@@ -81,15 +81,15 @@
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./src/main.js");
+/******/ 	return __webpack_require__(__webpack_require__.s = "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\main.js");
 /******/ })
 /************************************************************************/
 /******/ ({
 
-/***/ "./gen/astnodes.js":
-/*!*************************!*\
-  !*** ./gen/astnodes.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\gen\\astnodes.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/gen/astnodes.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -1938,10 +1938,10 @@ Sk.exportSymbol("Sk.astnodes", Sk.astnodes);
 
 /***/ }),
 
-/***/ "./gen/parse_tables.js":
-/*!*****************************!*\
-  !*** ./gen/parse_tables.js ***!
-  \*****************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\gen\\parse_tables.js":
+/*!****************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/gen/parse_tables.js ***!
+  \****************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -3750,10 +3750,10 @@ start: 256
 
 /***/ }),
 
-/***/ "./node_modules/process/browser.js":
-/*!*****************************************!*\
-  !*** ./node_modules/process/browser.js ***!
-  \*****************************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\process\\browser.js":
+/*!****************************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/node_modules/process/browser.js ***!
+  \****************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -3945,10 +3945,10 @@ process.umask = function() { return 0; };
 
 /***/ }),
 
-/***/ "./node_modules/setimmediate/setImmediate.js":
-/*!***************************************************!*\
-  !*** ./node_modules/setimmediate/setImmediate.js ***!
-  \***************************************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\setimmediate\\setImmediate.js":
+/*!**************************************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/node_modules/setimmediate/setImmediate.js ***!
+  \**************************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -4139,14 +4139,14 @@ process.umask = function() { return 0; };
     attachTo.clearImmediate = clearImmediate;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js"), __webpack_require__(/*! ./../process/browser.js */ "./node_modules/process/browser.js")))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../webpack/buildin/global.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\webpack\\buildin\\global.js"), __webpack_require__(/*! ./../process/browser.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\process\\browser.js")))
 
 /***/ }),
 
-/***/ "./node_modules/strftime/strftime.js":
-/*!*******************************************!*\
-  !*** ./node_modules/strftime/strftime.js ***!
-  \*******************************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\strftime\\strftime.js":
+/*!******************************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/node_modules/strftime/strftime.js ***!
+  \******************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -4972,7 +4972,7 @@ process.umask = function() { return 0; };
 
 /***/ }),
 
-/***/ "./node_modules/webpack/buildin/global.js":
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\webpack\\buildin\\global.js":
 /*!***********************************!*\
   !*** (webpack)/buildin/global.js ***!
   \***********************************/
@@ -5003,10 +5003,10 @@ module.exports = g;
 
 /***/ }),
 
-/***/ "./src/abstract.js":
-/*!*************************!*\
-  !*** ./src/abstract.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\abstract.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/abstract.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -6056,10 +6056,10 @@ Sk.abstr.superConstructor = function (thisClass, self, args) {
 
 /***/ }),
 
-/***/ "./src/assert-dev.js":
-/*!***************************!*\
-  !*** ./src/assert-dev.js ***!
-  \***************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\assert-dev.js":
+/*!**************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/assert-dev.js ***!
+  \**************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -6102,10 +6102,10 @@ Sk.exportSymbol("Sk.asserts.fail", Sk.asserts.fail);
 
 /***/ }),
 
-/***/ "./src/ast.js":
-/*!********************!*\
-  !*** ./src/ast.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\ast.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/ast.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -9445,10 +9445,10 @@ Sk.exportSymbol("Sk.INHERITANCE_MAP", Sk.INHERITANCE_MAP);
 
 /***/ }),
 
-/***/ "./src/biginteger.js":
-/*!***************************!*\
-  !*** ./src/biginteger.js ***!
-  \***************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\biginteger.js":
+/*!**************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/biginteger.js ***!
+  \**************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -11311,10 +11311,10 @@ Sk.builtin.biginteger.prototype.isProbablePrime = Sk.builtin.biginteger.prototyp
 
 /***/ }),
 
-/***/ "./src/bool.js":
-/*!*********************!*\
-  !*** ./src/bool.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\bool.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/bool.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -11370,10 +11370,10 @@ Sk.exportSymbol("Sk.builtin.bool", Sk.builtin.bool);
 
 /***/ }),
 
-/***/ "./src/builtin.js":
-/*!************************!*\
-  !*** ./src/builtin.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\builtin.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/builtin.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -12933,10 +12933,10 @@ Sk.builtin.intern = function intern () {
 
 /***/ }),
 
-/***/ "./src/builtindict.js":
-/*!****************************!*\
-  !*** ./src/builtindict.js ***!
-  \****************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\builtindict.js":
+/*!***************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/builtindict.js ***!
+  \***************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -13073,10 +13073,10 @@ Sk.exportSymbol("Sk.builtins", Sk.builtins);
 
 /***/ }),
 
-/***/ "./src/compile.js":
-/*!************************!*\
-  !*** ./src/compile.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\compile.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/compile.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -15917,10 +15917,10 @@ Sk.exportSymbol("Sk.mangleName", Sk.mangleName);
 
 /***/ }),
 
-/***/ "./src/complex.js":
-/*!************************!*\
-  !*** ./src/complex.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\complex.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/complex.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -17156,10 +17156,10 @@ Sk.builtin.complex.PyOS_double_to_string.Py_DTST_NAN = 2;
 
 /***/ }),
 
-/***/ "./src/constants.js":
-/*!**************************!*\
-  !*** ./src/constants.js ***!
-  \**************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\constants.js":
+/*!*************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/constants.js ***!
+  \*************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -17367,10 +17367,10 @@ for (i = 0; i < builtinStringMethods.length; i++) {
 
 /***/ }),
 
-/***/ "./src/dict.js":
-/*!*********************!*\
-  !*** ./src/dict.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\dict.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/dict.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -18036,10 +18036,10 @@ Sk.builtin.dict_iter_.prototype.next$ = function (self) {
 
 /***/ }),
 
-/***/ "./src/enumerate.js":
-/*!**************************!*\
-  !*** ./src/enumerate.js ***!
-  \**************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\enumerate.js":
+/*!*************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/enumerate.js ***!
+  \*************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -18109,10 +18109,10 @@ Sk.builtin.enumerate.prototype["$r"] = function () {
 
 /***/ }),
 
-/***/ "./src/env.js":
-/*!********************!*\
-  !*** ./src/env.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\env.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/env.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -18522,10 +18522,10 @@ Sk.exportSymbol("Sk.inputfun", Sk.inputfun);
 
 /***/ }),
 
-/***/ "./src/errors.js":
-/*!***********************!*\
-  !*** ./src/errors.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\errors.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/errors.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -19286,10 +19286,10 @@ Sk.builtin.getExcInfo = function(e) {
 
 /***/ }),
 
-/***/ "./src/ffi.js":
-/*!********************!*\
-  !*** ./src/ffi.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\ffi.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/ffi.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -19475,10 +19475,10 @@ Sk.exportSymbol("Sk.ffi.unwrapn", Sk.ffi.unwrapn);
 
 /***/ }),
 
-/***/ "./src/file.js":
-/*!*********************!*\
-  !*** ./src/file.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\file.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/file.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -19739,10 +19739,10 @@ Sk.exportSymbol("Sk.builtin.file", Sk.builtin.file);
 
 /***/ }),
 
-/***/ "./src/filter.js":
-/*!***********************!*\
-  !*** ./src/filter.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\filter.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/filter.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -19817,10 +19817,10 @@ Sk.exportSymbol("Sk.builtin.filter_", Sk.builtin.filter_);
 
 /***/ }),
 
-/***/ "./src/float.js":
-/*!**********************!*\
-  !*** ./src/float.js ***!
-  \**********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\float.js":
+/*!*********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/float.js ***!
+  \*********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -20762,10 +20762,10 @@ Sk.builtin.float_.prototype.str$ = function (base, sign) {
 
 /***/ }),
 
-/***/ "./src/formatting.js":
-/*!***************************!*\
-  !*** ./src/formatting.js ***!
-  \***************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\formatting.js":
+/*!**************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/formatting.js ***!
+  \**************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -21122,10 +21122,10 @@ Sk.builtin.str.prototype["format"] = new Sk.builtin.func(format);
 
 /***/ }),
 
-/***/ "./src/fromcodepoint.js":
-/*!******************************!*\
-  !*** ./src/fromcodepoint.js ***!
-  \******************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\fromcodepoint.js":
+/*!*****************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/fromcodepoint.js ***!
+  \*****************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -21196,10 +21196,10 @@ if (!String.fromCodePoint) {
 
 /***/ }),
 
-/***/ "./src/function.js":
-/*!*************************!*\
-  !*** ./src/function.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\function.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/function.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -21633,10 +21633,10 @@ Sk.builtin.func.prototype["$r"] = function () {
 
 /***/ }),
 
-/***/ "./src/generator.js":
-/*!**************************!*\
-  !*** ./src/generator.js ***!
-  \**************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\generator.js":
+/*!*************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/generator.js ***!
+  \*************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -21774,10 +21774,10 @@ Sk.exportSymbol("Sk.builtin.makeGenerator", Sk.builtin.makeGenerator);
 
 /***/ }),
 
-/***/ "./src/import.js":
-/*!***********************!*\
-  !*** ./src/import.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\import.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/import.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -22438,10 +22438,10 @@ Sk.exportSymbol("Sk.getCurrentSysModules", Sk.getCurrentSysModules);
 
 /***/ }),
 
-/***/ "./src/int.js":
-/*!********************!*\
-  !*** ./src/int.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\int.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/int.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -23649,10 +23649,10 @@ Sk.exportSymbol("Sk.builtin.int_", Sk.builtin.int_);
 
 /***/ }),
 
-/***/ "./src/internalpython.js":
-/*!*******************************!*\
-  !*** ./src/internalpython.js ***!
-  \*******************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\internalpython.js":
+/*!******************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/internalpython.js ***!
+  \******************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -23660,10 +23660,10 @@ Sk.internalPy={"files":{"src/classmethod.py":"class classmethod(object):\n    \"
 
 /***/ }),
 
-/***/ "./src/iterator.js":
-/*!*************************!*\
-  !*** ./src/iterator.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\iterator.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/iterator.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -23773,10 +23773,10 @@ Sk.exportSymbol("Sk.builtin.iterator", Sk.builtin.iterator);
 
 /***/ }),
 
-/***/ "./src/list.js":
-/*!*********************!*\
-  !*** ./src/list.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\list.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/list.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -24491,10 +24491,10 @@ Sk.builtin.list_iter_.prototype.next$ = function (self) {
 
 /***/ }),
 
-/***/ "./src/long.js":
-/*!*********************!*\
-  !*** ./src/long.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\long.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/long.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -25346,10 +25346,10 @@ Sk.builtin.lng.prototype.str$ = function (base, sign) {
 
 /***/ }),
 
-/***/ "./src/main.js":
-/*!*********************!*\
-  !*** ./src/main.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\main.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/main.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -25359,78 +25359,78 @@ Sk.builtin.lng.prototype.str$ = function (base, sign) {
 // It should be kept in sync with ../skulpt.py.
 // Order is important!
 
-__webpack_require__(/*! ./util.js */ "./src/util.js");
+__webpack_require__(/*! ./util.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\util.js");
 
 // Global support functions
-Sk.global["strftime"] = __webpack_require__(/*! strftime */ "./node_modules/strftime/strftime.js");
-Sk.global["strptime"] = __webpack_require__(/*! ../support/time-helpers/strptime.js */ "./support/time-helpers/strptime.js");
-__webpack_require__(/*! setimmediate */ "./node_modules/setimmediate/setImmediate.js");
+Sk.global["strftime"] = __webpack_require__(/*! strftime */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\strftime\\strftime.js");
+Sk.global["strptime"] = __webpack_require__(/*! ../support/time-helpers/strptime.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\support\\time-helpers\\strptime.js");
+__webpack_require__(/*! setimmediate */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\setimmediate\\setImmediate.js");
 
 // Skulpt
-__webpack_require__(/*! assert */ "./src/assert-dev.js");
-__webpack_require__(/*! ./env.js */ "./src/env.js");
-__webpack_require__(/*! ./type.js */ "./src/type.js");
-__webpack_require__(/*! ./abstract.js */ "./src/abstract.js");
-__webpack_require__(/*! ./object.js */ "./src/object.js");
-__webpack_require__(/*! ./function.js */ "./src/function.js");
-__webpack_require__(/*! ./builtin.js */ "./src/builtin.js");
-__webpack_require__(/*! ./fromcodepoint.js */ "./src/fromcodepoint.js");
-__webpack_require__(/*! ./errors.js */ "./src/errors.js");
-__webpack_require__(/*! ./method.js */ "./src/method.js");
-__webpack_require__(/*! ./misceval.js */ "./src/misceval.js");
-__webpack_require__(/*! ./seqtype.js */ "./src/seqtype.js");
-__webpack_require__(/*! ./list.js */ "./src/list.js");
-__webpack_require__(/*! ./str.js */ "./src/str.js");
-__webpack_require__(/*! ./formatting.js */ "./src/formatting.js");
-__webpack_require__(/*! ./tuple.js */ "./src/tuple.js");
-__webpack_require__(/*! ./dict.js */ "./src/dict.js");
-__webpack_require__(/*! ./numtype.js */ "./src/numtype.js");
-__webpack_require__(/*! ./biginteger.js */ "./src/biginteger.js");
-__webpack_require__(/*! ./int.js */ "./src/int.js");
-__webpack_require__(/*! ./bool.js */ "./src/bool.js");
-__webpack_require__(/*! ./float.js */ "./src/float.js");
-__webpack_require__(/*! ./number.js */ "./src/number.js");
-__webpack_require__(/*! ./long.js */ "./src/long.js");
-__webpack_require__(/*! ./complex.js */ "./src/complex.js");
-__webpack_require__(/*! ./slice.js */ "./src/slice.js");
-__webpack_require__(/*! ./set.js */ "./src/set.js");
-__webpack_require__(/*! ./print.js */ "./src/print.js");
-__webpack_require__(/*! ./module.js */ "./src/module.js");
-__webpack_require__(/*! ./structseq.js */ "./src/structseq.js");
-__webpack_require__(/*! ./generator.js */ "./src/generator.js");
-__webpack_require__(/*! ./file.js */ "./src/file.js");
-__webpack_require__(/*! ./ffi.js */ "./src/ffi.js");
-__webpack_require__(/*! ./iterator.js */ "./src/iterator.js");
-__webpack_require__(/*! ./enumerate.js */ "./src/enumerate.js");
-__webpack_require__(/*! ./filter.js */ "./src/filter.js");
-__webpack_require__(/*! ./zip.js */ "./src/zip.js");
-__webpack_require__(/*! ./map.js */ "./src/map.js");
+__webpack_require__(/*! assert */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\assert-dev.js");
+__webpack_require__(/*! ./env.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\env.js");
+__webpack_require__(/*! ./type.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\type.js");
+__webpack_require__(/*! ./abstract.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\abstract.js");
+__webpack_require__(/*! ./object.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\object.js");
+__webpack_require__(/*! ./function.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\function.js");
+__webpack_require__(/*! ./builtin.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\builtin.js");
+__webpack_require__(/*! ./fromcodepoint.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\fromcodepoint.js");
+__webpack_require__(/*! ./errors.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\errors.js");
+__webpack_require__(/*! ./method.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\method.js");
+__webpack_require__(/*! ./misceval.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\misceval.js");
+__webpack_require__(/*! ./seqtype.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\seqtype.js");
+__webpack_require__(/*! ./list.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\list.js");
+__webpack_require__(/*! ./str.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\str.js");
+__webpack_require__(/*! ./formatting.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\formatting.js");
+__webpack_require__(/*! ./tuple.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\tuple.js");
+__webpack_require__(/*! ./dict.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\dict.js");
+__webpack_require__(/*! ./numtype.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\numtype.js");
+__webpack_require__(/*! ./biginteger.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\biginteger.js");
+__webpack_require__(/*! ./int.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\int.js");
+__webpack_require__(/*! ./bool.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\bool.js");
+__webpack_require__(/*! ./float.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\float.js");
+__webpack_require__(/*! ./number.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\number.js");
+__webpack_require__(/*! ./long.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\long.js");
+__webpack_require__(/*! ./complex.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\complex.js");
+__webpack_require__(/*! ./slice.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\slice.js");
+__webpack_require__(/*! ./set.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\set.js");
+__webpack_require__(/*! ./print.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\print.js");
+__webpack_require__(/*! ./module.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\module.js");
+__webpack_require__(/*! ./structseq.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\structseq.js");
+__webpack_require__(/*! ./generator.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\generator.js");
+__webpack_require__(/*! ./file.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\file.js");
+__webpack_require__(/*! ./ffi.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\ffi.js");
+__webpack_require__(/*! ./iterator.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\iterator.js");
+__webpack_require__(/*! ./enumerate.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\enumerate.js");
+__webpack_require__(/*! ./filter.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\filter.js");
+__webpack_require__(/*! ./zip.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\zip.js");
+__webpack_require__(/*! ./map.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\map.js");
 //require("./classmethod.js");
-__webpack_require__(/*! ./token.js */ "./src/token.js");
-__webpack_require__(/*! ./tokenize.js */ "./src/tokenize.js");
-__webpack_require__(/*! ../gen/parse_tables.js */ "./gen/parse_tables.js");
-__webpack_require__(/*! ./parser.js */ "./src/parser.js");
-__webpack_require__(/*! ../gen/astnodes.js */ "./gen/astnodes.js");
-__webpack_require__(/*! ./ast.js */ "./src/ast.js");
-__webpack_require__(/*! ./symtable.js */ "./src/symtable.js");
-__webpack_require__(/*! ./compile.js */ "./src/compile.js");
-__webpack_require__(/*! ./import.js */ "./src/import.js");
-__webpack_require__(/*! ./timsort.js */ "./src/timsort.js");
-__webpack_require__(/*! ./sorted.js */ "./src/sorted.js");
-__webpack_require__(/*! ./typeobject.js */ "./src/typeobject.js");
-__webpack_require__(/*! ./builtindict.js */ "./src/builtindict.js");
-__webpack_require__(/*! ./constants.js */ "./src/constants.js");
-__webpack_require__(/*! ./internalpython.js */ "./src/internalpython.js");
+__webpack_require__(/*! ./token.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\token.js");
+__webpack_require__(/*! ./tokenize.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\tokenize.js");
+__webpack_require__(/*! ../gen/parse_tables.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\gen\\parse_tables.js");
+__webpack_require__(/*! ./parser.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\parser.js");
+__webpack_require__(/*! ../gen/astnodes.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\gen\\astnodes.js");
+__webpack_require__(/*! ./ast.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\ast.js");
+__webpack_require__(/*! ./symtable.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\symtable.js");
+__webpack_require__(/*! ./compile.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\compile.js");
+__webpack_require__(/*! ./import.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\import.js");
+__webpack_require__(/*! ./timsort.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\timsort.js");
+__webpack_require__(/*! ./sorted.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\sorted.js");
+__webpack_require__(/*! ./typeobject.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\typeobject.js");
+__webpack_require__(/*! ./builtindict.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\builtindict.js");
+__webpack_require__(/*! ./constants.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\constants.js");
+__webpack_require__(/*! ./internalpython.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\internalpython.js");
 
 /* jshint ignore:end */
 
 
 /***/ }),
 
-/***/ "./src/map.js":
-/*!********************!*\
-  !*** ./src/map.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\map.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/map.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -25522,10 +25522,10 @@ Sk.exportSymbol("Sk.builtin.map_", Sk.builtin.map_);
 
 /***/ }),
 
-/***/ "./src/method.js":
-/*!***********************!*\
-  !*** ./src/method.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\method.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/method.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -25670,10 +25670,10 @@ Sk.builtin.method.prototype["$r"] = function () {
 
 /***/ }),
 
-/***/ "./src/misceval.js":
-/*!*************************!*\
-  !*** ./src/misceval.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\misceval.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/misceval.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -26992,10 +26992,10 @@ Sk.exportSymbol("Sk.misceval.buildClass", Sk.misceval.buildClass);
 
 /***/ }),
 
-/***/ "./src/module.js":
-/*!***********************!*\
-  !*** ./src/module.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\module.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/module.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -27019,10 +27019,10 @@ Sk.builtin.module.prototype.tp$name = "module";
 
 /***/ }),
 
-/***/ "./src/number.js":
-/*!***********************!*\
-  !*** ./src/number.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\number.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/number.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -27340,10 +27340,10 @@ Sk.exportSymbol("Sk.builtin.nmber", Sk.builtin.nmber);
 
 /***/ }),
 
-/***/ "./src/numtype.js":
-/*!************************!*\
-  !*** ./src/numtype.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\numtype.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/numtype.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -28023,10 +28023,10 @@ Sk.builtin.numtype.prototype.nb$ispositive = function () {
 
 /***/ }),
 
-/***/ "./src/object.js":
-/*!***********************!*\
-  !*** ./src/object.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\object.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/object.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -28574,10 +28574,10 @@ Sk.exportSymbol("Sk.builtin.NotImplemented", Sk.builtin.NotImplemented);
 
 /***/ }),
 
-/***/ "./src/parser.js":
-/*!***********************!*\
-  !*** ./src/parser.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\parser.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/parser.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -28974,10 +28974,10 @@ Sk.exportSymbol("Sk.parseTreeDump", Sk.parseTreeDump);
 
 /***/ }),
 
-/***/ "./src/print.js":
-/*!**********************!*\
-  !*** ./src/print.js ***!
-  \**********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\print.js":
+/*!*********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/print.js ***!
+  \*********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -29076,10 +29076,10 @@ Sk.builtin.input.co_name = new Sk.builtin.str("input");
 
 /***/ }),
 
-/***/ "./src/seqtype.js":
-/*!************************!*\
-  !*** ./src/seqtype.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\seqtype.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/seqtype.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -29220,10 +29220,10 @@ Sk.builtin.seqtype.prototype["__rmul__"] = new Sk.builtin.func(function (self, n
 
 /***/ }),
 
-/***/ "./src/set.js":
-/*!********************!*\
-  !*** ./src/set.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\set.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/set.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -29697,10 +29697,10 @@ Sk.builtin.set_iter_.prototype.next$ = function (self) {
 
 /***/ }),
 
-/***/ "./src/slice.js":
-/*!**********************!*\
-  !*** ./src/slice.js ***!
-  \**********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\slice.js":
+/*!*********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/slice.js ***!
+  \*********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -29891,10 +29891,10 @@ Sk.builtin.slice$step = new Sk.builtin.str("step");
 
 /***/ }),
 
-/***/ "./src/sorted.js":
-/*!***********************!*\
-  !*** ./src/sorted.js ***!
-  \***********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\sorted.js":
+/*!**********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/sorted.js ***!
+  \**********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -29970,10 +29970,10 @@ Sk.builtin.sorted = function sorted (iterable, cmp, key, reverse) {
 
 /***/ }),
 
-/***/ "./src/str.js":
-/*!********************!*\
-  !*** ./src/str.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\str.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/str.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -31215,10 +31215,10 @@ Sk.builtin.str_iter_.prototype.next$ = function (self) {
 
 /***/ }),
 
-/***/ "./src/structseq.js":
-/*!**************************!*\
-  !*** ./src/structseq.js ***!
-  \**************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\structseq.js":
+/*!*************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/structseq.js ***!
+  \*************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -31324,10 +31324,10 @@ Sk.exportSymbol("Sk.builtin.make_structseq", Sk.builtin.make_structseq);
 
 /***/ }),
 
-/***/ "./src/symtable.js":
-/*!*************************!*\
-  !*** ./src/symtable.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\symtable.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/symtable.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -32456,10 +32456,10 @@ Sk.exportSymbol("Sk.dumpSymtab", Sk.dumpSymtab);
 
 /***/ }),
 
-/***/ "./src/timsort.js":
-/*!************************!*\
-  !*** ./src/timsort.js ***!
-  \************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\timsort.js":
+/*!***********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/timsort.js ***!
+  \***********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -33200,10 +33200,10 @@ Sk.exportSymbol("Sk.builtin.timSort", Sk.builtin.timSort);
 
 /***/ }),
 
-/***/ "./src/token.js":
-/*!**********************!*\
-  !*** ./src/token.js ***!
-  \**********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\token.js":
+/*!*********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/token.js ***!
+  \*********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -33379,10 +33379,10 @@ Sk.exportSymbol("Sk.token.ISEOF", Sk.token.ISEOF);
 
 /***/ }),
 
-/***/ "./src/tokenize.js":
-/*!*************************!*\
-  !*** ./src/tokenize.js ***!
-  \*************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\tokenize.js":
+/*!************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/tokenize.js ***!
+  \************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -33871,10 +33871,10 @@ Sk.exportSymbol("Sk._tokenize", Sk._tokenize);
 
 /***/ }),
 
-/***/ "./src/tuple.js":
-/*!**********************!*\
-  !*** ./src/tuple.js ***!
-  \**********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\tuple.js":
+/*!*********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/tuple.js ***!
+  \*********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -34180,10 +34180,10 @@ Sk.builtin.tuple_iter_.prototype.next$ = function (self) {
 
 /***/ }),
 
-/***/ "./src/type.js":
-/*!*********************!*\
-  !*** ./src/type.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\type.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/type.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -34525,11 +34525,12 @@ Sk.builtin.type = function (name, bases, dict) {
             return canSuspend ? r : Sk.misceval.retryOptionalSuspensionOrThrow(r);
         };
         klass.prototype.tp$call = function (args, kw) {
-            return Sk.misceval.chain(this.tp$getattr(Sk.builtin.str.$call, true), function(callf) {
+            var that = this;
+            return Sk.misceval.chain(this.__class__.tp$getattr(Sk.builtin.str.$call, true), function(callf) {
                 if (callf === undefined) {
                     throw new Sk.builtin.TypeError("'" + Sk.abstr.typeName(this) + "' object is not callable");
                 }
-                return Sk.misceval.applyOrSuspend(callf, undefined, undefined, kw, args);
+                return Sk.misceval.applyOrSuspend(callf, undefined, undefined, kw, [that].concat(args));
             });
         };
         klass.prototype.tp$iter = function () {
@@ -34921,10 +34922,10 @@ Sk.builtin.type.pythonFunctions = ["__format__"];
 
 /***/ }),
 
-/***/ "./src/typeobject.js":
-/*!***************************!*\
-  !*** ./src/typeobject.js ***!
-  \***************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\typeobject.js":
+/*!**************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/typeobject.js ***!
+  \**************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -35072,10 +35073,10 @@ Sk.builtin.super_.__doc__ = new Sk.builtin.str(
 
 /***/ }),
 
-/***/ "./src/util.js":
-/*!*********************!*\
-  !*** ./src/util.js ***!
-  \*********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\util.js":
+/*!********************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/util.js ***!
+  \********************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -35083,8 +35084,8 @@ Sk.builtin.super_.__doc__ = new Sk.builtin.str(
 var Sk = {}; // jshint ignore:line
 
 Sk.build = {
-    githash: "bb6ff875875cf70c8362e922413ff3ddd0ed560f",
-    date: "2019-10-15T02:26:42.667Z"
+    githash: "c4967af8d02c280e4fe0a88a4b5d4a229c158d43",
+    date: "2019-10-30T19:56:27.232Z"
 };
 
 /**
@@ -35141,14 +35142,14 @@ Sk.exportSymbol("Sk.exportSymbol", Sk.exportSymbol);
 Sk.exportSymbol("Sk.isArrayLike", Sk.isArrayLike);
 Sk.exportSymbol("Sk.js_beautify", Sk.js_beautify);
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\node_modules\\webpack\\buildin\\global.js")))
 
 /***/ }),
 
-/***/ "./src/zip.js":
-/*!********************!*\
-  !*** ./src/zip.js ***!
-  \********************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\src\\zip.js":
+/*!*******************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/src/zip.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -35218,10 +35219,10 @@ Sk.exportSymbol("Sk.builtin.zip_", Sk.builtin.zip_);
 
 /***/ }),
 
-/***/ "./support/time-helpers/strptime.js":
-/*!******************************************!*\
-  !*** ./support/time-helpers/strptime.js ***!
-  \******************************************/
+/***/ "E:\\Luke_Stuff\\Research\\ComputationalThinking\\CodeBase\\blockpy-edu\\skulpt\\support\\time-helpers\\strptime.js":
+/*!*****************************************************************************************************************!*\
+  !*** E:/Luke_Stuff/Research/ComputationalThinking/CodeBase/blockpy-edu/skulpt/support/time-helpers/strptime.js ***!
+  \*****************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
