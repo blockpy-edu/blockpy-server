@@ -25,7 +25,7 @@ services:
     restart: always
     entrypoint: /usr/local/bin/docker-entrypoint.sh
   db:
-    image: postgres:16-bullseye
+    image: postgres:17
     restart: always
     container_name: blockpy_db
     env_file:
