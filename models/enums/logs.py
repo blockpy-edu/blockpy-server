@@ -49,3 +49,4 @@ class SubmissionLogEvent(StrEnum):
     CANVAS = "canvas"
     EXTEND_TIME = "extend_time"
     START_TIMER = "start_timer"
+    RESET_START_DATE = "reset_start_date"
