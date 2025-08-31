@@ -269,6 +269,19 @@ export class Quiz {
     }
 
     hidePools() {
+        // Check if any pools have groups defined
+        const hasGroupedPools = this.pools().some((pool: QuestionPool) => pool.group);
+        
+        if (hasGroupedPools) {
+            this.hidePoolsGroups();
+        } else {
+            // Original behavior for backward compatibility
+            this.hidePoolsIndividually();
+        }
+    }
+
+    // Original pool hiding logic, extracted for clarity
+    private hidePoolsIndividually() {
         this.questions().forEach((question: Question) => {
             question.visible(true);
         });
@@ -287,7 +300,66 @@ export class Quiz {
     }
 
     hidePoolsGroups() {
+        // First, make all questions visible
+        this.questions().forEach((question: Question) => {
+            question.visible(true);
+        });
 
+        // Group pools by their group field
+        const poolsByGroup: Map<string, QuestionPool[]> = new Map();
+        const ungroupedPools: QuestionPool[] = [];
+
+        this.pools().forEach((pool: QuestionPool) => {
+            if (pool.group) {
+                if (!poolsByGroup.has(pool.group)) {
+                    poolsByGroup.set(pool.group, []);
+                }
+                poolsByGroup.get(pool.group)!.push(pool);
+            } else {
+                ungroupedPools.push(pool);
+            }
+        });
+
+        // Calculate the base seed based on pool randomness
+        const baseSeed = this.poolRandomness() === QuizPoolRandomness.SEED ?
+            this.seed() :
+            this.poolRandomness() === QuizPoolRandomness.ATTEMPT ?
+                this.seed() + this.attemptCount() :
+                0;
+
+        // Handle grouped pools - use same seed for all pools in the same group
+        poolsByGroup.forEach((groupPools: QuestionPool[], groupName: string) => {
+            // Use group name as additional seed modifier for consistency
+            const groupSeed = baseSeed + this.hashString(groupName);
+            
+            groupPools.forEach((pool: QuestionPool) => {
+                const allQuestions = pool.questions;
+                const chosenQuestions = subsetRandomly(allQuestions, pool.amount, groupSeed);
+                allQuestions.forEach((questionId: string) => {
+                    this.questionMap[questionId].visible(chosenQuestions.includes(questionId));
+                });
+            });
+        });
+
+        // Handle ungrouped pools individually (original behavior)
+        ungroupedPools.forEach((pool: QuestionPool) => {
+            const allQuestions = pool.questions;
+            const chosenQuestions = subsetRandomly(allQuestions, pool.amount, baseSeed);
+            allQuestions.forEach((questionId: string) => {
+                this.questionMap[questionId].visible(chosenQuestions.includes(questionId));
+            });
+        });
+    }
+
+    // Simple hash function to convert group name to a consistent number
+    private hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
     }
 
     submissionAsJson(): string {
