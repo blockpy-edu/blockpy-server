@@ -150,12 +150,15 @@ class AssignmentGroupFactory:
         if url is None:
             url = f"test-group-{uuid.uuid4().hex[:8]}"
         
+        # Set default category if not provided in kwargs
+        if 'category' not in kwargs:
+            kwargs['category'] = AssignmentGroupCategory.NONE
+        
         group = AssignmentGroup(
             name=name,
             course_id=course.id,
             owner_id=owner.id,
             url=url,
-            category=AssignmentGroupCategory.NONE,
             **kwargs
         )
         db.session.add(group)
@@ -185,14 +188,20 @@ class AssignmentFactory:
         if url is None:
             url = f"test-assignment-{uuid.uuid4().hex[:8]}"
         
+        # Set default status if not provided in kwargs
+        if 'status' not in kwargs:
+            kwargs['status'] = AssignmentStatus.PUBLISHED
+        
+        # Set default instructions if not provided in kwargs
+        if 'instructions' not in kwargs:
+            kwargs['instructions'] = "This is a test assignment."
+        
         assignment = Assignment(
             name=name,
             course_id=course.id,
             owner_id=owner.id,
             url=url,
             type=assignment_type,
-            status=AssignmentStatus.PUBLISHED,
-            instructions="This is a test assignment.",
             **kwargs
         )
         db.session.add(assignment)
@@ -208,6 +217,7 @@ class SubmissionFactory:
         assignment: Optional[Assignment] = None,
         user: Optional[User] = None,
         course: Optional[Course] = None,
+        assignment_group: Optional[AssignmentGroup] = None,
         code: str = "print('Hello, World!')",
         correct: bool = False,
         **kwargs
@@ -222,17 +232,23 @@ class SubmissionFactory:
         if user is None:
             user = UserFactory.create_student(course=course)
         
-        submission = Submission(
-            assignment_id=assignment.id,
-            user_id=user.id,
-            course_id=course.id,
-            code=code,
-            correct=correct,
-            submission_status=SubmissionStatuses.COMPLETED if correct else SubmissionStatuses.STARTED,
-            grading_status=GradingStatuses.FULLY_GRADED if correct else GradingStatuses.NOT_READY,
-            url=f"submission-{uuid.uuid4().hex[:8]}",
+        submission_kwargs = {
+            "assignment_id": assignment.id,
+            "user_id": user.id,
+            "course_id": course.id,
+            "code": code,
+            "correct": correct,
+            "submission_status": SubmissionStatuses.COMPLETED if correct else SubmissionStatuses.STARTED,
+            "grading_status": GradingStatuses.FULLY_GRADED if correct else GradingStatuses.NOT_READY,
+            "url": f"submission-{uuid.uuid4().hex[:8]}",
             **kwargs
-        )
+        }
+        
+        # Add assignment_group_id if provided
+        if assignment_group:
+            submission_kwargs["assignment_group_id"] = assignment_group.id
+        
+        submission = Submission(**submission_kwargs)
         db.session.add(submission)
         db.session.commit()
         return submission
