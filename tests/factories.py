@@ -56,11 +56,13 @@ class UserFactory:
         **kwargs
     ) -> User:
         """Create a test instructor user."""
-        user = UserFactory.create_user(
-            first_name="Instructor",
-            last_name="Test",
-            **kwargs
-        )
+        # Set default name if not provided
+        if 'first_name' not in kwargs:
+            kwargs['first_name'] = "Instructor"
+        if 'last_name' not in kwargs:
+            kwargs['last_name'] = "Test"
+        
+        user = UserFactory.create_user(**kwargs)
         
         if course:
             role = Role(
@@ -79,11 +81,13 @@ class UserFactory:
         **kwargs
     ) -> User:
         """Create a test student user."""
-        user = UserFactory.create_user(
-            first_name="Student",
-            last_name="Test",
-            **kwargs
-        )
+        # Set default name if not provided
+        if 'first_name' not in kwargs:
+            kwargs['first_name'] = "Student"
+        if 'last_name' not in kwargs:
+            kwargs['last_name'] = "Test"
+        
+        user = UserFactory.create_user(**kwargs)
         
         if course:
             role = Role(
