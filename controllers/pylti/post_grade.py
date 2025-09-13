@@ -1,3 +1,4 @@
+from typing import Optional, Tuple
 from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
     send_from_directory, current_app
 from common.urls import normalize_url
@@ -174,7 +175,7 @@ class FailureReasons:
     INVALID_SUBMISSION_STATUS = "The given submission status is invalid"
 
 
-def grade_submission(submission_id, assignment_group_id,
+def grade_submission(submission_id: int, assignment_group_id,
                      grader: User, ip_address: str,
                      client_score, client_correct, client_status, image,
                      force_update, by_human=False,
