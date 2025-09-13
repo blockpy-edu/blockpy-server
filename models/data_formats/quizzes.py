@@ -80,14 +80,17 @@ def process_quiz(body: dict, checks: dict, submission_body: dict) -> QuizResult:
         checked_question = check_quiz_question(question, check, student)
         if checked_question is None:
             feedbacks[question_id] = {"message": "Unknown Type: " + question.get('type'),
-                                      "correct": None, "score": 0, "status": "error"}
+                                      "correct": None, "score": 0, "status": "error", 'tags': []}
         else:
             score, correct, feedback = checked_question
             #print(question_id, score)
             total_score += score*points
             total_correct = total_correct and correct
             message = str(feedback)
-            feedbacks[question_id] = { 'message': message, 'correct': correct, 'score': score, 'status': 'graded' }
+            tags = []
+            if not correct:
+                tags = question.get('tags', [])
+            feedbacks[question_id] = { 'message': message, 'correct': correct, 'score': score, 'status': 'graded', 'tags': tags }
         questions_checked += 1
     if not questions_checked:
         total_correct = False
