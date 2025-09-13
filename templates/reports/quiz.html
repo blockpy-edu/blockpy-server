@@ -34,8 +34,8 @@
     </script>
     <submission-watcher params="server: server, courseId: pageCourseId,
         user: user, 
-        userIds: [{{ submission.user_id|tojson }}], 
-        assignmentIds: [{{ submission.assignment_id|tojson }}]"></submission-watcher>
+        userIds: {{ submission.user_id|tojson }},
+        assignmentIds: {{ submission.assignment_id|tojson }}"></submission-watcher>
     <!--<div>History: <a href="{{ url_for('blockpy.browse_history', assignment_id=submission.assignment_id,
         user_id=submission.user_id, course_id=submission.course_id) }}">view</a></div>-->
     {% if 'summary' in code and code['summary']['points_possible'] != assignment.points %}
@@ -64,24 +64,44 @@
 
 <div id="reviewable-code-area-{{ submission.id }}"></div>
 
-{% if 'feedback' in code and (not is_grader and ('feedbackType' in quiz_settings and quiz_settings['feedbackType'].upper() == 'SUMMARY')) %}
+
+{% if 'feedback' in code and (is_grader and ('feedbackType' in quiz_settings and quiz_settings['feedbackType'].upper() == 'SUMMARY')) %}
     <div>
 
-    {% set feedback_messages = (code['feedback'].values()|map(attribute='message')|reject("equalto", "Incorrect")|reject("equalto", "Correct")|join('\n')|replace("<br>", "")
-                        ).split("\n")|unique|reject("equalto", "")|sort() %}
-    {% if feedback_messages %}
-        <p>This feedback was automatically generated during your exam. Until grades have been released, you should take it with a grain of salt.
-        They are presented in alphabetical order, not in order of importance or the order they appeared in the assessment.
-        Still, these are topics and skills that, at a minimum, you should probably review and make sure you have mastered.
-        It is likely that they are at least related to the problems that you got wrong.</p>
-        <ol>
-        {% for feedback in feedback_messages %}
-            <li>{{ feedback }}</li>
+{#    {% set feedback_messages = (code['feedback'].values()|map(attribute='message')|reject("equalto", "Incorrect")|reject("equalto", "Correct")|join('\n')|replace("<br>", "")#}
+{#                        ).split("\n")|unique|reject("equalto", "")|sort() %}#}
+    {% set tags = code['feedback'].values()|selectattr("tags")|sum(attribute='tags', start=[])|unique()|sort() %}
+    {% if tags %}
+    <div class="alert alert-info" role="alert">
+        Based on an automatic analysis of your exam, we recommend you review the following lessons:
+        <ul>
+        {% for tag in tags %}
+            <li>
+            <a href="{{ url_for('assignments.load_textbook', path='bakery_textbook',
+                                    page='bakery_'+tag+'_read', embed=True) }}"
+                target="_blank">
+                {{ tag.replace('_', ' - ', 1).replace('_', ' ').title() }}
+            </a>
+            </li>
         {% endfor %}
-        </ol>
-    {% else %}
+    </ul>
+    </div>
+        {% else %}
         <p>No automatic feedback messages were generated for this quiz. That does not mean that all of your answers were correct, just that we have no automatic feedback to provide you.</p>
     {% endif %}
+{#    {% if feedback_messages %}#}
+{#        <p>This feedback was automatically generated during your exam. Until grades have been released, you should take it with a grain of salt.#}
+{#        They are presented in alphabetical order, not in order of importance or the order they appeared in the assessment.#}
+{#        Still, these are topics and skills that, at a minimum, you should probably review and make sure you have mastered.#}
+{#        It is likely that they are at least related to the problems that you got wrong.</p>#}
+{#        <ol>#}
+{#        {% for feedback in feedback_messages %}#}
+{#            <li>{{ feedback }}</li>#}
+{#        {% endfor %}#}
+{#        </ol>#}
+{#    {% else %}#}
+{#        <p>No automatic feedback messages were generated for this quiz. That does not mean that all of your answers were correct, just that we have no automatic feedback to provide you.</p>#}
+{#    {% endif %}#}
     </div>
 {% elif 'feedback' in code and (not hiding or is_grader) %}
     <div class="accordion" id="quiz-{{ assignment.id }}">
