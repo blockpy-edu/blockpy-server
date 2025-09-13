@@ -52,6 +52,7 @@ class User(Base, UserMixin):
                                                                foreign_keys="RoleLog.authorizer_id")
     assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="subject")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="subject")
+    report_logs: Mapped[list["ReportLog"]] = db.relationship(back_populates="subject")
     reviews: Mapped[list["Review"]] = db.relationship(back_populates="author")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="user")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="owner")

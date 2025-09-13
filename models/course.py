@@ -50,6 +50,7 @@ class Course(Base):
     role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="course")
     assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="course")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="course")
+    report_logs: Mapped[list["ReportLog"]] = db.relationship(back_populates="course")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="course")
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="course")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="course")

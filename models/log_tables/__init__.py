@@ -8,3 +8,4 @@ from models.log_tables.course_log import CourseLog
 from models.log_tables.role_log import RoleLog
 from models.log_tables.assignment_log import AssignmentLog
 from models.log_tables.submission_log import SubmissionLog
+from models.log_tables.report_log import ReportLog
