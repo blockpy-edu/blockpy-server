@@ -288,8 +288,8 @@ def load_history():
     # Could be one or more user_ids, separated by commas
     student_ids = safe_request.get_maybe_int_list('user_id')
     # Pagination information
-    page_limit = safe_request.get_maybe_int('page_limit', 20)
-    page_offset = safe_request.get_maybe_int('page_offset', 0)
+    page_limit = safe_request.get_maybe_int('page_limit')
+    page_offset = safe_request.get_maybe_int('page_offset')
     with_submission = safe_request.get_maybe_bool('with_submission', False)
     # Load models
     for assignment_id in assignment_ids:
