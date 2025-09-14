@@ -65,7 +65,7 @@
 <div id="reviewable-code-area-{{ submission.id }}"></div>
 
 
-{% if 'feedback' in code and (is_grader and ('feedbackType' in quiz_settings and quiz_settings['feedbackType'].upper() == 'SUMMARY')) %}
+{% if 'feedback' in code and (not is_grader and ('feedbackType' in quiz_settings and quiz_settings['feedbackType'].upper() == 'SUMMARY')) %}
     <div>
 
 {#    {% set feedback_messages = (code['feedback'].values()|map(attribute='message')|reject("equalto", "Incorrect")|reject("equalto", "Correct")|join('\n')|replace("<br>", "")#}
