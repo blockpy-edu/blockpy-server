@@ -72,16 +72,35 @@
 {#                        ).split("\n")|unique|reject("equalto", "")|sort() %}#}
     {% set tags = code['feedback'].values()|selectattr("tags")|sum(attribute='tags', start=[])|unique()|sort() %}
     {% if tags %}
+        <script>
+        $(document).ready(function() {
+            if (inIframe()) {
+                $(".read-textbook-link").click((event) => {
+                    event.preventDefault();
+                    console.log(event);
+                    relaunchInWindow(event.currentTarget.dataset.externalUrl);
+                });
+            }
+        });
+        </script>
     <div class="alert alert-info" role="alert">
         Based on an automatic analysis of your exam, we recommend you review the following lessons:
         <ul>
         {% for tag in tags %}
             <li>
             <a href="{{ url_for('assignments.load_textbook', path='bakery_textbook',
-                                    page='bakery_'+tag+'_read', embed=True) }}"
-                target="_blank">
+                                page='bakery_'+tag+'_read', embed=True, course_id=submission.course_id) }}"
+               class="read-textbook-link"
+               data-external-url="{{ url_for('assignments.load', _external=True, assignment_url='bakery_'+tag+'_read',
+                       course_id=submission.course_id, embed=True)|safe }}"
+               target="_blank">
                 {{ tag.replace('_', ' - ', 1).replace('_', ' ').title() }}
             </a>
+{#            <button class="read-textbook-link" data-external-url={{ url_for('assignments.load', _external=True, assignment_url='bakery_'+tag+'_read',#}
+{#                    course_id=submission.course_id, embed=True)|safe }}#}
+{#                    style="background:none; border:none; padding:0; color:#007bff; text-decoration:underline; cursor:pointer;">#}
+{#                {{ tag.replace('_', ' - ', 1).replace('_', ' ').title() }}#}
+{#            </button>#}
             </li>
         {% endfor %}
     </ul>
