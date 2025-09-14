@@ -184,7 +184,7 @@ def load_assignment():
     # Load models
     scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
     # Start processing
-    is_quiz = force_quiz or (assignment.type == 'quiz' and scope.can_view)
+    is_quiz = force_quiz or (assignment.type == 'quiz' and scope.can_view and not scope.can_edit)
 
     if course_id is None:
         editor_information = assignment.for_read_only_editor(student_id, is_quiz)
