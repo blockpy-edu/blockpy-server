@@ -75,7 +75,25 @@ export class AssignmentInterface {
             console.log("Killing old time checker", window['$TIME_CHECKER_ID']);
         }
         this.timeChecker = setInterval(() => {
-            this.handleTimeCheck();
+            try {
+                this.handleTimeCheck();
+            } catch (e) {
+                console.error("Failed to handle time check", e);
+                this.logEvent(
+                    "timer_error",
+                    "timer",
+                    "time_error",
+                    JSON.stringify({
+                        "error": e.toString(),
+                        "stack": e.stack
+                    }),
+                    this.assignment() ? this.assignment().url() : "",
+                    () => {}
+                )
+                $(".assignment-selector-countdown").html(
+                    "Error with timer"
+                );
+            }
         }, 5000);
         window['$TIME_CHECKER_ID'] = this.timeChecker;
     }
@@ -88,6 +106,14 @@ export class AssignmentInterface {
                 clearInterval(this.timeChecker);
                 console.log("Killing old time checker", this.timeChecker);
                 this.timeChecker = null;
+                this.logEvent(
+                        "timer_cleared",
+                        "timer",
+                        "time_clear",
+                        "",
+                        this.assignment().url(),
+                        () => {}
+                    )
             }
             return;
         }
@@ -143,6 +169,19 @@ export class AssignmentInterface {
                         "text-align": "center",
                         "z-index": "1000"
                     });
+                    this.logEvent(
+                        "timer_expired",
+                        "timer",
+                        "time_up",
+                        JSON.stringify({
+                            elapsed: elapsed,
+                            remaining: remaining,
+                            time_limit: timeLimit,
+                            start_time: startTime
+                        }),
+                        this.assignment().url(),
+                        () => {}
+                    )
                 }
 
                 $(".assignment-selector-countdown").html(

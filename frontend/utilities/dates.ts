@@ -103,7 +103,11 @@ export function formatAmount(delta: number, sign: string, coarse: boolean = fals
     let secondsDisplay = `${seconds} second${seconds!==1? 's': ''}`;
 
     if (coarse) {
-        if (delta < 60) {
+        if (delta < -30) {
+            return "Time past!";
+        } else if (delta < 1) {
+            return "At this time";
+        } else if (delta < 60) {
             return "<1 minute" + sign;
         } else if (delta < 60 * 60) {
             return minutesDisplay + sign;
