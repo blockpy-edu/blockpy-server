@@ -13,7 +13,7 @@ export interface AssignmentInterfaceJson {
     user: User;
     currentAssignmentId: ko.Observable<number>;
     assignmentGroupId: number;
-    isInstructor: boolean;
+    isInstructor: boolean | ko.Observable<boolean>;
     markCorrect: (id: number) => void;
 }
 
@@ -62,7 +62,11 @@ export class AssignmentInterface {
         this.user = params.user;
         this.currentAssignmentId = params.currentAssignmentId;
         this.assignmentGroupId = params.assignmentGroupId;
-        this.isInstructor = ko.observable(params.isInstructor);
+        if (typeof params.isInstructor === "boolean") {
+            this.isInstructor = ko.observable(params.isInstructor);
+        } else {
+            this.isInstructor = params.isInstructor;
+        }
         this.assignment = ko.observable(null);
         this.submission = ko.observable(null);
         this.markCorrect = params.markCorrect;
