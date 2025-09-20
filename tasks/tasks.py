@@ -318,27 +318,43 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
         for (submission, assignment, assignment_group) in submissions:
             history = submission.get_logs()
             filename = f"{directory}/{assignment.id}_{student.id}.json"
+            additions_per_second, cpa = copy_paste_additions(history, characters_per_second_threshold=characters_per_second_threshold)
             reports[student].append(dict(
                 assignment_id=assignment.id,
+                assignment_url=assignment.url,
+                edit_count=submission.version,
+                score=submission.full_score(),
                 duration_until_success=duration_until_success(history, filename, short_threshold=short_threshold),
-                copy_paste_additions=copy_paste_additions(history, characters_per_second_threshold=characters_per_second_threshold),
-                working_at_end=working_at_end(history, max_backstep_threshold)
+                copy_paste_additions=cpa,
+                additions_per_second=additions_per_second,
+                emoji_count=emoji_count(submission.code),
+                #working_at_end=working_at_end(history, max_backstep_threshold)
             ))
         report.update_progress(message=f"Making report for each student: {progress}/{len(students)}")
 
     report.update_progress(message="Writing out the final report")
     with open(os.path.join(directory, "red_flags.csv"), 'w', newline="") as out:
         csv_out = csv.writer(out)
-        csv_out.writerow(["Student", "Email", "Assignment", "Duration Until Success", "Copy Paste Additions", "Working at End"])
+        csv_out.writerow(["Course", "Student", "BlockPy User ID", "Email", "Assignment", "Url",
+                          "Duration Until Success", "Copy Paste Additions", "Additions Per Second", "Emoji Count", "Edit Count", "Score"])
         for student, reports in reports.items():
             for r in reports:
-                csv_out.writerow([student.name(), student.id,
-                                  r['assignment_id'], r['duration_until_success'],
-                                  r['copy_paste_additions'], r['working_at_end']])
+                csv_out.writerow([course.name,
+                                  student.name(), student.id, student.email,
+                                  r['assignment_id'], r['assignment_url'],
+                                  r['duration_until_success'],
+                                  r['copy_paste_additions'], r["additions_per_second"],
+                                  r["emoji_count"],
+                                  r['edit_count'], r['score']])
 
     report.finish(result="red_flags.csv",
                   message=f"Task finished. Checked {len(students)} students in this course.")
     return "red_flags.csv"
+
+
+def emoji_count(code):
+    # Roughly count emojis by looking for characters outside the BMP (Basic Multilingual Plane)
+    return sum(1 for c in code if ord(c) > 0xFFFF)
 
 
 def duration_until_success(history, filename, short_threshold=10):
@@ -354,13 +370,15 @@ def duration_until_success(history, filename, short_threshold=10):
             break
     if not start_time or not end_time:
         return None
-    return (end_time - start_time).total_seconds() < short_threshold
+    return (end_time - start_time).total_seconds()
 
 def copy_paste_additions(history, characters_per_second_threshold=30):
     # Find the difference between consecutive edits in terms of additive edit distance (non negative length change)
     started = False
     start_time = None
     end_time = None
+    total_additions, total_durations = 0, 0
+    spikes = 0
     previous_code, previous_time = "", None
     for log in history:
         if not started and log.event_type == 'Session.Start':
@@ -375,12 +393,14 @@ def copy_paste_additions(history, characters_per_second_threshold=30):
                 diff = difflib.ndiff(previous_code, code)
                 additions = sum(1 for d in diff if d[0] == '+')
                 duration = min(5, max(1, abs((log.date_created - previous_time).total_seconds())))
+                total_additions += additions
+                total_durations += duration
                 if additions / duration > characters_per_second_threshold:
-                    return True
+                    spikes += 1
             previous_code, previous_time = code, log.date_created
     if not start_time or not end_time:
-        return None
-    return False
+        return None, None
+    return (total_additions / total_durations if total_durations > 0 else 0, spikes)
 
 def working_at_end(history, max_backstep_threshold=5):
     # Find a series of edits between the last begin session and the last success where only the last n characters

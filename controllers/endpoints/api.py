@@ -4,7 +4,7 @@ import time
 import random
 
 import flask_security
-from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory
+from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory, render_template
 
 from flask import current_app
 from controllers.auth import get_user
@@ -198,17 +198,30 @@ def import_endpoint():
 
 # export_progsnap2
 
-@blueprint_api.route('/make_red_flag_report/<course_id>/', methods=['GET'])
-@blueprint_api.route('/make_red_flag_report/<course_id>', methods=['GET'])
+@blueprint_api.route('/make_red_flag_report/<course_id>/', methods=['GET', 'POST'])
+@blueprint_api.route('/make_red_flag_report/<course_id>', methods=['GET', 'POST'])
 def make_red_flag_report(course_id):
     short_threshold = maybe_int(request.args.get('short_threshold', 10))
     characters_per_second_threshold = maybe_int(request.args.get('characters_per_second_threshold', 30))
     max_backstep_threshold = maybe_int(request.args.get('max_backstep_threshold', 5))
     user, user_id = get_user()
     course_id = maybe_int(course_id)
-    task = tasks.make_red_flag_report(user_id, course_id, short_threshold=short_threshold,
-                                      characters_per_second_threshold=characters_per_second_threshold,
-                                      max_backstep_threshold=max_backstep_threshold)
-    location = url_for('api.task_status', task_id=task.id)
-    #return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
-    return jsonify({"task_id": task.id, "status_url": location})
+
+    if request.method == 'POST':
+        task = tasks.make_red_flag_report(user_id, course_id, short_threshold=short_threshold,
+                                          characters_per_second_threshold=characters_per_second_threshold,
+                                          max_backstep_threshold=max_backstep_threshold)
+        location = url_for('api.task_status', task_id=task.id)
+        #return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
+        return jsonify({"task_id": task.id, "status_url": location,
+                        "back_to_reports": url_for('api.make_red_flag_report', course_id=course_id)})
+    else:
+        existing_reports = sorted([report for report in Report.by_user(user_id)
+                            if report.task == "make_red_flag_report"],
+                                  key= lambda report: report.date_created,
+                                  reverse=True)
+        return render_template("tasks/make_red_flag_report.html", course_id=course_id,
+                               short_threshold=short_threshold,
+                                 characters_per_second_threshold=characters_per_second_threshold,
+                                    max_backstep_threshold=max_backstep_threshold,
+                               existing_reports=existing_reports)

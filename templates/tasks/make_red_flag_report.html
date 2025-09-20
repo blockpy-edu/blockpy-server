@@ -1,0 +1,112 @@
+{% extends 'helpers/layout.html' %}
+{% import 'helpers/navigation.html' as navigation %}
+
+{% block title %}
+Make Red Flag Report
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+
+<script type='text/javascript'>
+
+    $(document).ready(() => {
+
+    });
+
+</script>
+{% endblock %}
+
+{% block body %}
+
+    <h1>Make Red Flag Report</h1>
+    {{ navigation.navigate_course(course_id) }}
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert-warning">
+            {% for message in messages %}
+                {{ message }}<br>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <p>
+        This tool generates a "Red Flag Report", which searches for potentially problematic submissions
+        based on a variety of heuristics. It is not perfect, but it can help identify students who may need
+        additional help or attention.
+
+        <ul>
+            <li>Duration Until Success: The estimated amount of time spent writing code, until success</li>
+            <li>Copy Paste Additions: The number of sudden large code additions</li>
+            <li>Additions Per Second: The total number of characters changed, divided by the time spent coding</li>
+            <li>Emoji Count: The number of characters outside of the regular bitmap plane</li>
+            <li>Edit Count: The number of times an edit was saved to the database</li>
+            <li>Score: The final calculated score for the assignment.</li>
+        </ul>
+    </p>
+
+    <h3>Generate New Report</h3>
+
+    <!-- TODO: Remember choices between page loads -->
+    <form method="post">
+
+    <!--<div>
+        <label>
+            Short Threshold:
+            <input type="text" class="form-control" id="short_threshold" name="short_threshold"
+                value="{{ short_threshold or 10 }}">
+        </label>
+        <div class="form-text text-muted">How many estimated seconds is considered "short". We attempt to calculate how many seconds they spent actually coding, and then if it's less than this threshold, we mark it as problematic.</div>
+    </div>-->
+
+    <div>
+        <label>
+            Characters per Second Threshold:
+            <input type="text" class="form-control" id="characters_per_second_threshold" name="characters_per_second_threshold"
+                value="{{ characters_per_second_threshold or 30 }}">
+        </label>
+        <div class="form-text text-muted">How many characters students can type per second, before it is considered unusual. Useful for detecting large copy/paste additions to the code, since the average student can't normally type that fast.</div>
+    </div>
+
+    <!--<div>
+        <label>
+            Max Backstep Threshold:
+            <input type="text" class="form-control" id="characters_per_second_threshold" name="characters_per_second_threshold"
+                value="{{ characters_per_second_threshold or 30 }}">
+        </label>
+        <div class="form-text text-muted">How many characters students can type per second, before it is considered unusual.</div>
+    </div>-->
+
+    <button class="btn btn-outline-secondary" id="generate-report" type="submit">Generate report</button>
+    <small class="form-text text-muted">Might take a while.</small>
+    </form>
+
+    <h3>Existing Reports</h3>
+
+    {% for report in existing_reports %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    {{ report.date_created }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    <strong>Created:</strong> <span title="{{ report.date_created }}">{{ report.date_created }}</span><br>
+                    <strong>Started:</strong> <span title="{{ report.date_started }}">{{ report.date_started }}</span><br>
+                    <strong>Finished:</strong> <span title="{{ report.date_finished }}">{{ report.date_finished }}</span><br>
+                    <strong>User: </strong> <span>{{ report.owner.name() }} ({{ report.owner_id }})</span><br>
+                    <strong>Status:</strong> {{ report.status }}<br>
+                    <strong>Message:</strong> {{ report.message }}<br>
+                    <a href="{{ url_for('api.report', report_id=report.id) }}/" class="btn btn-outline-secondary" target="_blank">View Report</a>
+                </p>
+            </div>
+        </div>
+        <br>
+    {% endfor %}
+
+{% endblock %}
