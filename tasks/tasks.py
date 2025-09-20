@@ -312,25 +312,29 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
 
     report.update_progress(message=f"Making report for each student: 0/{len(students)}")
     reports = {}
-    for progress, (role, student) in enumerate(students):
-        submissions = course.get_users_submitted_assignments_grouped(student.id)
-        reports[student] = []
-        for (submission, assignment, assignment_group) in submissions:
-            history = submission.get_logs()
-            filename = f"{directory}/{assignment.id}_{student.id}.json"
-            additions_per_second, cpa = copy_paste_additions(history, characters_per_second_threshold=characters_per_second_threshold)
-            reports[student].append(dict(
-                assignment_id=assignment.id,
-                assignment_url=assignment.url,
-                edit_count=submission.version,
-                score=submission.full_score(),
-                duration_until_success=duration_until_success(history, filename, short_threshold=short_threshold),
-                copy_paste_additions=cpa,
-                additions_per_second=additions_per_second,
-                emoji_count=emoji_count(submission.code),
-                #working_at_end=working_at_end(history, max_backstep_threshold)
-            ))
-        report.update_progress(message=f"Making report for each student: {progress}/{len(students)}")
+    try:
+        for progress, (role, student) in enumerate(students):
+            submissions = course.get_users_submitted_assignments_grouped(student.id)
+            reports[student] = []
+            for (submission, assignment, assignment_group) in submissions:
+                history = submission.get_logs()
+                filename = f"{directory}/{assignment.id}_{student.id}.json"
+                additions_per_second, cpa = copy_paste_additions(history, characters_per_second_threshold=characters_per_second_threshold)
+                reports[student].append(dict(
+                    assignment_id=assignment.id,
+                    assignment_url=assignment.url,
+                    edit_count=submission.version,
+                    score=submission.full_score(),
+                    duration_until_success=duration_until_success(history, filename, short_threshold=short_threshold),
+                    copy_paste_additions=cpa,
+                    additions_per_second=additions_per_second,
+                    emoji_count=emoji_count(submission.code),
+                    #working_at_end=working_at_end(history, max_backstep_threshold)
+                ))
+            report.update_progress(message=f"Making report for each student: {progress}/{len(students)}")
+    except Exception as e:
+        report.error("Task Error: " + str(e))
+        raise
 
     report.update_progress(message="Writing out the final report")
     with open(os.path.join(directory, "red_flags.csv"), 'w', newline="") as out:
