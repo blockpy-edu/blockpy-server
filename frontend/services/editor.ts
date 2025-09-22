@@ -19,6 +19,7 @@ export function launchEditor(assignment: Assignment, submission: Submission) {
         submission: submission ? submission.toJson(): null,
         // Matches JWT_JSON_KEY, which defaults to "access_token"
         access_token: accessToken,
+        display_seed: submission ? submission.id : null
     };
 
     formData.assignment.forked_id = assignment.id;

@@ -80,7 +80,8 @@ def make_readonly_form(assignment, submission, is_grader):
     data = {
         "assignment": assignment.encode_json(),
         "submission": submission.encode_json(),
-        "user": {"role": "owner" if is_grader else "student"}
+        "user": {"role": "owner" if is_grader else "student"},
+        "display_seed": submission.id,
     }
     data['assignment']['forked_id'] = assignment.id
     data['assignment']['forked_version'] = assignment.version
