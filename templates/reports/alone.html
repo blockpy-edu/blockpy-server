@@ -9,6 +9,26 @@
     <script>
     URLS_UPDATE_SUBMISSION = "{{ url_for('blockpy.update_submission') }}";
     let assignments = [], submissions = [];
+
+    let loggedInUser = {{ viewer.encode_json()|tojson }};
+    let userIds = {{  request.values.get('user_ids')|tojson }} || frontend.getLocalStorage("BLOCKPY_SERVER_USERIDS", "");
+    let assignmentIds = {{  request.values.get('assignment_ids')|tojson }} || frontend.getLocalStorage("BLOCKPY_SERVER_ASSIGNMENTIDS", "first");
+
+    $(function() {
+        server = new frontend.Server({{ course_id|tojson }}, {
+        }, {
+            users: [loggedInUser]
+        });
+        mainModel = {
+            pageCourseId: {{ course_id|tojson }},
+            userIds: userIds,
+            assignmentIds: assignmentIds,
+            server: server,
+            user: loggedInUser,
+            submissions: []
+        }
+        ko.applyBindings(mainModel);
+    });
     </script>
 {% endblock %}
 

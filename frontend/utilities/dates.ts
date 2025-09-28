@@ -16,6 +16,15 @@ export function isSameDay(first: Date, second: Date) {
         first.getFullYear() === second.getFullYear();
 }
 
+export function smartHandleDate(date: string|number): string {
+    if (typeof date === 'string') {
+        if (date.includes("T")) {
+            return (new Date(date+"Z")).getTime().toString();
+        }
+    }
+    return date.toString();
+}
+
 /**
  * Helper function to parse a date/time string and rewrite it as something
  * more human readable.
@@ -57,7 +66,7 @@ export function prettyPrintDateTimeString(timeString: string): string {
         minutes = timeString.slice(11, 13),
         seconds = timeString.slice(13, 15);*/
     // TODO: Handle timezones correctly
-    return prettyPrintDateTime(parseInt(timeString, 10));
+    return prettyPrintDateTime(parseInt(smartHandleDate(timeString), 10));
 }
 
 export function prettyPrintDate(timeString: string): string {
@@ -65,7 +74,7 @@ export function prettyPrintDate(timeString: string): string {
         return "Undefined Time";
     }
     let now = new Date();
-    let past = new Date(parseInt(timeString, 10));
+    let past = new Date(parseInt(smartHandleDate(timeString), 10));
     if (isSameDay(now, past)) {
         return "Today";
     } else {
@@ -84,7 +93,7 @@ export function prettyPrintTime(timeString: string): string {
     if (timeString === undefined) {
         return "Undefined Time";
     }
-    let past = new Date(parseInt(timeString, 10));
+    let past = new Date(parseInt(smartHandleDate(timeString), 10));
     return past.toLocaleTimeString();
 }
 
@@ -141,8 +150,8 @@ export function formatDuration(earlier: string, later: string) {
     if (earlier === null) {
         return "Never";
     }
-    let timeEarlier = new Date(parseInt(earlier, 10));
-    let timeLater = later === null ? new Date() : new Date(parseInt(later, 10));
+    let timeEarlier = new Date(parseInt(smartHandleDate(earlier), 10));
+    let timeLater = later === null ? new Date() : new Date(parseInt(smartHandleDate(later), 10));
     let delta = Math.abs(timeLater.getTime() - timeEarlier.getTime())/1000;
     let sign = timeLater.getTime() > timeEarlier.getTime() ? ' earlier' : ' later';
 

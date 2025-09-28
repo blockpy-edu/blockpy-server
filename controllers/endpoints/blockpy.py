@@ -475,7 +475,8 @@ def view_submission():
     return render_template("reports/alone.html", embed=embed,
                            submission=submission, assignment=submission.assignment,
                            is_grader=is_grader, tags=tags, has_reviews=has_reviews,
-                           user_id=submission.user_id, course_id=submission.course_id)
+                           user_id=submission.user_id, course_id=submission.course_id,
+                           viewer=viewer)
 
 
 @blueprint_blockpy.route('/update_submission/', methods=['GET', 'POST'])

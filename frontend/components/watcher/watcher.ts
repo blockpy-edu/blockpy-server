@@ -132,22 +132,26 @@ export class SubmissionState {
             case "Run.Program":
                 this.lastRan = log.when();
                 let message = "";
-                try {
-                    const data = JSON.parse(log.message());
-                    if ("output" in data) {
-                        const output = JSON.parse(data['output']);
-                        const outputBody = output.map((line: any) => `<code>${line.type}: ${line.contents}</code>`).join("\n");
-                        message += "<strong>Execution Output:</strong><pre>"+outputBody+"</pre>";
+                if (log.category() === "ProgramErrorOutput") {
+                    message = `<strong>Runtime Error</strong><div>${log.message()}</div>`;
+                } else {
+                    try {
+                        const data = JSON.parse(log.message());
+                        if ("output" in data) {
+                            const output = JSON.parse(data['output']);
+                            const outputBody = output.map((line: any) => `<code>${line.type}: ${line.contents}</code>`).join("\n");
+                            message += "<strong>Execution Output:</strong><pre>" + outputBody + "</pre>";
+                        }
+                        if ("errors" in data) {
+                            const errors = JSON.parse(data['errors']);
+                            const errorBody = errors.map((error: any) => `<code>${error}</code>`).join("\n");
+                            message += "<strong>Execution Errors:</strong><pre>" + errorBody + "</pre>";
+                        }
+                        message += `<strong>Run Details</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } catch (e) {
+                        console.error(e);
+                        message = `<strong>Run Details</strong><pre>${log.message()}</pre>`;
                     }
-                    if ("errors" in data) {
-                        const errors = JSON.parse(data['errors']);
-                        const errorBody = errors.map((error: any) => `<code>${error}</code>`).join("\n");
-                        message += "<strong>Execution Errors:</strong><pre>"+errorBody+"</pre>";
-                    }
-                    message += `<strong>Run Details</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
-                } catch (e) {
-                    console.error(e);
-                    message = `<strong>Run Details</strong><pre>${log.message()}</pre>`;
                 }
                 this.system = `${message}`;
                 break;
@@ -284,14 +288,15 @@ export class SubmissionHistory {
         let optGroup: JQuery<JQuery.Node> = null;
         for (i=0; i <this.states().length; i+= 1) {
             let entry: Log = this.states()[i].log;
-            let formattedDate = prettyPrintDate(entry.clientTimestamp());
+            let when = entry.clientTimestamp() || entry.dateCreated() || "";
+            let formattedDate = prettyPrintDate(when);
             if (optGroup === null || optGroup.attr("label") != formattedDate) {
                 optGroup = $("<optgroup></optgroup>");
                 optGroup.attr("label", formattedDate);
                 selector.append(optGroup);
             }
             let eventType = REMAP_EVENT_TYPES[entry.eventType()] || entry.eventType();
-            let displayed = prettyPrintTime(entry.clientTimestamp()) +" - "+eventType;
+            let displayed = prettyPrintTime(when) +" - "+eventType;
             let option = $("<option></option>", {text: displayed});
             option.attr("value", i);
             optGroup.append(option);

@@ -68,8 +68,14 @@ export const REMAP_EVENT_TYPES: Record<string, string> = {
     "Session.Start": "Began session",
     "X-IP.Change": "Changed IP address",
     "File.Edit": "Edited code",
-    "File.Create": "Started assignment",
+    "File.Create": "Created submission",
     "Run.Program": "Ran program",
     "Compile.Error": "Syntax error",
-    "X-Submission.LMS": "Updated grade"
+    "X-Submission.LMS": "Updated grade",
+    "start_timer": "Started timer",
+    "X-View.Submission": "Viewed submission",
+    "X-Quiz.Grade.Failure": "Failed while grading quiz",
+    "error": "System Error",
+    "extend_time": "Instructor Extended Time Limit",
+    "timer_expired": "Timer Expired (Exam Locked)"
 };
