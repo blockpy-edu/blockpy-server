@@ -217,7 +217,7 @@ class Course(Base):
         if by_type is not None:
             query = query.filter(models.Assignment.type == by_type)
         return (query.order_by(models.Assignment.name) # , models.AssignmentGroupMembership.position)
-                     .distinct(models.Assignment.id, models.AssignmentGroup.id)
+                     .distinct()
                 )
 
     def get_assignments_grouped(self):
