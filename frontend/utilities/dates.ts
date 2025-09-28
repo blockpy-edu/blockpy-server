@@ -19,6 +19,10 @@ export function isSameDay(first: Date, second: Date) {
 export function smartHandleDate(date: string|number): string {
     if (typeof date === 'string') {
         if (date.includes("T")) {
+            if (date.includes("+")) {
+                // Handle ISO 8601 format with timezone offset
+                return (new Date(date)).getTime().toString();
+            }
             return (new Date(date+"Z")).getTime().toString();
         }
     }
