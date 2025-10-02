@@ -314,7 +314,7 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
 
     report.update_progress(message="Getting all the learners in the course.")
     course = Course.by_id(target_course)
-    students = course.get_users(roles=['learner'])
+    students = course.get_users(roles=['learner', 'instructor', 'grader'])
 
     directory = report.get_report_folder()
     ensure_dirs(directory)
@@ -502,6 +502,17 @@ def duration_until_success(history, filename, short_threshold=10):
     return total
     #return (end_time - start_time).total_seconds()
 
+def _added_chars(a: str, b: str) -> int:
+    # Count only inserted text; deletions don't reduce the count.
+    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    add = 0
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == 'insert':
+            add += (j2 - j1)
+        elif tag == 'replace':
+            add += (j2 - j1)  # inserted side of the replacement counts as additions
+    return add
+
 def copy_paste_additions(history, characters_per_second_threshold=30):
     # Find the difference between consecutive edits in terms of additive edit distance (non negative length change)
     started = False
@@ -520,8 +531,7 @@ def copy_paste_additions(history, characters_per_second_threshold=30):
         elif log.event_type in ('File.Edit', 'File.Create'):
             code = log.message
             if previous_time is not None:
-                diff = difflib.ndiff(previous_code, code)
-                additions = sum(1 for d in diff if d[0] == '+')
+                additions = _added_chars(previous_code, code)
                 duration = min(5, max(1, abs((log.date_created - previous_time).total_seconds())))
                 total_additions += additions
                 total_durations += duration
