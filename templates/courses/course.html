@@ -64,6 +64,7 @@ function renameCourse() {
     <a href="{{ url_for('courses.check_similar', course_id=course.id) }}" class='btn btn-outline-secondary'>Check for Similar Submissions</a> Review all students' submissions for similarity with other submissions (across all courses).<br><br>
     <a href="{{ url_for('courses.bulk_groups', course_id=course.id) }}" class='btn btn-outline-secondary'>Bulk Group Editor</a> Experimental interface to allow bulk download/upload of student submissions with assignment groups.<br><br>
         <a href="{{ url_for('grading.review_editor', course_id=course.id) }}" class='btn btn-outline-secondary'>Review Editor</a> Manually grade submissions on specific submissions.<br><br>
+    <a href="{{ url_for('courses.manage_time', course_id=course.id) }}" class='btn btn-outline-secondary'>Manage Time Limits</a> Add, edit, and remove extra time for students on exams.<br><br>
     </div>
     <h3>Your Assignments</h3>
     <small>Not visible to anyone else</small><br>
