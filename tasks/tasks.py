@@ -314,7 +314,7 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
 
     report.update_progress(message="Getting all the learners in the course.")
     course = Course.by_id(target_course)
-    students = course.get_users(roles=['learner', 'instructor', 'grader'])
+    students = course.get_users(roles=['learner'])
 
     directory = report.get_report_folder()
     ensure_dirs(directory)
