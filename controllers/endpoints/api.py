@@ -210,7 +210,8 @@ def make_red_flag_report(course_id):
     if request.method == 'POST':
         task = tasks.make_red_flag_report(user_id, course_id, short_threshold=short_threshold,
                                           characters_per_second_threshold=characters_per_second_threshold,
-                                          max_backstep_threshold=max_backstep_threshold)
+                                          max_backstep_threshold=max_backstep_threshold,
+                                          base_url=url_for("blockpy.view_submission", _external=True, embed=False))
         location = url_for('api.task_status', task_id=task.id)
         #return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
         return jsonify({"task_id": task.id, "status_url": location,

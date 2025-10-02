@@ -1,4 +1,5 @@
 import random
+from statistics import mean, stdev
 import time
 import json
 import os
@@ -8,10 +9,12 @@ import difflib
 from itertools import combinations, zip_longest
 from dataclasses import asdict
 
+from emoji import emoji_count
 from thefuzz import fuzz
-from flask import current_app, render_template
+from flask import current_app, render_template, url_for
 
 from common.filesystem import ensure_dirs
+from common.urls import append_parameters
 from controllers.helpers import make_log_entry
 from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
@@ -23,7 +26,7 @@ from models.report import Report
 from models.assignment import Assignment
 from models.submission import Submission
 from models.course import Course
-from models.enums import GradingStatuses
+from models.enums import GradingStatuses, AssignmentTypes
 from tasks.similarity_report import make_report
 
 ctx = current_app.app_context()
@@ -289,8 +292,13 @@ def check_similarity_simple(user_id, assignment_id, exclude_courses, target_cour
     return index_file
 
 
+CODING_ASSIGNMENTS = (AssignmentTypes.PYTHON, AssignmentTypes.BLOCKPY, AssignmentTypes.TYPESCRIPT)
+
+# Generate a RFR Index for each student, sort students by that, and then show all their submissions
+# that had a Red Flag, ordering the assignments by the number of red flags
+
 @current_app.huey.context_task(ctx, context=True)
-def make_red_flag_report(user_id, target_course, short_threshold, characters_per_second_threshold, max_backstep_threshold, task=None):
+def make_red_flag_report(user_id, target_course, short_threshold, characters_per_second_threshold, max_backstep_threshold, base_url="", task=None):
     """
 
     :param target_course:
@@ -298,7 +306,8 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
     """
     report = Report.new('make_red_flag_report', json.dumps(
         dict(target_course=target_course, version=1, short_threshold=short_threshold,
-             characters_per_second_threshold=characters_per_second_threshold, max_backstep_threshold=max_backstep_threshold)
+             characters_per_second_threshold=characters_per_second_threshold, max_backstep_threshold=max_backstep_threshold,
+             base_url=base_url)
     ), owner_id=user_id, course_id=target_course)
 
     report.start()
@@ -316,6 +325,9 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
     try:
         for progress, (role, student) in enumerate(students):
             submissions = course.get_users_submitted_assignments_grouped(student.id)
+            # Filter for only coding problems that have been edited at least once
+            submissions = [(s, a, g) for (s, a, g) in submissions if a.type in CODING_ASSIGNMENTS
+                           and s.version > 0]
             reports[student] = []
             for (submission, assignment, assignment_group) in submissions:
                 try:
@@ -323,6 +335,7 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
                     filename = f"{directory}/{assignment.id}_{student.id}.json"
                     additions_per_second, cpa = copy_paste_additions(history, characters_per_second_threshold=characters_per_second_threshold)
                     reports[student].append(dict(
+                        submission_id=submission.id,
                         assignment_id=assignment.id,
                         assignment_url=assignment.url,
                         edit_count=submission.version,
@@ -330,7 +343,7 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
                         duration_until_success=duration_until_success(history, filename, short_threshold=short_threshold),
                         copy_paste_additions=cpa,
                         additions_per_second=additions_per_second,
-                        emoji_count=emoji_count(submission.code),
+                        emoji_count=count_all_emojis(history),
                         #working_at_end=working_at_end(history, max_backstep_threshold)
                     ))
                 except Exception as e:
@@ -341,20 +354,39 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
         report.error("Task Error: " + str(e))
         raise
 
+    report.update_progress(message="Trying to standardize columns")
+    NUMERIC_COLUMNS = ["duration_until_success", "copy_paste_additions",
+                       "additions_per_second", "emoji_count", "edit_count"]
+    NUMERIC_LABELS = ["Duration Until Success", "Copy Paste Additions",
+                      "Additions Per Second", "Emoji Count", "Edit Count", ]
+    standardized = standardize_columns(reports, NUMERIC_COLUMNS)
+
     report.update_progress(message="Writing out the final report")
     with open(os.path.join(directory, "red_flags.csv"), 'w', newline="") as out:
         csv_out = csv.writer(out)
-        csv_out.writerow(["Course", "Student", "BlockPy User ID", "Email", "Assignment", "Url",
-                          "Duration Until Success", "Copy Paste Additions", "Additions Per Second", "Emoji Count", "Edit Count", "Score"])
-        for student, reports in reports.items():
-            for r in reports:
+        csv_out.writerow(["Course", "Student", "BlockPy User ID", "Email", "Assignment", "Url", "Link",
+                          "Red Flag Index", "Reasons",
+                          *NUMERIC_LABELS,
+                          *[f"Standardized {l}" for l in NUMERIC_LABELS],
+                          "Score"])
+
+        for student, rs in reports.items():
+            for r in rs:
+                link = append_parameters(base_url, submission_id=r['submission_id'])
+                url = r['assignment_url']
+                numeric_row = [r[c] for c in NUMERIC_COLUMNS]
+                standardized_row = standardized.get(student, {}).get(url, {})
+                standardized_values = [standardized_row.get(c) for c in NUMERIC_COLUMNS]
+                reasons, red_flag_index = identify_red_flags(r, standardized_row)
                 csv_out.writerow([course.name,
                                   student.name(), student.id, student.email,
-                                  r['assignment_id'], r['assignment_url'],
-                                  r['duration_until_success'],
-                                  r['copy_paste_additions'], r["additions_per_second"],
-                                  r["emoji_count"],
-                                  r['edit_count'], r['score']])
+                                  r['assignment_id'], url,
+                                  link,
+                                  red_flag_index,
+                                  "|".join(reasons),
+                                  *numeric_row,
+                                  *standardized_values,
+                                  r['score']])
     if errors:
         with open(os.path.join(directory, "errors.txt"), 'w') as out:
             out.write("\n".join(errors))
@@ -362,26 +394,113 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
                   message=f"Task finished. Checked {len(students)} students in this course.")
     return "red_flags.csv"
 
+class RedFlagIndexer:
+    def __init__(self):
+        self.index = 0
+        self.reasons = []
 
-def emoji_count(code):
-    # Roughly count emojis by looking for characters outside the BMP (Basic Multilingual Plane)
-    return sum(1 for c in code if ord(c) > 0xFFFF)
+    def add(self, reason, index_increase=1):
+        self.reasons.append(reason)
+        self.index += index_increase
+
+    def get(self):
+        return self.reasons, self.index
+
+def identify_red_flags(numeric_row, standardized_row):
+    red_flags = RedFlagIndexer()
+    if standardized_row["duration_until_success"] is not None:
+        if standardized_row["duration_until_success"] < -1:
+            red_flags.add("Very Fast Success")
+        elif standardized_row["duration_until_success"] < -2:
+            red_flags.add("Extremely Fast Success", 2)
+    if numeric_row["copy_paste_additions"] is not None:
+        if numeric_row["copy_paste_additions"] == 1:
+            red_flags.add("Addition Spike")
+        elif numeric_row["copy_paste_additions"] > 1:
+            red_flags.add("Multiple Addition Spikes", 2)
+    if standardized_row["additions_per_second"] is not None:
+        if standardized_row["additions_per_second"] > 2:
+            red_flags.add("Massive Edit", 2)
+        elif standardized_row["additions_per_second"] > 1:
+            red_flags.add("Large Edit")
+    if standardized_row["edit_count"] is not None:
+        if standardized_row["edit_count"] < -2:
+            red_flags.add("Very Few Edits", 2)
+        elif standardized_row["edit_count"] < -1:
+            red_flags.add("Few Edits")
+    if numeric_row['emoji_count'] > 0:
+        red_flags.add("Used Emojis")
+
+    return red_flags.get()
+
+def standardize_columns(reports, numeric_columns):
+    column_submits = {col: {} for col in numeric_columns}
+    for student, rs in reports.items():
+        for r in rs:
+            for col in numeric_columns:
+                if r.get(col) is None:
+                    continue
+                url = r['assignment_url']
+                if url not in column_submits[col]:
+                    column_submits[col][url] = []
+                column_submits[col][url].append(r.get(col, 0) or 0)
+                # if r.get(col) is not None:
+                #     column_totals[col] += r.get(col, 0) or 0
+                #     column_counts[col] += 1
+
+    means = {col: {} for col in numeric_columns}
+    stds = {col: {} for col in numeric_columns}
+    for column, rs in column_submits.items():
+        for url, values in rs.items():
+            means[column][url] = mean(values) if values else None
+            stds[column][url] = stdev(values) if len(values) > 1 else None
+
+    standardized = {}
+    for student, rs in reports.items():
+        standardized[student] = {}
+        for r in rs:
+            url = r['assignment_url']
+            standardized[student][url] = {}
+            for col in numeric_columns:
+                m = means.get(col, {}).get(url)
+                s = stds.get(col, {}).get(url)
+                a = r.get(col)
+                if m is None or s is None or a is None:
+                    standardized[student][url][col] = None
+                else:
+                    standardized[student][url][col] = (a - m) / s if s > 0 else 0
+
+    return standardized
+
+def count_all_emojis(history):
+    total = 0
+    for log in history:
+        if log.event_type == 'File.Edit':
+            total += emoji_count(log.message)
+    return total
 
 
 def duration_until_success(history, filename, short_threshold=10):
     started = False
     start_time = None
     end_time = None
+    current, total = None, 0
     for log in history:
         if not started and log.event_type == 'Session.Start':
             started = True
             start_time = log.date_created
+            current = start_time
         elif log.event_type.lower() == 'intervention' and log.category.lower() == 'complete':
             end_time = log.date_created
             break
+        else:
+            diff = max(0, min((current - log.date_created).seconds, short_threshold))
+            total += diff
+            current = log.date_created
     if not start_time or not end_time:
         return None
-    return (end_time - start_time).total_seconds()
+    return total
+    #return (end_time - start_time).total_seconds()
 
 def copy_paste_additions(history, characters_per_second_threshold=30):
     # Find the difference between consecutive edits in terms of additive edit distance (non negative length change)
@@ -486,7 +605,7 @@ def quiz_report(user_id, assignment_id, course_id,
     report.update_progress(message="Filtering for the given courses")
     included = [submission for submission in submissions if submission.course_id in adjacent_courses]
     report.update_progress(message="Filtering for the given roles")
-    print(included, included_roles, adjacent_courses)
+    # print(included, included_roles, adjacent_courses)
     submissions = []
     for submission in included:
         if 'anonymous' not in included_roles and submission.user.anonymous:

@@ -54,6 +54,7 @@ edit_distance
 click
 webassets
 python-dateutil
+emoji
 
 scipy
 

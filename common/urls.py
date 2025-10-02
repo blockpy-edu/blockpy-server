@@ -14,3 +14,12 @@ def normalize_url(url):
     parts = parts._replace(query=_query, path=_path, scheme='', fragment='')
     url = "/".join((parts.netloc, _path, _query))
     return quote_plus(url)
+
+def append_parameters(url: str, **parameters) -> str:
+    if not parameters:
+        return url
+    url_parts = list(urlparse(url))
+    query = dict(parse_qsl(url_parts[4]))
+    query.update(parameters)
+    url_parts[4] = urlencode(query)
+    return urlparse(url)._replace(query=urlencode(query)).geturl()
