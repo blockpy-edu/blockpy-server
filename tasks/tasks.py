@@ -484,7 +484,7 @@ def duration_until_success(history, filename, short_threshold=10):
     started = False
     start_time = None
     end_time = None
-    current, total = None, 0
+    current, total = history[0].date_created if history else None, 0
     for log in history:
         if not started and log.event_type == 'Session.Start':
             started = True
