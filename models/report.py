@@ -78,6 +78,7 @@ class Report(Base):
     assignment: Mapped["Assignment"] = db.relationship(back_populates="reports")
     owner: Mapped["User"] = db.relationship(back_populates="reports")
     course: Mapped["Course"] = db.relationship(back_populates="reports")
+    report_logs: Mapped[list["ReportLog"]] = db.relationship(back_populates="report")
 
     def encode_json(self):
         return {
