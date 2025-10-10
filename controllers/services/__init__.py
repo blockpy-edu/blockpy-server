@@ -47,6 +47,7 @@ class PermissionScope:
 FULL = PermissionScope(5, 'grader', can_view=True, can_edit=True, can_grade=True)
 DEVELOPER = PermissionScope(4, 'developer', can_view=True, can_edit=True, can_grade=False)
 GRADER = PermissionScope(3, 'grader', can_view=True, can_edit=False, can_grade=True)
+GRADER_SUBMISSION = PermissionScope(3, 'grader', can_view=True, can_edit=True, can_grade=True)
 STUDENT_ASSIGNMENT = PermissionScope(2, 'student', can_view=True, can_edit=False, can_grade=False)
 STUDENT_SUBMISSION = PermissionScope(2, 'student', can_view=True, can_edit=True, can_grade=False)
 ANONYMOUS = PermissionScope(1, 'anonymous', can_view=True, can_edit=False, can_grade=False)
@@ -145,19 +146,21 @@ class ValidUserPermissionLayer(PermissionLayer):
         assignment = self.check_resource_exists(assignment, "Assignment", submission.assignment_id)
         # For non-hidden assignments,
         if not assignment.hidden:
-            # If the user is a grader (e.g., TA) in the course, they can see the submission.
-            if self.user.is_grader(submission_course_id):
-                return GRADER, submission
-            # Also if they own the submission
-            elif self.user.id == submission.user_id:
+            # If they own the submission
+            if self.user.id == submission.user_id:
                 # Still have to pass security checks
                 if assignment.is_allowed(safe_request.remote_addr):
                     possible_passcode = safe_request.get_maybe_str('passcode')
                     if assignment.passcode_fails(possible_passcode):
                         self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
+                    if self.user.is_grader(submission_course_id):
+                        return GRADER_SUBMISSION, submission
                     return STUDENT_SUBMISSION, submission
                 else:
                     self.abort_with_error("You cannot access this assignment from your current location: " + safe_request.remote_addr, 403)
+            # If the user is a grader (e.g., TA) in the course, they can see the submission.
+            elif self.user.is_grader(submission_course_id):
+                return GRADER, submission
             elif assignment.public:
                 if assignment.is_allowed(safe_request.remote_addr):
                     possible_passcode = safe_request.get_maybe_str('passcode')
