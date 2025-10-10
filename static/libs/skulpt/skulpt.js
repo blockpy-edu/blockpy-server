@@ -37711,8 +37711,8 @@ function check_special_type_attr(type, value, pyName) {
 var Sk = {}; // jshint ignore:line
 
 Sk.build = {
-    githash: "fe72926a313469811a07c640344fbaf46157af39",
-    date: "2025-08-08T19:36:19.974Z"
+    githash: "52c36aa2e87307cb1fdd94988be062375ff271f5",
+    date: "2025-10-09T19:48:30.098Z"
 };
 
 /**
