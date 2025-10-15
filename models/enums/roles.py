@@ -51,6 +51,7 @@ class UserRoles(StrEnum):
     PROCTOR = 'proctor'
     CONTENT_DEVELOPER = "contentdeveloper"
     NONE = "none"
+    ADMINISTRATOR = 'administrator' # Not an alias, distinct role for LTI
 
 
 USER_DISPLAY_ROLES = {
@@ -61,14 +62,15 @@ USER_DISPLAY_ROLES = {
     UserRoles.ADOPTER: 'Adopter',
     UserRoles.PROCTOR: 'Proctor',
     UserRoles.CONTENT_DEVELOPER: 'Content Developer',
-    UserRoles.NONE: 'None'
+    UserRoles.NONE: 'None',
+    UserRoles.ADMINISTRATOR: 'LTI System Administrator',
 }
 
 
 class RolePermissions:
     ALL_ROLES = [UserRoles.ADMIN, UserRoles.INSTRUCTOR, UserRoles.LEARNER,
                  UserRoles.TA, UserRoles.ADOPTER, UserRoles.PROCTOR,
-                 UserRoles.CONTENT_DEVELOPER]
+                 UserRoles.CONTENT_DEVELOPER, UserRoles.ADMINISTRATOR]
     LEARNER_ROLES = [UserRoles.ADMIN, UserRoles.LEARNER,]
     GRADER_ROLES = [UserRoles.ADMIN, UserRoles.INSTRUCTOR, UserRoles.TA,]
     STAFF_ROLES = [UserRoles.ADMIN, UserRoles.INSTRUCTOR, UserRoles.TA,
