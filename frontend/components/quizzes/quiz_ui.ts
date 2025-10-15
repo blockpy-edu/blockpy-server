@@ -202,7 +202,7 @@ export const QUIZZER_HTML = `
                             asPreamble: true,
                             user: user"></reader>
         </div>
-        <div data-bind="if: quiz()?.readingId() && ['SUBMISSION', 'QUIZ_EDITOR'].includes(editorMode()) && !asStudent()">
+        <div data-bind="if: quiz()?.readingId() && !asStudent()">
             <strong>Reading is hidden; Click "View as Student" to preview the Reading.</strong>
             <hr>
         </div>
