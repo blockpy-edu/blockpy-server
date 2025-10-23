@@ -134,7 +134,7 @@ def queue_grade_submission(previous_report, attempts, force_update, overwrite_hu
         report.update_progress(message="Loaded the submission.")
         course = Course.by_id(previous_report.course_id)
         report.update_progress(message="Loaded the course.")
-        student = User.by_id(submission.user)
+        # student = User.by_id(submission.user)
         report.update_progress(message="Loaded the student.")
         grade_post = report.create_grade_post(submission, course,
                                               force_update, overwrite_human_grades,
