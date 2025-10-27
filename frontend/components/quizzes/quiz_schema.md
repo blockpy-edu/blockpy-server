@@ -50,6 +50,7 @@ Remember, these objects are in a LIST.
 * `"name"`: An optional string name for the pool. I usually name the questions stuff like `PoolName_1` and then the pool `PoolName`, using CapitalCamelCase.
 * `"amount"`: The number of questions to select from this pool for each attempt.
 * `"questions"`: A list of strings representing the IDs of the questions (eg.g., `["PoolName_1", "PoolName_2"]` or whatever you're calling them.)
+* `"group"`: An optional string that allows multiple pools to "vary together". When pools share the same group name, they will use the same seed for question selection, ensuring their random choices are coordinated. This is useful for multi-question scenarios where you want to show related content (e.g., a code block in one pool and follow-up questions in another pool). Pools without a group field work independently as before.
 
 ### Questions Instructions
 
