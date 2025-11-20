@@ -18,7 +18,7 @@ from werkzeug.utils import secure_filename
 
 import models
 from common.maybe import maybe_int
-from common.text import make_flavored_uuid_generator
+from common.text import make_flavored_uuid_generator, sanitize_for_pg_text
 from common.databases import get_enum_values
 from models.generics.definitions import LatePolicy
 from models.assignment import Assignment
@@ -387,7 +387,7 @@ class Submission(EnhancedBase):
         elif filename == "answer.py":
             if part_id:
                 code = inject_code_part(self.code, code, part_id)
-            self.code = code
+            self.code = sanitize_for_pg_text(code)
         self.version += 1
         self.assignment_version = self.assignment.version
         db.session.commit()

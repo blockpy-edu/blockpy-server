@@ -357,7 +357,9 @@ def share_url(target=None):
     assignment_group_id = maybe_int(assignment_group_id)
     assignment_id = maybe_int(assignment_id)
     user_id = maybe_int(user_id)
-    if None in (course_id, assignment_group_id, assignment_id, user_id):
+    if assignment_group_id is None and None not in (course_id, assignment_id, user_id):
+        verb = "submission"
+    elif None in (course_id, assignment_group_id, assignment_id, user_id):
         return ajax_failure(f"Target has invalid value inside ({course_id}, {assignment_group_id}, {assignment_id}, {user_id}).")
     # Check course permissions
     if not viewer.is_grader(course_id):

@@ -1,4 +1,5 @@
 import uuid
+import re
 from typing import Union
 from hashlib import sha256
 
@@ -34,3 +35,19 @@ def make_flavored_uuid_generator(flavor: str):
         return f"{flavor}-{uuid.uuid4()}"
 
     return generate_flavored_uuid
+
+CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x0c\x0e-\x1f]")
+
+def sanitize_for_pg_text(input_string: str) -> str:
+    """
+    Sanitize a string for safe storage in PostgreSQL text fields by removing control characters.
+
+    Args:
+        input_string (str): The input string to sanitize.
+
+    Returns:
+        str: The sanitized string with control characters removed.
+    """
+    if input_string is None:
+        return None
+    return CONTROL_CHARS_RE.sub("", input_string)

@@ -6,11 +6,13 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum
 from sqlalchemy_utc import utcnow
 
 import models
+from common.text import sanitize_for_pg_text
 from models.generics.models import db, ma
 from models.generics.base import Base
 from models.enums import SubmissionLogEvent
@@ -84,9 +86,14 @@ class SubmissionLog(Base):
                             assignment_id=assignment_id, assignment_version=assignment_version,
                             course_id=course_id, subject_id=subject_id,
                             event_type=event_type, file_path=file_type, category=category, label=label,
-                            message=message, client_timestamp=client_timestamp, client_timezone=client_timezone)
+                            message=sanitize_for_pg_text(message), client_timestamp=client_timestamp, client_timezone=client_timezone)
         db.session.add(log)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except (DataError, IntegrityError) as e:
+            db.session.rollback()
+            logging.getLogger('Database').error(f'Could not create SubmissionLog: {e}')
+            return None
         # Single-file logging
         # logging.getLogger('Events').info(log.for_file())
         return log
