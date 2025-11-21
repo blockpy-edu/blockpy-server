@@ -86,7 +86,7 @@ class SubmissionLog(Base):
                             assignment_id=assignment_id, assignment_version=assignment_version,
                             course_id=course_id, subject_id=subject_id,
                             event_type=event_type, file_path=file_type, category=category, label=label,
-                            message=sanitize_for_pg_text(message), client_timestamp=client_timestamp, client_timezone=client_timezone)
+                            message=sanitize_for_pg_text(str(message)), client_timestamp=client_timestamp, client_timezone=client_timezone)
         db.session.add(log)
         try:
             db.session.commit()
