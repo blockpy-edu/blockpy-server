@@ -408,18 +408,25 @@ def browse_history():
     
     # Get all assignments in this group
     assignments = assignment_group.get_assignments()
-    assignment_ids = ','.join(str(a.id) for a in assignments)
+    # Extract assignment IDs once for efficiency
+    assignment_id_list = [a.id for a in assignments] if assignments else []
+    # Format as comma-separated string (expected by watcher component)
+    assignment_ids = ','.join(str(aid) for aid in assignment_id_list)
     
     # Get all users who have submissions in this course for these assignments
     if user_id is None:
         # Get all users with submissions in these assignments
-        user_ids_list = (Log.query
-                        .filter(Log.course_id == course_id)
-                        .filter(Log.assignment_id.in_([a.id for a in assignments]))
-                        .with_entities(Log.subject_id)
-                        .distinct()
-                        .all())
-        user_ids = ','.join(str(uid[0]) for uid in user_ids_list)
+        if assignment_id_list:
+            user_ids_list = (Log.query
+                            .filter(Log.course_id == course_id)
+                            .filter(Log.assignment_id.in_(assignment_id_list))
+                            .with_entities(Log.subject_id)
+                            .distinct()
+                            .all())
+            # Format as comma-separated string (expected by watcher component)
+            user_ids = ','.join(str(uid[0]) for uid in user_ids_list) if user_ids_list else ''
+        else:
+            user_ids = ''
     else:
         user_ids = str(user_id)
     

@@ -17,12 +17,18 @@ Browse Assignment Group History
             users: [loggedInUser]
         });
         
+        // WatchMode enum values
+        const WatchMode = {
+            SUMMARY: 0,
+            FULL: 1
+        };
+        
         let mainModel = {
             server: server,
             courseId: {{ course_id|tojson }},
             assignmentIds: {{ assignment_ids|tojson }},
             userIds: {{ user_ids|tojson }},
-            defaultWatchMode: 0  // WatchMode.SUMMARY
+            defaultWatchMode: WatchMode.SUMMARY
         };
         
         ko.applyBindings(mainModel);
