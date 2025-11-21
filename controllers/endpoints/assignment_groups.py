@@ -6,7 +6,7 @@ from flask import Flask, redirect, url_for, session, request, jsonify, g, curren
 from common.maybe import maybe_bool
 from controllers.auth import get_user
 from controllers.helpers import (require_request_parameters, require_course_instructor, login_required,
-                                 require_course_adopter,
+                                 require_course_adopter, ajax_failure,
                                  check_resource_exists, get_select_menu_link, get_course_id, ajax_success,
                                  maybe_int, require_course_grader, make_log_entry)
 from models import Course, Submission, AssignmentLog
@@ -16,6 +16,8 @@ from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.assignment_group_membership import AssignmentGroupMembership
 from models.data_formats.portation import export_bundle, import_bundle, export_zip, export_pdf_zip
+from models.log_tables import SubmissionLog as Log
+from models.user import User
 
 blueprint_assignment_group = Blueprint('assignment_group', __name__, url_prefix='/assignment_group')
 
@@ -377,3 +379,55 @@ def export_submissions():
     filename = course.get_url_or_id() + '-' + assignment_group.get_filename(extension='.zip')
     return Response(bundle, mimetype='application/zip',
                     headers={'Content-Disposition': 'attachment;filename={}'.format(filename)})
+
+
+@blueprint_assignment_group.route('/browse_history/', methods=['GET', 'POST'])
+@blueprint_assignment_group.route('/browse_history', methods=['GET', 'POST'])
+@require_request_parameters('assignment_group_id', 'course_id')
+def browse_history():
+    """
+    View the history of all submissions in a single assignment group.
+    Returns a page with the watcher component to view submission histories.
+    """
+    # Get parameters
+    assignment_group_id = maybe_int(request.values.get('assignment_group_id'))
+    course_id = maybe_int(request.values.get('course_id'))
+    user_id = maybe_int(request.values.get('user_id', None))
+    embed = maybe_bool(request.values.get('embed'))
+    user, viewer_id = get_user()
+    
+    # Get resources
+    assignment_group = AssignmentGroup.by_id(assignment_group_id)
+    check_resource_exists(assignment_group, "AssignmentGroup", assignment_group_id)
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    
+    # Verify permissions - only graders can view history for an assignment group
+    if not user.is_grader(course_id):
+        return ajax_failure("Only graders can see logs for assignment groups.")
+    
+    # Get all assignments in this group
+    assignments = assignment_group.get_assignments()
+    assignment_ids = ','.join(str(a.id) for a in assignments)
+    
+    # Get all users who have submissions in this course for these assignments
+    if user_id is None:
+        # Get all users with submissions in these assignments
+        user_ids_list = (Log.query
+                        .filter(Log.course_id == course_id)
+                        .filter(Log.assignment_id.in_([a.id for a in assignments]))
+                        .with_entities(Log.subject_id)
+                        .distinct()
+                        .all())
+        user_ids = ','.join(str(uid[0]) for uid in user_ids_list)
+    else:
+        user_ids = str(user_id)
+    
+    return render_template('assignment_groups/browse_history.html',
+                          assignment_group=assignment_group,
+                          course=course,
+                          course_id=course_id,
+                          assignment_ids=assignment_ids,
+                          user_ids=user_ids,
+                          user=user,
+                          embed=embed)
