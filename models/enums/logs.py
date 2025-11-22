@@ -49,3 +49,16 @@ class SubmissionLogEvent(StrEnum):
     CANVAS = "canvas"
     EXTEND_TIME = "extend_time"
     START_TIMER = "start_timer"
+
+
+class ReportLogEvent(StrEnum):
+    CREATE = "create"
+    DELETE = "delete"
+    START = "start"
+    PROGRESS = "progress"
+    FINISH = "finish"
+    ERROR = "error"
+    VIEW = "view"
+    DOWNLOAD = "download"
+    SHARE = "share"
+    EDIT = "edit"
