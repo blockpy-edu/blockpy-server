@@ -53,6 +53,7 @@ class Course(Base):
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="course")
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="course")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="course")
+    counts: Mapped[Optional["CourseCounts"]] = db.relationship(back_populates="course", uselist=False)
 
     __table_args__ = (Index('course_url_index', "url"),)
 
@@ -311,6 +312,7 @@ class Course(Base):
 
     @staticmethod
     def new(name, owner_id, visibility, term, url):
+        from models.counters.helpers import increment_course_user_count
         if visibility and isinstance(visibility.lower(), CourseVisibility):
             visibility = visibility.lower()
         else:
@@ -325,6 +327,8 @@ class Course(Base):
         new_role = models.Role(name='instructor', user_id=owner_id, course_id=new_course.id)
         db.session.add(new_role)
         db.session.commit()
+        # Track instructor addition to course
+        increment_course_user_count(new_course.id, 'instructor')
         return new_course
 
     @staticmethod

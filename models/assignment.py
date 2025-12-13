@@ -89,6 +89,7 @@ class Assignment(EnhancedBase):
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="assignment")
+    counts: Mapped[Optional["AssignmentCounts"]] = db.relationship(back_populates="assignment", uselist=False)
 
     __table_args__ = (Index("assignment_url_index", "url"),
                       Index('assignment_course_index', "course_id"))
@@ -216,6 +217,7 @@ class Assignment(EnhancedBase):
     @staticmethod
     def new(owner_id, course_id, type="blockpy", name=None, level=None, url=None) -> 'models.Assignment':
         """ Create a new Assignment for the course and owner. """
+        from models.counters.helpers import increment_course_assignment_count
         if name is None:
             name = 'Untitled'
         assignment = Assignment(owner_id=owner_id, course_id=maybe_int(course_id),
@@ -223,6 +225,8 @@ class Assignment(EnhancedBase):
                                 type=type, name=level if type == 'maze' else name)
         db.session.add(assignment)
         db.session.commit()
+        # Track assignment creation in course counts
+        increment_course_assignment_count(maybe_int(course_id))
         return assignment
 
     def move_course(self, new_course_id: int):
