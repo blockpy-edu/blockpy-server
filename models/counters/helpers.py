@@ -238,6 +238,10 @@ def recalculate_submission_counts_from_logs(submission_id: int):
     Recalculate submission counts from historical log data.
     This is useful for backfilling counts or fixing discrepancies.
     
+    Note: This function uses ILIKE queries which may not be fully indexed.
+    This is acceptable since this function is intended for one-time backfilling
+    or occasional recalculation, not for frequent real-time use.
+    
     Args:
         submission_id: The ID of the submission
     """
@@ -252,7 +256,7 @@ def recalculate_submission_counts_from_logs(submission_id: int):
     ).count()
     counts.runs = run_count
     
-    # Count errors
+    # Count errors (using ILIKE for pattern matching - acceptable for backfilling)
     syntax_errors = SubmissionLog.query.filter(
         SubmissionLog.submission_id == submission_id,
         SubmissionLog.event_type == 'feedback'
