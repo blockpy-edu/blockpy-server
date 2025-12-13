@@ -637,3 +637,51 @@ CREATE INDEX authentication_lookup ON authentication (type, value);
 CREATE INDEX CONCURRENTLY log_assignment_index ON "log" (assignment_id);
 CREATE INDEX review_submission_index ON "review" (submission_id);
 ```
+
+# Testing
+
+BlockPy includes comprehensive tests to ensure the server works correctly.
+
+## Running Tests
+
+To run all tests:
+
+```bash
+python -m unittest discover tests -v
+```
+
+To run specific test modules:
+
+```bash
+# Run server integration tests
+python -m unittest tests.test_server_integration -v
+
+# Run code parts tests
+python -m unittest tests.test_code_parts -v
+```
+
+## Server Integration Tests
+
+The server integration tests (`tests/test_server_integration.py`) set up a complete test server instance and validate:
+
+- **Basic endpoints**: Index, about, contact, favicon, site-map routes
+- **HTTP methods**: GET, POST, HEAD, PUT requests
+- **API interactions**: JSON request handling and responses
+- **Error handling**: 404 and 405 error responses
+- **Configuration**: Server settings and database configuration
+
+These tests use an in-memory SQLite database and require the proper directory structure to be in place. You can create the required directories with:
+
+```bash
+make create_directories
+```
+
+## Test Configuration
+
+Tests use a special configuration file (`instance/configuration.py`) that sets up:
+
+- In-memory SQLite database for isolation
+- Test-specific secrets and keys
+- Minimal external dependencies
+
+This configuration is automatically created when running tests and should not be committed to the repository.
