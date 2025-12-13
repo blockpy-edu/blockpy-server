@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 import models
 from common.maybe import maybe_int
-from models.enums import RolePermissions, USER_DISPLAY_ROLES, UserRoles
+from models.enums import RolePermissions, USER_DISPLAY_ROLES, UserRoles, RoleLogEvent
 from models.generics.models import db, ma
 from models.generics.base import Base
 
@@ -239,6 +239,9 @@ class User(Base, UserMixin):
                                    course_id=maybe_int(course_id))
             db.session.add(new_role)
             db.session.commit()
+            # Log the role creation
+            models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, self.id,
+                               RoleLogEvent.GIVEN, name)
             return new_role
         return None
 
@@ -247,12 +250,19 @@ class User(Base, UserMixin):
         new_role_names = set(new_role_name.lower() for new_role_name in new_roles)
         for old_role in old_roles:
             if old_role.name.lower() not in new_role_names:
+                # Log the role removal
+                models.RoleLog.new(old_role.id, maybe_int(course_id), self.id, self.id,
+                                   RoleLogEvent.REMOVED, old_role.name)
                 models.Role.query.filter(models.Role.id == old_role.id).delete()
         old_role_names = set(role.name.lower() for role in old_roles)
         for new_role_name in new_roles:
             if new_role_name.lower() not in old_role_names:
                 new_role = models.Role(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
                 db.session.add(new_role)
+                db.session.flush()  # Ensure the role gets an ID
+                # Log the role creation
+                models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, self.id,
+                                   RoleLogEvent.GIVEN, new_role_name.lower())
         db.session.commit()
 
     def determine_role(self, assignments, submissions):

@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Index
 
 from common.maybe import maybe_int
 from common.databases import get_enum_values
-from models.enums import UserRoles
+from models.enums import UserRoles, RoleLogEvent
 from models.generics.models import db, ma
 from models.generics.base import Base
 
@@ -46,8 +46,13 @@ class Role(Base):
 
     def update_role(self, new_role):
         if new_role in [id for id, name in self.CHOICES]:
+            old_role = self.name
             self.name = new_role
             db.session.commit()
+            # Log the role change
+            import models
+            models.RoleLog.new(self.id, self.course_id, self.user_id, self.user_id,
+                               RoleLogEvent.CHANGED, f"{old_role} -> {new_role}")
             return new_role
         return None
 
@@ -56,6 +61,12 @@ class Role(Base):
 
     @staticmethod
     def remove(role_id):
+        import models
+        role = Role.query.get(role_id)
+        if role:
+            # Log the role removal
+            models.RoleLog.new(role.id, role.course_id, role.user_id, role.user_id,
+                               RoleLogEvent.REMOVED, role.name)
         Role.query.filter_by(id=role_id).delete()
         db.session.commit()
 
