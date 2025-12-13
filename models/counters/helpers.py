@@ -7,7 +7,7 @@ and standard deviations without needing to recompute from all historical data.
 from datetime import datetime
 from typing import Optional
 from sqlalchemy_utc import utcnow
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from models.generics.models import db
 import models
@@ -257,7 +257,7 @@ def recalculate_submission_counts_from_logs(submission_id: int):
         SubmissionLog.submission_id == submission_id,
         SubmissionLog.event_type == 'feedback'
     ).filter(
-        db.or_(
+        or_(
             SubmissionLog.category.ilike('%syntax%'),
             SubmissionLog.label.ilike('%syntax%')
         )
@@ -268,7 +268,7 @@ def recalculate_submission_counts_from_logs(submission_id: int):
         SubmissionLog.submission_id == submission_id,
         SubmissionLog.event_type == 'feedback'
     ).filter(
-        db.or_(
+        or_(
             SubmissionLog.category.ilike('%runtime%'),
             SubmissionLog.label.ilike('%runtime%')
         )
@@ -279,7 +279,7 @@ def recalculate_submission_counts_from_logs(submission_id: int):
         SubmissionLog.submission_id == submission_id,
         SubmissionLog.event_type == 'feedback'
     ).filter(
-        db.or_(
+        or_(
             SubmissionLog.category.ilike('%instructor%'),
             SubmissionLog.category.ilike('%test%')
         )
