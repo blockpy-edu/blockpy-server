@@ -73,8 +73,9 @@ class Role(Base):
             # Log the role removal
             models.RoleLog.new(role.id, role.course_id, role.user_id, authorizer_id,
                                RoleLogEvent.REMOVED, role.name)
-        Role.query.filter_by(id=role_id).delete()
-        db.session.commit()
+            # Delete the role
+            Role.query.filter_by(id=role_id).delete()
+            db.session.commit()
 
     @staticmethod
     def by_course(course_id):
