@@ -44,14 +44,17 @@ class Role(Base):
             'course_id': self.course_id
         }
 
-    def update_role(self, new_role):
+    def update_role(self, new_role, authorizer_id=None):
         if new_role in [id for id, name in self.CHOICES]:
             old_role = self.name
             self.name = new_role
             db.session.commit()
             # Log the role change
             import models
-            models.RoleLog.new(self.id, self.course_id, self.user_id, self.user_id,
+            # If no authorizer specified, assume the user is changing their own role
+            if authorizer_id is None:
+                authorizer_id = self.user_id
+            models.RoleLog.new(self.id, self.course_id, self.user_id, authorizer_id,
                                RoleLogEvent.CHANGED, f"{old_role} -> {new_role}")
             return new_role
         return None
@@ -60,12 +63,15 @@ class Role(Base):
         return '<User {} is {}>'.format(self.user_id, self.name)
 
     @staticmethod
-    def remove(role_id):
+    def remove(role_id, authorizer_id=None):
         import models
         role = Role.query.get(role_id)
         if role:
+            # If no authorizer specified, assume the user is removing their own role
+            if authorizer_id is None:
+                authorizer_id = role.user_id
             # Log the role removal
-            models.RoleLog.new(role.id, role.course_id, role.user_id, role.user_id,
+            models.RoleLog.new(role.id, role.course_id, role.user_id, authorizer_id,
                                RoleLogEvent.REMOVED, role.name)
         Role.query.filter_by(id=role_id).delete()
         db.session.commit()

@@ -233,25 +233,31 @@ class User(Base, UserMixin):
 
     ### Adding and updating roles ###
 
-    def add_role(self, name, course_id):
+    def add_role(self, name, course_id, authorizer_id=None):
         if name in [id for id, _ in USER_DISPLAY_ROLES.items()]:
             new_role = models.Role(name=name, user_id=self.id,
                                    course_id=maybe_int(course_id))
             db.session.add(new_role)
             db.session.commit()
             # Log the role creation
-            models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, self.id,
+            # If no authorizer specified, assume self-authorization
+            if authorizer_id is None:
+                authorizer_id = self.id
+            models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, authorizer_id,
                                RoleLogEvent.GIVEN, name)
             return new_role
         return None
 
-    def update_roles(self, new_roles, course_id):
+    def update_roles(self, new_roles, course_id, authorizer_id=None):
+        # If no authorizer specified, assume self-authorization
+        if authorizer_id is None:
+            authorizer_id = self.id
         old_roles = [role for role in self.roles if role.course_id == maybe_int(course_id)]
         new_role_names = set(new_role_name.lower() for new_role_name in new_roles)
         for old_role in old_roles:
             if old_role.name.lower() not in new_role_names:
                 # Log the role removal
-                models.RoleLog.new(old_role.id, maybe_int(course_id), self.id, self.id,
+                models.RoleLog.new(old_role.id, maybe_int(course_id), self.id, authorizer_id,
                                    RoleLogEvent.REMOVED, old_role.name)
                 models.Role.query.filter(models.Role.id == old_role.id).delete()
         old_role_names = set(role.name.lower() for role in old_roles)
@@ -261,7 +267,7 @@ class User(Base, UserMixin):
                 db.session.add(new_role)
                 db.session.flush()  # Ensure the role gets an ID
                 # Log the role creation
-                models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, self.id,
+                models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, authorizer_id,
                                    RoleLogEvent.GIVEN, new_role_name.lower())
         db.session.commit()
 
