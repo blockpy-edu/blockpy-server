@@ -261,14 +261,19 @@ class User(Base, UserMixin):
                                    RoleLogEvent.REMOVED, old_role.name)
                 models.Role.query.filter(models.Role.id == old_role.id).delete()
         old_role_names = set(role.name.lower() for role in old_roles)
+        new_roles_to_add = []
         for new_role_name in new_roles:
             if new_role_name.lower() not in old_role_names:
                 new_role = models.Role(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
                 db.session.add(new_role)
-                db.session.flush()  # Ensure the role gets an ID
-                # Log the role creation
+                new_roles_to_add.append((new_role, new_role_name.lower()))
+        # Flush once to get IDs for all new roles
+        if new_roles_to_add:
+            db.session.flush()
+            # Log all new role creations
+            for new_role, role_name in new_roles_to_add:
                 models.RoleLog.new(new_role.id, maybe_int(course_id), self.id, authorizer_id,
-                                   RoleLogEvent.GIVEN, new_role_name.lower())
+                                   RoleLogEvent.GIVEN, role_name)
         db.session.commit()
 
     def determine_role(self, assignments, submissions):

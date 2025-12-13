@@ -3,6 +3,7 @@ from flask_security.models.fsqla_v3 import FsRoleMixin as RoleMixin
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Index
 
+import models
 from common.maybe import maybe_int
 from common.databases import get_enum_values
 from models.enums import UserRoles, RoleLogEvent
@@ -50,7 +51,6 @@ class Role(Base):
             self.name = new_role
             db.session.commit()
             # Log the role change
-            import models
             # If no authorizer specified, assume the user is changing their own role
             if authorizer_id is None:
                 authorizer_id = self.user_id
@@ -64,7 +64,6 @@ class Role(Base):
 
     @staticmethod
     def remove(role_id, authorizer_id=None):
-        import models
         role = Role.query.get(role_id)
         if role:
             # If no authorizer specified, assume the user is removing their own role

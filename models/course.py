@@ -337,10 +337,9 @@ class Course(Base):
                 return None
         new_course = Course(name=name, owner_id=owner_id, visibility=visibility, term=term, url=url)
         db.session.add(new_course)
-        db.session.flush()
+        db.session.flush()  # Ensure the course gets an ID before creating the role
         new_role = models.Role(name='instructor', user_id=owner_id, course_id=new_course.id)
         db.session.add(new_role)
-        db.session.flush()  # Ensure the role gets an ID
         db.session.commit()
         # Log the course creation
         models.CourseLog.new(new_course.id, owner_id, CourseLogEvent.CREATE)
