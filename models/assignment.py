@@ -15,7 +15,7 @@ from common.dates import datetime_to_string
 from common.databases import optional_encoded_field, make_copy, get_enum_values
 from common.maybe import maybe_int
 from common.text import make_flavored_uuid_generator
-from models.enums import AssignmentStatus, AssignmentTypes
+from models.enums import AssignmentStatus, AssignmentTypes, AssignmentLogEvent
 from models.generics.definitions import LatePolicy
 from models.generics.models import db, ma
 from models.generics.base import EnhancedBase, Base
@@ -223,6 +223,10 @@ class Assignment(EnhancedBase):
                                 type=type, name=level if type == 'maze' else name)
         db.session.add(assignment)
         db.session.commit()
+        # Log the assignment creation
+        models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
+                                 owner_id, AssignmentLogEvent.CREATE, "assignment", "",
+                                 client_timestamp="", client_timezone="")
         return assignment
 
     def move_course(self, new_course_id: int):
@@ -234,6 +238,12 @@ class Assignment(EnhancedBase):
     @staticmethod
     def remove(assignment_id: int):
         """ Delete the assignment with the given ID. """
+        # Log the assignment deletion before removing it
+        assignment = Assignment.query.get(assignment_id)
+        if assignment:
+            models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
+                                     assignment.owner_id, AssignmentLogEvent.DELETE, "assignment", "",
+                                     client_timestamp="", client_timezone="")
         # TODO: Clear anyone's Fork that is me
         # TODO: Clear assignment tag membership
         # TODO: Clear submission sample
@@ -391,6 +401,10 @@ class Assignment(EnhancedBase):
         # TODO: Copy tags, sample_submissions, submissions, files
         db.session.add(assignment)
         db.session.commit()
+        # Log the fork event for the new assignment
+        models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
+                                 new_owner_id, AssignmentLogEvent.FORK, "forked_id", str(self.id),
+                                 client_timestamp="", client_timezone="")
         return assignment
 
     def is_allowed(self, ip: str) -> bool:

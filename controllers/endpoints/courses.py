@@ -428,13 +428,13 @@ def add_users(course_id):
             new_role = add_form.role.data
             # TODO: Update this to reflect new enums
             if new_role in ('student', 'learner') and not new_user.is_student(course_id):
-                new_user.add_role('learner', course_id=course_id)
+                new_user.add_role('learner', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             elif new_role == 'teachingassistant' and not new_user.is_grader(course_id):
-                new_user.add_role('teachingassistant', course_id=course_id)
+                new_user.add_role('teachingassistant', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             elif new_role == 'instructor' and not new_user.is_instructor(course_id):
-                new_user.add_role('instructor', course_id=course_id)
+                new_user.add_role('instructor', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             # TODO: Add an invite for the course and that user
             # TODO: Send an email to reset their password
@@ -455,7 +455,7 @@ def remove_role(role_id):
     is_instructor = g.user.is_instructor(course_id)
     if not is_instructor:
         return "You're not an instructor in this course!"
-    Role.remove(int(role_id))
+    Role.remove(int(role_id), authorizer_id=g.user.id)
     return redirect(url_for('courses.manage_users', course_id=course_id))
 
 
@@ -475,7 +475,7 @@ def change_role():
     is_instructor = g.user.is_instructor(course_id)
     if not is_instructor:
         return "You're not an instructor in this course!"
-    role.update_role(new_role)
+    role.update_role(new_role, authorizer_id=g.user.id)
     return ajax_success({"new_role": new_role})
 
 
