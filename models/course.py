@@ -345,7 +345,7 @@ class Course(Base):
         models.CourseLog.new(new_course.id, owner_id, CourseLogEvent.CREATE)
         # Log the initial instructor role creation
         models.RoleLog.new(new_role.id, new_course.id, owner_id, owner_id,
-                           models.RoleLogEvent.GIVEN, new_role.name)
+                           RoleLogEvent.GIVEN, new_role.name)
         return new_course
 
     @staticmethod

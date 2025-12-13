@@ -226,7 +226,7 @@ class Assignment(EnhancedBase):
         # Log the assignment creation
         models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
                                  owner_id, AssignmentLogEvent.CREATE, "assignment", "",
-                                 "", "")
+                                 client_timestamp="", client_timezone="")
         return assignment
 
     def move_course(self, new_course_id: int):
@@ -243,7 +243,7 @@ class Assignment(EnhancedBase):
         if assignment:
             models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
                                      assignment.owner_id, AssignmentLogEvent.DELETE, "assignment", "",
-                                     "", "")
+                                     client_timestamp="", client_timezone="")
         # TODO: Clear anyone's Fork that is me
         # TODO: Clear assignment tag membership
         # TODO: Clear submission sample
@@ -404,7 +404,7 @@ class Assignment(EnhancedBase):
         # Log the fork event for the new assignment
         models.AssignmentLog.new(assignment.id, assignment.version, assignment.course_id,
                                  new_owner_id, AssignmentLogEvent.FORK, "forked_id", str(self.id),
-                                 "", "")
+                                 client_timestamp="", client_timezone="")
         return assignment
 
     def is_allowed(self, ip: str) -> bool:
