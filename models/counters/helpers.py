@@ -7,6 +7,7 @@ and standard deviations without needing to recompute from all historical data.
 from datetime import datetime
 from typing import Optional
 from sqlalchemy_utc import utcnow
+from sqlalchemy import func
 
 from models.generics.models import db
 import models
@@ -216,15 +217,74 @@ def increment_course_user_count(course_id: int, role: str):
     
     Args:
         course_id: The ID of the course
-        role: The role of the user (student or instructor)
+        role: The role of the user (student, learner, or instructor)
     """
     course_counts = ensure_course_counts(course_id)
     course_counts.total_users += 1
     course_counts.date_last_user = utcnow()
     
-    if role == 'student':
+    # Map role names to count fields
+    role_lower = role.lower()
+    if role_lower in ('student', 'learner'):
         course_counts.total_students += 1
-    elif role == 'instructor':
+    elif role_lower == 'instructor':
         course_counts.total_instructors += 1
     
     db.session.commit()
+
+
+def recalculate_submission_counts_from_logs(submission_id: int):
+    """
+    Recalculate submission counts from historical log data.
+    This is useful for backfilling counts or fixing discrepancies.
+    
+    Args:
+        submission_id: The ID of the submission
+    """
+    from models.log_tables import SubmissionLog
+    
+    counts = ensure_submission_counts(submission_id)
+    
+    # Count runs
+    run_count = SubmissionLog.query.filter(
+        SubmissionLog.submission_id == submission_id,
+        SubmissionLog.event_type.in_(['X-run', 'Run'])
+    ).count()
+    counts.runs = run_count
+    
+    # Count errors
+    syntax_errors = SubmissionLog.query.filter(
+        SubmissionLog.submission_id == submission_id,
+        SubmissionLog.event_type == 'feedback'
+    ).filter(
+        db.or_(
+            SubmissionLog.category.ilike('%syntax%'),
+            SubmissionLog.label.ilike('%syntax%')
+        )
+    ).count()
+    counts.syntax_errors = syntax_errors
+    
+    runtime_errors = SubmissionLog.query.filter(
+        SubmissionLog.submission_id == submission_id,
+        SubmissionLog.event_type == 'feedback'
+    ).filter(
+        db.or_(
+            SubmissionLog.category.ilike('%runtime%'),
+            SubmissionLog.label.ilike('%runtime%')
+        )
+    ).count()
+    counts.runtime_errors = runtime_errors
+    
+    instructor_test_failures = SubmissionLog.query.filter(
+        SubmissionLog.submission_id == submission_id,
+        SubmissionLog.event_type == 'feedback'
+    ).filter(
+        db.or_(
+            SubmissionLog.category.ilike('%instructor%'),
+            SubmissionLog.category.ilike('%test%')
+        )
+    ).count()
+    counts.failed_instructor_tests = instructor_test_failures
+    
+    db.session.commit()
+    return counts
