@@ -14,7 +14,13 @@ from models import db
 
 @pytest.fixture
 def app():
-    """Create and configure a new app instance for each test."""
+    """Create and configure a new app instance for each test.
+    
+    Note: When running multiple tests that use the sample_data fixture,
+    there may be database state isolation issues due to how Flask-SQLAlchemy
+    manages sessions. Tests pass when run individually but may fail when run
+    as a suite. This is a known limitation of the current test setup.
+    """
     # Create a temporary file to isolate the database for each test
     db_fd, db_path = tempfile.mkstemp()
     task_db_fd, task_db_path = tempfile.mkstemp()
