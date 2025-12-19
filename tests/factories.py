@@ -290,19 +290,19 @@ class SampleDataGenerator:
                 name="Hello World",
                 course=course,
                 owner=instructor,
-                type=AssignmentTypes.PYTHON
+                assignment_type=AssignmentTypes.PYTHON
             ),
             AssignmentFactory.create_assignment(
                 name="Variables and Types",
                 course=course,
                 owner=instructor,
-                type=AssignmentTypes.PYTHON
+                assignment_type=AssignmentTypes.PYTHON
             ),
             AssignmentFactory.create_assignment(
                 name="Control Structures",
                 course=course,
                 owner=instructor,
-                type=AssignmentTypes.PYTHON
+                assignment_type=AssignmentTypes.PYTHON
             )
         ]
         
