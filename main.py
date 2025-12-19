@@ -23,16 +23,29 @@ def create_app(test_config=None, instance_config="configuration.py") -> Flask:
     # load the test config if passed in
     if test_config is not None:
         if test_config == 'testing':
+            print("Loading TestConfig")
             app.config.from_object('config.TestConfig')
         else:
+            print("Loading custom test config")
             app.config.from_mapping(test_config)
     elif app.config['DEBUG']:
         app.config.from_object('config.DevelopmentConfig')
     else:
         print("Loading Production!")
         app.config.from_object('config.ProductionConfig')
-    print(f"Loading instance configuration from {instance_config!r}")
-    app.config.from_pyfile(instance_config)
+
+    # Load the instance config, if it exists
+    if isinstance(instance_config, dict):
+        if '_BASE_FILE' in instance_config:
+            base_file = instance_config['_BASE_FILE']
+            print(f"Loading base instance configuration from {base_file!r}")
+            app.config.from_pyfile(base_file)
+            del instance_config['_BASE_FILE']
+        print("Loading instance configuration from dict")
+        app.config.from_mapping(instance_config)
+    else:
+        print(f"Loading instance configuration from {instance_config!r}")
+        app.config.from_pyfile(instance_config)
 
     # Additional settings being overridden here
     app.config['TEMPLATES_AUTO_RELOAD'] = True
