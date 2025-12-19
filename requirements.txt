@@ -36,6 +36,7 @@ six~=1.16.0
 bcrypt
 python-slugify~=8.0.1
 pytest
+pytest-flask
 natsort~=8.4.0
 psycopg
 psycopg2

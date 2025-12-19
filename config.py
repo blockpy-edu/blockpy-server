@@ -104,7 +104,7 @@ class DefaultConfig:
     # Task Settings
     TASK_DB_URI: str
     TASK_QUEUE_STYLE: str
-    TASK_DB_SETTINGS = dict
+    TASK_DB_SETTINGS: dict = {}
 
     # Logs
     ROTATE_LOGS = False
@@ -139,6 +139,6 @@ class DevelopmentConfig(DefaultConfig):
 class TestConfig(DefaultConfig):
     """ Simple test config with in-memory database """
     TESTING = True
+    HOST = 'localhost'
+    SITE_ROOT_URL = 'localhost:5001'
     TASK_QUEUE_STYLE = 'sqlite'
-    TASK_DB_URI = 'instance/tasks.db'
-    SQLALCHEMY_DATABASE_URI = 'sqlite://:memory:'
