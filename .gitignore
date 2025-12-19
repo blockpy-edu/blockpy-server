@@ -45,6 +45,8 @@ settings/*.json
 settings/*.yaml
 
 frontend/node_modules/
+frontend-solid/node_modules/
+static/libs/blockpy_server_solid/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
