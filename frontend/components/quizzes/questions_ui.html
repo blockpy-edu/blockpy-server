@@ -112,6 +112,7 @@
                     <div data-bind="case: 'short_answer_question'">
                         <div class="form-group">
                             <input type="text" class="form-control"
+                                   autocomplete="off"
                                 data-bind="textInput: student,
                                            disable: $component.isReadOnly(),
                                            attr: {id: 'question-sa-'+$index()}">
@@ -120,12 +121,14 @@
                     <div data-bind="case: 'essay_question'">
                     <textarea data-bind="textInput: student,
                                            disable: $component.isReadOnly(),
-                                           attr: {id: 'question-es-'+$index()}" style="width: 100%; height: 300px"></textarea><br>
+                                           attr: {id: 'question-es-'+$index()}" style="width: 100%; height: 300px"
+                                   autocomplete="off"></textarea><br>
                     </div>
                     <!-- Numerical Input -->
                     <div data-bind="case: 'numerical_question'">
                         <div class="form-group">
                             <input type="number" class="form-control"
+                                   autocomplete="off"
                                 data-bind="textInput: student,
                                            disable: $component.isReadOnly(),
                                            attr: {id: 'question-num-'+$index()}">

@@ -336,7 +336,7 @@ export class Quiz {
                     return part.slice(1, -1);
                 } else if (part.startsWith('[') && part.endsWith(']')) {
                     const key = part.slice(1, -1);
-                    return `<span class="d-inline-block"><input id="question-fimb-${index}-${part}" type="text" class="form-control" data-bind="textInput: student['${key}'], disable: $component.isReadOnly()"></span>`;
+                    return `<span class="d-inline-block"><input id="question-fimb-${index}-${part}" type="text" class="form-control" autocomplete="off" data-bind="textInput: student['${key}'], disable: $component.isReadOnly()"></span>`;
                 } else {
                     return part;
                 }
