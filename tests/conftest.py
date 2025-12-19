@@ -69,3 +69,4 @@ def app_context():
             yield app
         finally:
             db.drop_all()
+

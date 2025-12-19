@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from flask_security import UserMixin
 from flask_security.utils import hash_password
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, MappedAsDataclass
 from sqlalchemy.sql.expression import true, tuple_
 from sqlalchemy_utc import UtcDateTime
 from werkzeug.utils import secure_filename
@@ -18,7 +18,8 @@ from models.generics.base import Base
 
 
 if TYPE_CHECKING:
-    from models import *
+    from models import Role, Authentication, Assignment, AssignmentGroup, Course, AssignmentTag, AccessLog, \
+        CourseLog, RoleLog, AssignmentLog, SubmissionLog, Review, Submission, Report, Invite, GradeHistory, SampleSubmission
 
 
 class User(Base, UserMixin):
