@@ -3,6 +3,7 @@ import { Assignment } from '../../models/assignment';
 import { Submission } from '../../models/submission';
 import { User } from '../../models/user';
 import { ajax_post } from '../../services/ajax';
+import { AssignmentInterface, EditorMode } from '../../services/assignment-interface';
 
 export interface ReaderProps {
     courseId: number;
@@ -14,19 +15,25 @@ export interface ReaderProps {
     onMarkCorrect?: (assignmentId: number) => void;
 }
 
-export enum EditorMode {
-    RAW = 'RAW',
-    FORM = 'FORM',
-    SUBMISSION = 'SUBMISSION'
-}
-
 interface VideoOptions {
     [key: string]: string;
 }
 
 export function Reader(props: ReaderProps) {
-    const [assignment, setAssignment] = createSignal<Assignment | null>(null);
-    const [submission, setSubmission] = createSignal<Submission | null>(null);
+    // Create assignment interface for shared functionality
+    const assignmentInterface = new AssignmentInterface({
+        courseId: props.courseId,
+        assignmentGroupId: props.assignmentGroupId || 0,
+        user: props.user,
+        isInstructor: props.isInstructor,
+        currentAssignmentId: props.currentAssignmentId,
+        markCorrect: props.onMarkCorrect
+    });
+    
+    // Use assignment and submission from interface
+    const assignment = assignmentInterface.assignment;
+    const submission = assignmentInterface.submission;
+    
     const [editorMode, setEditorMode] = createSignal<EditorMode>(EditorMode.SUBMISSION);
     const [errorMessage, setErrorMessage] = createSignal<string>('');
     
@@ -58,35 +65,27 @@ export function Reader(props: ReaderProps) {
 
     function loadReading(assignmentId: number) {
         if (!assignmentId) {
-            setAssignment(null);
+            assignmentInterface.setAssignment(null);
+            assignmentInterface.setSubmission(null);
             return;
         }
 
-        ajax_post('/blockpy/load_assignment', {
-            assignment_id: assignmentId,
-            assignment_group_id: props.assignmentGroupId,
-            course_id: props.courseId,
-            user_id: props.user.id()
-        }).then((response: any) => {
-            if (response.success) {
-                setAssignment(new Assignment(response.assignment));
-                setSubmission(response.submission ? new Submission(response.submission) : null);
-                parseAdditionalSettings(response.assignment.settings);
-                
-                if (response.submission) {
-                    markRead();
+        assignmentInterface.loadAssignment(assignmentId)
+            .then(({ assignment: loadedAssignment, submission: loadedSubmission }) => {
+                if (loadedAssignment) {
+                    parseAdditionalSettings(loadedAssignment.settings());
+                    
+                    if (loadedSubmission) {
+                        markRead();
+                    }
+                    
+                    logCount = 1;
+                    logTimer = setTimeout(() => logReadingStart(), 1000);
                 }
-                
-                logCount = 1;
-                logTimer = setTimeout(() => logReadingStart(), 1000);
-            } else {
-                console.error('Failed to load', response);
-                setAssignment(null);
-            }
-        }).catch((error: any) => {
-            console.error('Failed to load (HTTP LEVEL)', error);
-            setAssignment(null);
-        });
+            })
+            .catch((error) => {
+                console.error('Failed to load reading', error);
+            });
     }
 
     function parseAdditionalSettings(settingsRaw: string) {
@@ -136,33 +135,37 @@ export function Reader(props: ReaderProps) {
     function logReadingStart() {
         // Log reading activity
         logCount += 1;
-        if (assignment() && submission()) {
-            logEvent('Resource.View', 'reading', 'read', JSON.stringify({
-                count: logCount,
-                timestamp: new Date().toISOString()
-            }));
-            
-            const delay = logCount * 30000; // 30 seconds
-            logTimer = setTimeout(() => logReadingStart(), delay);
+        const assign = assignment();
+        if (assign && submission()) {
+            assignmentInterface.logEvent(
+                'Resource.View',
+                'reading',
+                'read',
+                JSON.stringify({
+                    count: logCount,
+                    timestamp: new Date().toISOString()
+                }),
+                assign.url(),
+                () => {
+                    const delay = logCount * 30000; // 30 seconds
+                    logTimer = setTimeout(() => logReadingStart(), delay);
+                }
+            );
         }
     }
 
-    function logEvent(category: string, label: string, action: string, message: string) {
+    function logEvent(eventType: string, category: string, label: string, message: string) {
         const assign = assignment();
         if (!assign) return;
         
-        ajax_post('/blockpy/log_event', {
-            assignment_id: assign.id,
-            assignment_group_id: props.assignmentGroupId,
-            course_id: props.courseId,
-            user_id: props.user.id(),
+        assignmentInterface.logEvent(
+            eventType,
             category,
             label,
-            action,
-            message
-        }).catch((error: any) => {
-            console.error('Failed to log event', error);
-        });
+            message,
+            assign.url(),
+            () => {}
+        );
     }
 
     function markRead() {
@@ -228,25 +231,25 @@ export function Reader(props: ReaderProps) {
         const assign = assignment();
         if (!assign) return;
 
+        // Save the instructions file
+        assignmentInterface.saveFile(
+            "!instructions.md",
+            assign.instructions(),
+            true,
+            () => {},
+            undefined
+        );
+        
         // Save assignment settings
-        ajax_post('/blockpy/save_assignment', {
-            assignment_id: assign.id,
-            course_id: props.courseId,
+        assignmentInterface.saveAssignmentSettings({
             settings: assign.settings(),
             points: assign.points(),
             url: assign.url(),
-            name: assign.name(),
-            instructions: assign.instructions()
-        }).then((response: any) => {
+            name: assign.name()
+        }).then((response) => {
             if (response.success) {
                 alert('Assignment saved successfully!');
-            } else {
-                console.error('Failed to save', response);
-                alert('Failed to save assignment: ' + (response.message?.message || 'Unknown error'));
             }
-        }).catch((error: any) => {
-            console.error('Failed to save (HTTP LEVEL)', error);
-            alert('HTTP ERROR: ' + error.message);
         });
     }
 
