@@ -3,6 +3,7 @@ Pytest configuration and fixtures for BlockPy tests.
 """
 import os
 import tempfile
+import gc
 from contextlib import contextmanager
 
 import pytest
@@ -12,14 +13,28 @@ from main import create_app
 from models import db
 
 
-@pytest.fixture
+@pytest.fixture(scope='function', autouse=True)
+def setup_db(request):
+    """Setup and teardown for each test to ensure database isolation.
+    
+    This fixture automatically runs before and after each test to clean up
+    the database session and rollback any uncommitted transactions.
+    """
+    yield
+    # After each test, rollback any pending transactions and remove the session
+    # This ensures database changes don't leak between tests
+    try:
+        db.session.rollback()
+        db.session.remove()
+    except:
+        pass
+
+
+@pytest.fixture(scope='function')
 def app():
     """Create and configure a new app instance for each test.
     
-    Note: When running multiple tests that use the sample_data fixture,
-    there may be database state isolation issues due to how Flask-SQLAlchemy
-    manages sessions. Tests pass when run individually but may fail when run
-    as a suite. This is a known limitation of the current test setup.
+    Uses transaction rollback to ensure test isolation.
     """
     # Create a temporary file to isolate the database for each test
     db_fd, db_path = tempfile.mkstemp()
@@ -40,17 +55,45 @@ def app():
         'SECRET_KEY': 'test-secret-key'
     })
 
+    # Push app context for the test
+    ctx = app.app_context()
+    ctx.push()
+    db.create_all()
+    
+    yield app
+    
+    # Clean up after test - be thorough
     try:
-        with app.app_context():
-            db.create_all()
-            yield app
-            db.drop_all()
-
-            db.session.remove()
-            db.engine.dispose()
-    finally:
+        db.session.rollback()
+        db.session.remove()
+    except:
+        pass
+    
+    try:
+        db.drop_all()
+    except:
+        pass
+    
+    try:
+        db.engine.dispose()
+    except:
+        pass
+    
+    # Pop the app context
+    ctx.pop()
+    
+    # Clean up temp files
+    try:
         os.unlink(db_path)
+    except:
+        pass
+    try:
         os.unlink(task_db_path)
+    except:
+        pass
+    
+    # Force garbage collection to clean up any lingering references
+    gc.collect()
 
 
 @pytest.fixture
