@@ -84,11 +84,23 @@ export interface MultipleAnswersQuestion extends QuestionBase {
   answers: string[];
 }
 
+export interface MultipleDropdownsQuestion extends QuestionBase {
+  type: QuizQuestionType.multiple_dropdowns_question;
+  answers: Record<string, string[]>;
+  retainOrder?: boolean;
+}
+
+export interface FillInMultipleBlanksQuestion extends QuestionBase {
+  type: QuizQuestionType.fill_in_multiple_blanks_question;
+}
+
 export type Question =
   | MultipleChoiceQuestion
   | TrueFalseQuestion
   | ShortAnswerQuestion
-  | MultipleAnswersQuestion;
+  | MultipleAnswersQuestion
+  | MultipleDropdownsQuestion
+  | FillInMultipleBlanksQuestion;
 
 export interface QuizInstructions {
   questions?: Record<string, Question>;

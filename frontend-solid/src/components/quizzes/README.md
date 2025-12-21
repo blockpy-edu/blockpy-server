@@ -40,10 +40,10 @@ The quiz system is built with modern SolidJS reactive primitives, providing:
 - **True/False** - Boolean choice
 - **Short Answer** - Text input
 - **Multiple Answers** - Multiple selection from options
+- **Multiple Dropdowns** - Dropdowns embedded in question text
+- **Fill in Multiple Blanks** - Text inputs embedded in question text
 
 Additional types defined but not yet implemented:
-- Multiple Dropdowns
-- Fill in Multiple Blanks
 - Matching
 - Essay
 - Numerical
@@ -209,6 +209,37 @@ frontendSolid.initQuizzer('#quiz-container', quizData, true);
 }
 ```
 
+### Multiple Dropdowns
+
+```javascript
+{
+  id: 'q5',
+  type: 'multiple_dropdowns_question',
+  body: '<p>A <code>for</code> loop uses the [keyword] keyword to iterate over [structure].</p>',
+  points: 2,
+  retainOrder: false,
+  answers: {
+    'keyword': ['for', 'while', 'if', 'def'],
+    'structure': ['sequences', 'integers', 'strings', 'functions']
+  }
+}
+```
+
+Note: Square brackets `[identifier]` in the body create dropdown boxes. Use `[[` and `]]` to show literal square brackets.
+
+### Fill in Multiple Blanks
+
+```javascript
+{
+  id: 'q6',
+  type: 'fill_in_multiple_blanks_question',
+  body: '<p>To define a function, use [keyword1] followed by the [keyword2] and parentheses.</p>',
+  points: 2
+}
+```
+
+Note: Square brackets `[identifier]` in the body create text input boxes. The identifiers become the keys in the answer object.
+
 ## Testing
 
 The quiz system includes comprehensive tests:
@@ -219,6 +250,7 @@ npm test
 
 **Test Coverage:**
 - Quiz model state management (34 tests)
+- Advanced question types (18 tests - dropdowns and fill-in-blanks)
 - Question rendering
 - Attempt limits
 - Feedback display
@@ -288,7 +320,7 @@ tests/
 
 ## Future Enhancements
 
-- [ ] Implement remaining question types (matching, dropdowns, etc.)
+- [ ] Implement remaining question types (matching, essay, numerical)
 - [ ] Add question pools and randomization
 - [ ] Implement pagination (questions per page)
 - [ ] Add cooldown period between attempts
@@ -297,10 +329,11 @@ tests/
 - [ ] Implement quiz timer
 - [ ] Add accessibility improvements
 - [ ] Create quiz editor interface
+- [ ] Improve escaped bracket handling in fill-in-blanks
 
 ## Performance
 
-- **Build size**: 37.4 KB (12 KB gzipped)
+- **Build size**: 40.25 KB (12.57 KB gzipped)
 - **Combined with Watcher**: Total bundle remains small
 - **Reactive updates**: Only affected DOM nodes update
 

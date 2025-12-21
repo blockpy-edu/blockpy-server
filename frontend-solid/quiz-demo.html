@@ -54,6 +54,13 @@
 
     <div class="row mt-5">
       <div class="col-md-12">
+        <h3>Advanced Question Types</h3>
+        <div id="quiz-advanced" class="border p-3 rounded"></div>
+      </div>
+    </div>
+
+    <div class="row mt-5">
+      <div class="col-md-12">
         <h3>Instructor View</h3>
         <div id="quiz-instructor" class="border p-3 rounded"></div>
       </div>
@@ -157,10 +164,57 @@
       }
     };
 
+    // Quiz 3: Advanced Question Types
+    const advancedQuiz = {
+      assignmentId: 203,
+      courseId: 1,
+      userId: 3,
+      instructions: {
+        settings: {
+          attemptLimit: 2,
+          coolDown: -1,
+          feedbackType: QuizFeedbackType.IMMEDIATE,
+          questionsPerPage: -1,
+          poolRandomness: QuizPoolRandomness.SEED,
+          readingId: null
+        },
+        pools: [],
+        questions: {
+          'mdq1': {
+            id: 'mdq1',
+            type: 'multiple_dropdowns_question',
+            body: '<p>A <code>for</code> loop in Python uses the [keyword] keyword to iterate over [structure].</p>',
+            points: 2,
+            retainOrder: false,
+            answers: {
+              'keyword': ['for', 'while', 'if', 'def'],
+              'structure': ['sequences', 'integers', 'strings', 'functions']
+            }
+          },
+          'fimb1': {
+            id: 'fimb1',
+            type: 'fill_in_multiple_blanks_question',
+            body: '<p>To define a function in Python, use the [keyword1] keyword followed by the function [keyword2] and parentheses.</p>',
+            points: 2
+          }
+        }
+      },
+      submission: {
+        studentAnswers: {},
+        attempt: {
+          attempting: false,
+          count: 0,
+          mulligans: 0
+        },
+        feedback: {}
+      }
+    };
+
     // Initialize quizzes
     document.addEventListener('DOMContentLoaded', () => {
       initQuizzer('#quiz-1', simpleQuiz, false);
       initQuizzer('#quiz-2', mixedQuiz, false);
+      initQuizzer('#quiz-advanced', advancedQuiz, false);
       initQuizzer('#quiz-instructor', simpleQuiz, true);
     });
   </script>
