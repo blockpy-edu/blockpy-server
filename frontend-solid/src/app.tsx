@@ -15,6 +15,8 @@ import { CourseList, type Course } from './components/management/CourseList';
 import { GroupList } from './components/management/GroupList';
 import { ModelSelector, type Model } from './components/management/ModelSelector';
 import { UserEditor } from './components/management/UserEditor';
+import { CodingAssignment } from './components/coding/CodingAssignment';
+import type { CodingAssignmentData } from './components/coding/types';
 
 // Export components for external use
 export { Watcher } from './components/watcher/Watcher';
@@ -45,6 +47,10 @@ export { GroupList } from './components/management/GroupList';
 export { ModelSelector } from './components/management/ModelSelector';
 export type { Model } from './components/management/ModelSelector';
 export { UserEditor, SortOrder, RenderStyle } from './components/management/UserEditor';
+
+// Export coding component
+export { CodingAssignment } from './components/coding/CodingAssignment';
+export type { CodingAssignmentData, Runtime, ExecutionResult, FeedbackMessage, ExecutionTrace } from './components/coding/types';
 
 // Export models
 export { User } from './models/user';
@@ -276,6 +282,32 @@ export function initUserEditor(
   render(() => <UserEditor {...(props || {})} />, element);
 }
 
+/**
+ * Initialize a CodingAssignment component in the given container
+ * @param container - DOM element or selector where the component should be mounted
+ * @param props - Props for the CodingAssignment component
+ */
+export function initCodingAssignment(
+  container: HTMLElement | string,
+  props: {
+    assignment: CodingAssignmentData;
+    user: any;
+    courseId: number;
+    isInstructor: boolean;
+  }
+) {
+  const element = typeof container === 'string'
+    ? document.querySelector(container)
+    : container;
+
+  if (!element) {
+    console.error('Container element not found:', container);
+    return;
+  }
+
+  render(() => <CodingAssignment {...props} />, element);
+}
+
 // Make it available globally for template usage
 if (typeof window !== 'undefined') {
   (window as any).frontendSolid = {
@@ -289,6 +321,7 @@ if (typeof window !== 'undefined') {
     initGroupList,
     initModelSelector,
     initUserEditor,
+    initCodingAssignment,
     Watcher,
     Quizzer,
     QuizEditor,
@@ -299,6 +332,7 @@ if (typeof window !== 'undefined') {
     GroupList,
     ModelSelector,
     UserEditor,
+    CodingAssignment,
     WatchMode,
   };
 }
