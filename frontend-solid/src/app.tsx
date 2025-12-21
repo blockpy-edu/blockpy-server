@@ -6,6 +6,8 @@ import { render } from 'solid-js/web';
 import { Watcher } from './components/watcher/Watcher';
 import { Quizzer } from './components/quizzes/Quizzer';
 import { QuizEditor } from './components/quizzes/QuizEditor';
+import { Reader, ReaderProps } from './components/reader/Reader';
+import { Textbook, TextbookProps, TextbookData } from './components/textbook/Textbook';
 import { WatchMode } from './components/watcher/SubmissionState';
 import { QuizData } from './components/quizzes/types';
 
@@ -23,6 +25,12 @@ export {
   QuizFeedbackType,
   QuizQuestionType
 } from './components/quizzes/types';
+
+// Export reader and textbook components
+export { Reader } from './components/reader/Reader';
+export type { ReaderProps } from './components/reader/Reader';
+export { Textbook } from './components/textbook/Textbook';
+export type { TextbookProps, TextbookData } from './components/textbook/Textbook';
 
 // Export models
 export { User } from './models/user';
@@ -106,15 +114,61 @@ export function initQuizEditor(
   render(() => <QuizEditor quizData={quizData} onSave={onSave} />, element);
 }
 
+/**
+ * Initialize a Reader component in the given container
+ * @param container - DOM element or selector where the component should be mounted
+ * @param props - Props for the Reader component
+ */
+export function initReader(
+  container: HTMLElement | string,
+  props: ReaderProps
+) {
+  const element = typeof container === 'string'
+    ? document.querySelector(container)
+    : container;
+
+  if (!element) {
+    console.error('Container element not found:', container);
+    return;
+  }
+
+  render(() => <Reader {...props} />, element);
+}
+
+/**
+ * Initialize a Textbook component in the given container
+ * @param container - DOM element or selector where the component should be mounted
+ * @param props - Props for the Textbook component
+ */
+export function initTextbook(
+  container: HTMLElement | string,
+  props: TextbookProps
+) {
+  const element = typeof container === 'string'
+    ? document.querySelector(container)
+    : container;
+
+  if (!element) {
+    console.error('Container element not found:', container);
+    return;
+  }
+
+  render(() => <Textbook {...props} />, element);
+}
+
 // Make it available globally for template usage
 if (typeof window !== 'undefined') {
   (window as any).frontendSolid = {
     initWatcher,
     initQuizzer,
     initQuizEditor,
+    initReader,
+    initTextbook,
     Watcher,
     Quizzer,
     QuizEditor,
+    Reader,
+    Textbook,
     WatchMode,
   };
 }
