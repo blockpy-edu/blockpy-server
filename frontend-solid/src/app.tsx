@@ -5,6 +5,7 @@
 import { render } from 'solid-js/web';
 import { Watcher } from './components/watcher/Watcher';
 import { Quizzer } from './components/quizzes/Quizzer';
+import { QuizEditor } from './components/quizzes/QuizEditor';
 import { WatchMode } from './components/watcher/SubmissionState';
 import { QuizData } from './components/quizzes/types';
 
@@ -15,6 +16,7 @@ export { WatchMode, FeedbackMode } from './components/watcher/SubmissionState';
 
 // Export quiz components
 export { Quizzer } from './components/quizzes/Quizzer';
+export { QuizEditor } from './components/quizzes/QuizEditor';
 export type { QuizData } from './components/quizzes/types';
 export {
   QuizMode,
@@ -81,13 +83,38 @@ export function initQuizzer(
   render(() => <Quizzer quizData={quizData} isInstructor={isInstructor} />, element);
 }
 
+/**
+ * Initialize a QuizEditor component in the given container
+ * @param container - DOM element or selector where the component should be mounted
+ * @param quizData - Quiz data including instructions and submission
+ * @param onSave - Callback when quiz is saved
+ */
+export function initQuizEditor(
+  container: HTMLElement | string,
+  quizData: QuizData,
+  onSave?: (data: QuizData) => void
+) {
+  const element = typeof container === 'string'
+    ? document.querySelector(container)
+    : container;
+
+  if (!element) {
+    console.error('Container element not found:', container);
+    return;
+  }
+
+  render(() => <QuizEditor quizData={quizData} onSave={onSave} />, element);
+}
+
 // Make it available globally for template usage
 if (typeof window !== 'undefined') {
   (window as any).frontendSolid = {
     initWatcher,
     initQuizzer,
+    initQuizEditor,
     Watcher,
     Quizzer,
+    QuizEditor,
     WatchMode,
   };
 }
