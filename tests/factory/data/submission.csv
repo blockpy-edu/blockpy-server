@@ -1,1 +1,2 @@
 id,date_created,date_modified,url,assignment_id,assignment_group_id,course_id,user_id,assignment_version,version,endpoint,content,extra_files,score,correct,submission_status,grading_status,date_started,date_submitted,date_graded,date_due,date_locked
+index,datetime,datetime,string,integer,integer,integer,integer,integer,integer,string,string,string,integer,boolean,string,string,datetime,datetime,datetime,datetime,datetime

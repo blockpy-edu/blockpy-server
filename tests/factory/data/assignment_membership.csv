@@ -1,0 +1,2 @@
+id,assignment_group_id,assignment_id,position,policy
+index,integer,integer,integer,string

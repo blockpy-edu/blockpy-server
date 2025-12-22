@@ -35,3 +35,6 @@ check_redis:
 	sudo systemctl status redis-server
 check_huey:
 	sudo journalctl -u huey
+
+test:
+	pytest
