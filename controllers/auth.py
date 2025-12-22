@@ -38,6 +38,26 @@ from models.user import User
 from models.course import Course
 
 
+
+
+
+def notify_admin():
+    msg = Message(
+        'A rascal has attempted to access the system!',
+        recipients=current_app.config['SYS_ADMINS'],
+        sender=current_app.config['SECURITY_EMAIL_SENDER'],
+        body=f'A rascal has attempted to access the system. '
+             f'I stopped them before they could do anything. '
+             f'Here are their details:\n'
+                f'User ID: {g.user.id}\n'
+                f'User Name: {g.user.name()}\n'
+                f'User Email: {g.user.email}\n'
+                f'User IP: {request.remote_addr}\n'
+                f'User Agent: {request.user_agent}\n'
+    )
+    mail.send(msg)
+
+
 def move_token_to_header(func):
     """
     Decorator to move the access_token from the body to the header.
@@ -55,8 +75,12 @@ def move_token_to_header(func):
         return func(*args, **kwargs)
     return wrapper
 
+def check_banned_user():
+    user = getattr(g, 'user', None)
+    if user and user.banned:
+        notify_admin()
+        abort(403, description="You are banned. Stop trying. The administrator has been notified.")
 
-@current_app.before_request
 @move_token_to_header
 def login_user_if_able():
     """
@@ -351,26 +375,11 @@ def make_user_anonymous(ip_address=None):
         if g.user is not None:
             g.safely = ValidUserPermissionLayer(g.user)
 
-@current_app.before_request
-def check_banned_user():
-    user = getattr(g, 'user', None)
-    if user and user.banned:
-        notify_admin()
-        abort(403, description="You are banned. Stop trying. The administrator has been notified.")
 
-
-def notify_admin():
-    msg = Message(
-        'A rascal has attempted to access the system!',
-        recipients=current_app.config['SYS_ADMINS'],
-        sender=current_app.config['SECURITY_EMAIL_SENDER'],
-        body=f'A rascal has attempted to access the system. '
-             f'I stopped them before they could do anything. '
-             f'Here are their details:\n'
-                f'User ID: {g.user.id}\n'
-                f'User Name: {g.user.name()}\n'
-                f'User Email: {g.user.email}\n'
-                f'User IP: {request.remote_addr}\n'
-                f'User Agent: {request.user_agent}\n'
-    )
-    mail.send(msg)
+def setup_authentication(app):
+    """
+    Sets up the authentication system for the app.
+    This includes loading the user before each request.
+    """
+    app.before_request(login_user_if_able)
+    app.before_request(check_banned_user)

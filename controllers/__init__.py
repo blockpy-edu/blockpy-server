@@ -1,10 +1,11 @@
 from controllers.setup import registry, rebar, generator
 
-import controllers.auth
+from controllers.auth import setup_authentication
 from controllers.admin import setup_admin
 from controllers.security import setup_security
 from controllers.assets import setup_assets
-
+from controllers.endpoints import register_blueprints
+from controllers.errors import register_error_handlers
 
 def create_blueprints(app):
     """
@@ -13,9 +14,10 @@ def create_blueprints(app):
     :param app: The main application context
     :return:
     """
+    setup_authentication(app)
     setup_assets(app)
     setup_security(app)
-    import controllers.endpoints
+    register_blueprints(app)
     setup_admin(app)
-    import controllers.errors
+    register_error_handlers(app)
     rebar.init_app(app)

@@ -1,10 +1,8 @@
 from flask import g, request, redirect, url_for, make_response, current_app, render_template
 from flask import flash, session, jsonify, abort
-
 import controllers.pylti.common
 
 
-@current_app.errorhandler(controllers.pylti.common.LTIException)
 def handle_lti_exception(error):
     if "Expired timestamp" in str(error):
         return render_template('lti/lti_error.html', message=
@@ -15,15 +13,18 @@ def handle_lti_exception(error):
     ), 500
 
 
-@current_app.errorhandler(401)
 def handle_401(error):
     return render_template('lti/lti_error.html', message=
                            "Unauthorized Error: "+str(error)+"\n<br>Please reload the page and try again."
     ), 401
 
 
-@current_app.errorhandler(403)
 def handle_403(error):
     return render_template('errors/forbidden.html', message=
                            str(error)
     ), 403
+
+def register_error_handlers(app):
+    app.register_error_handler(controllers.pylti.common.LTIException, handle_lti_exception)
+    app.register_error_handler(401, handle_401)
+    app.register_error_handler(403, handle_403)
