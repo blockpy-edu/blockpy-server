@@ -1,11 +1,6 @@
 """
-Comprehensive tests for course endpoints.
-
-This test suite covers all course-related endpoints with a focus on:
-1. Authorization and permission checks (students vs instructors)
-2. Access control for sensitive data
-3. Cross-course authorization
-4. Valid operations by authorized users
+TODO: Some of the earlier tests are human-authored, but a lot of these are
+low-quality AI generated. We should improve them at some point.
 """
 import pytest
 
@@ -71,14 +66,7 @@ class TestCourseUserManagement:
         act_as(test_data.user("ada@blockpy.com"))
         response = client.get('/courses/users/')
         # May return 403 or 500 depending on get_course_id() behavior
-        assert response.status_code in [403, 500]
-        # If JSON response, should have success=False
-        try:
-            data = response.get_json()
-            if data:
-                assert data.get('success') is False
-        except:
-            pass  # May not be JSON
+        assert response.get_json()['success'] is False
     
     def test_get_users_anonymous_with_course(self, client, test_data):
         """Anonymous users cannot get all users in a course."""
@@ -156,7 +144,7 @@ class TestCourseUserManagement:
         act_as(test_data.user("lulu@blockpy.com"))
         response = client.get('/courses/manage_users/6')
         # Actually allows access, but is_instructor flag controls what they can do
-        assert response.status_code == 200
+        assert response.status_code == 403
     
     def test_manage_users_page_instructor_allowed(self, client, test_data, act_as):
         """Instructors can access the manage users page for their courses."""
@@ -344,24 +332,7 @@ class TestCourseAssignments:
         response = client.get('/courses/view_assignments/2')
         assert response.status_code == 200
     
-    def test_manage_assignments_has_bug(self, client, test_data, act_as):
-        """There's a bug in manage_assignments - the if statement logic is inverted.
-        Line 314 should be 'if not user.is_instructor' but it's 'if user.is_instructor'.
-        This causes instructors to be blocked and students to access the page."""
-        # Ada (10) is instructor in course 6
-        act_as(test_data.user("ada@blockpy.com"))
-        response = client.get('/courses/manage_assignments/6')
-        # Due to bug, instructor gets redirected
-        assert response.status_code == 302  # Bug: redirects instructor
-    
-    def test_manage_assignments_student_allowed_due_to_bug(self, client, test_data, act_as):
-        """Due to bug, students can access manage assignments page."""
-        # Lulu (100) is a student in course 6
-        act_as(test_data.user("lulu@blockpy.com"))
-        response = client.get('/courses/manage_assignments/6')
-        # Bug allows student access
-        assert response.status_code == 200
-    
+
     def test_assignments_page_student_not_in_course(self, client, test_data, act_as):
         """Students cannot access assignments page for courses they're not in."""
         # Lulu (100) is NOT in course 10
@@ -440,23 +411,6 @@ class TestCourseExport:
 class TestSubmissionsAndGrading:
     """Test submission viewing and grading endpoints (security critical)."""
     
-    def test_submissions_grid_needs_context(self, client, test_data, act_as):
-        """submissions_grid endpoint has a bug - it ignores the course_id parameter.
-        It calls get_course_id() which reads from g.course, causing 500 error."""
-        # Lulu (100) is a student in course 6
-        act_as(test_data.user("lulu@blockpy.com"))
-        response = client.get('/courses/submissions_grid/6/')
-        # Bug: ignores URL parameter, causes 500 error
-        assert response.status_code == 500
-    
-    def test_submissions_grid_instructor_also_needs_context(self, client, test_data, act_as):
-        """Instructors also get 500 error due to bug in submissions_grid."""
-        # Ada (10) is instructor in course 6
-        act_as(test_data.user("ada@blockpy.com"))
-        response = client.get('/courses/submissions_grid/6/')
-        # Bug: ignores URL parameter, causes 500 error  
-        assert response.status_code == 500
-    
     def test_submissions_filter_student_blocked(self, client, test_data, act_as):
         """Students cannot filter/view all submissions."""
         # Lulu (100) is a student in course 6
@@ -505,11 +459,7 @@ class TestDashboardAndReporting:
         # Ada (10) is instructor in course 6
         act_as(test_data.user("ada@blockpy.com"))
         response = client.get('/courses/dashboard/', query_string={'course_id': 6})
-        # get_course_id() may fail without proper session context
-        assert response.status_code in [200, 500]
-        if response.status_code == 200:
-            # Success means we got valid dashboard response
-            assert b'course' in response.data.lower() or b'dashboard' in response.data.lower()
+        assert b'course' in response.data.lower() or b'dashboard' in response.data.lower()
     
     def test_list_grading_failures_student_blocked(self, client, test_data, act_as):
         """Students cannot view grading failures."""
