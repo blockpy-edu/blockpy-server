@@ -16,12 +16,17 @@ STATIC_SETTINGS = {
     '_BASE_FILE': 'testing_configuration.py',
     'TESTING': True,
     'HOST': 'localhost',
-    'SERVER_NAME': 'localhost:5001',
+    'SERVER_NAME': 'localhost',
     'PORT': 5001,
     'SITE_URL': 'localhost:5001',
     'TASK_QUEUE_STYLE': 'sqlite',
     'WTF_CSRF_ENABLED': False,
-    'SECRET_KEY': 'test-secret-key'
+    'SECRET_KEY': 'test-secret-key',
+    "SESSION_COOKIE_DOMAIN": None,
+    "SESSION_COOKIE_SECURE": False,
+    "COOKIE_SAMESITE": "Lax",
+    "SESSION_COOKIE_HTTPONLY": False,
+    "SESSION_COOKIE_SAMESITE": "Lax",
 }
 
 def run_server():
@@ -71,3 +76,16 @@ def app_context():
     """Create an app context for testing outside of fixtures."""
     yield from run_server()
 
+
+@pytest.fixture
+def act_as(client):
+    def _act_as(user):
+        # user can be a model object, or ID/email lookup
+        with client.session_transaction() as sess:
+            # Example for Flask-Login:
+            sess["_user_id"] = str(user.get_id())
+            sess["_fresh"] = True
+        #from flask import session
+        #print(session["_user_id"])
+        return client
+    return _act_as

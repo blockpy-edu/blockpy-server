@@ -57,5 +57,44 @@ def test_load_public_course_users_cannot_get_everyone(client, test_data):
         response = client.get('/courses/users/', query_string={"course_id": course_id})
         assert response.status_code == 403
 
+
+def test_login_instructor_see_course_users(client, test_data):
+    # Login Ada (10) as instructor for course 6
+    login_response = client.post('/users/login', data={
+        'email': 'ada@blockpy.com', "password": 'fetch'})
+    assert login_response.status_code == 302
+    response = client.get('/courses/users/', query_string={"course_id": 6})
+    assert response.status_code == 200
+    users = response.get_json()
+    # Can get all users in the course
+    assert len(users['users']) >= 6
+    assert set(u['id'] for u in users['users']) >= {
+        10, 100, 101, 102, 103, 104
+    }
+
+def test_login_student_cannot_see_course_users(client, test_data):
+    # Login Bob (100) as student for course 6
+    login_response = client.post('/users/login', data={
+        'email': 'lulu@blockpy.com', "password": "geass"})
+    assert login_response.status_code == 302
+    response = client.get('/courses/users/', query_string={"course_id": 6})
+    assert response.status_code == 403
+
+def test_instructor_session_direct_write(client, test_data, act_as):
+    act_as(test_data.user("ada@blockpy.com"))
+    my_identity = client.get('/whoami').get_json()
+    assert my_identity['email'] == "ada@blockpy.com"
+
+def test_instructor_see_course_users_session(client, test_data, act_as):
+    act_as(test_data.user("ada@blockpy.com"))
+    response = client.get('/courses/users/', query_string={"course_id": 6})
+    assert response.status_code == 200
+    users = response.get_json()
+    # Can get all users in the course
+    assert len(users['users']) >= 6
+    assert set(u['id'] for u in users['users']) >= {
+        10, 100, 101, 102, 103, 104
+    }
+
 def test_load_private_assignment_endpoint_unauthorized(client, test_data):
     pass

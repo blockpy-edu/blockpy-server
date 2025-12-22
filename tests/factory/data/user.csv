@@ -2,6 +2,7 @@ id,date_created,date_modified,first_name,last_name,email,proof,password,active,a
 index,datetime,datetime,string,string,string,string,string,boolean,boolean,boolean,datetime,string_default_uuid
 1,,,Admin,User,admin@blockpy.com,,hunter2,true,false,false,,
 
+# Ada is an instructor in a lot of courses
 10,,,Ada,Bart,ada@blockpy.com,,fetch,true,false,false,,
 11,,,Babbage,Bart,babbage@blockpy.com,,nap,true,false,false,,
 12,,,Captain,Copes,captain@blockpy.com,,cuddles,true,false,false,,
@@ -11,12 +12,13 @@ index,datetime,datetime,string,string,string,string,string,boolean,boolean,boole
 51,,,Sable,Copes,sable@blockpy.com,,food,true,false,false,,
 
 
-
+# Most of these folks are students in cs1_f20
 100,,,Lelouch,Lamperouge,lulu@blockpy.com,,geass,true,false,false,,
 101,,,Suzaku,Kururugi,suzaku@blockpy.com,,knightmare,true,false,false,,
 102,,,C.C.,,cc@blockpy.com,,immortal,true,false,false,,
 103,,,Kallen,Kozuki,kallen@blockpy.com,,guren,true,false,false,,
 104,,,Nunnally,Lamperouge,nunnally@blockpy.com,,emperor,true,false,false,,
+# Most of these folks are students in cs2_f21
 105,,,Jeremiah,Gottwald,jeremiah@blockpy.com,,orange,true,false,false,,
 106,,,Shirley,Fenette,shirley@blockpy.com,,aquamarine,true,false,false,,
 107,,,Rolo,Lamperouge,rolo@blockpy.com,,dagger,true,false,false,,

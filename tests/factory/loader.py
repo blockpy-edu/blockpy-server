@@ -28,9 +28,69 @@ TABLES_AND_DATA = [
 @pytest.fixture
 def test_data():
     """ Load all static data files for testing. """
-    data = {}
+    data = SimpleDatabase()
     for category, filename, model in TABLES_AND_DATA:
-        data[category] = load_static_data_file(filename, model)
+        data.add(category, load_static_data_file(filename, model))
+    return data
+
+
+class SimpleDatabaseCategory:
+    def __init__(self, category, data):
+        self._category = category
+        self._data = data
+
+    def by(self, raw=False, **kwargs):
+        for item in self._data:
+            item = item[1] if raw else item[0]
+            if all(getattr(item, key) == value for key, value in kwargs.items()):
+                return item
+        raise ValueError(f"No {self._category} found matching {kwargs}")
+
+    def filter(self, raw=False, **kwargs):
+        results = []
+        for item in self._data:
+            item = item[1] if raw else item[0]
+            if all(getattr(item, key) == value for key, value in kwargs.items()):
+                results.append(item)
+        return results
+
+
+class SimpleDatabase:
+    """
+    test_data.users.by(email='ada@blockpy.com')
+    test_data.courses.by(url='intro_to_cs1')
+    test-data.roles.filter(name='instructor')
+    """
+    def __init__(self):
+        self._data = {}
+
+    def user(self, email: str) -> User:
+        return self.users.by(email=email)
+
+    def add(self, category, data):
+        self._data[category] = SimpleDatabaseCategory(category, data)
+
+    def __getattr__(self, name):
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'SimpleDatabase' object has no attribute '{name}'")
+
+def load_static_data_file(filename, model):
+    """ Load a static data file into the database. """
+    data = []
+    resources = Path(__file__).parent / 'data'
+    with open(resources / filename, encoding='utf-8') as f:
+        reader = csv.DictReader(row for row in f if not row.lstrip().startswith("#"))
+        types = next(reader)
+        for row in reader:
+            init = {}
+            for key, value in row.items():
+                value = convert_value(value, types[key])
+                init[key] = value
+            obj = model(**init)
+            db.session.add(obj)
+            data.append((obj, init))
+    db.session.commit()
     return data
 
 def convert_value(value, type_name):
@@ -69,21 +129,3 @@ def convert_value(value, type_name):
             return value  # Default to string
     except Exception as e:
         raise ValueError(f"Error converting value '{value}' to type '{type_name}': {e}") from e
-
-def load_static_data_file(filename, model):
-    """ Load a static data file into the database. """
-    data = []
-    resources = Path(__file__).parent / 'data'
-    with open(resources / filename, encoding='utf-8') as f:
-        reader = csv.DictReader(row for row in f if not row.lstrip().startswith("#"))
-        types = next(reader)
-        for row in reader:
-            obj = model()
-            for key, value in row.items():
-                value = convert_value(value, types[key])
-                if hasattr(model, key):
-                    setattr(obj, key, value)
-            db.session.add(obj)
-            data.append(obj)
-    db.session.commit()
-    return data
