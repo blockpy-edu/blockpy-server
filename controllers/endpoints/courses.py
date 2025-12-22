@@ -311,7 +311,7 @@ def manage_assignments(course_id):
         flash("You are not in course_id")
         return redirect(url_for('courses.index'))
     course = Course.by_id(course_id)
-    if user.is_instructor(course_id):
+    if not user.is_instructor(course_id):
         flash(f"You are not an instructor in course: {course_id}")
         return redirect(url_for("courses.index"))
     return render_template('courses/manage_assignments.html',
@@ -387,6 +387,8 @@ def manage_users(course_id):
     if not g.user.in_course(course_id):
         return redirect(url_for('courses.index'))
     is_instructor = g.user.is_instructor(int(course_id))
+    if not is_instructor:
+        return abort(403, description="You are not an instructor in this course!")
     students = Course.by_id(int(course_id)).get_users()
     return render_template('courses/manage_users.html',
                            students=students,
@@ -640,7 +642,7 @@ def submissions_specific(submission_id):
 @login_required
 def submissions_grid(course_id):
     ''' List all the users in the course '''
-    course_id = get_course_id()
+    course_id = get_course_id(course_id)
     user, user_id = get_user()
     # Check permissions
     require_course_grader(user, course_id)

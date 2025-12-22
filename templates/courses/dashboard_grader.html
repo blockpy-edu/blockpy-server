@@ -9,7 +9,7 @@ Dashboard
 
 {% block extrahead %}
 
-    <script>window.accessToken = {{ g.access_token|tojson }}</script>
+    <script>window.accessToken = {{ (g.access_token or "")|tojson }}</script>
 
     <script>
     URLS_UPDATE_SUBMISSION = "{{ url_for('blockpy.update_submission') }}";
