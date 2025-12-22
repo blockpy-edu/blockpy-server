@@ -14,7 +14,11 @@ class TestAssignmentCreation:
             'course_id': 6,
             'name': 'New Assignment'
         })
-        assert response.status_code == 302  # Redirect to login
+        # Returns 200 with success=False for auth failures
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'instructor' in data['message'].lower()
     
     def test_new_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot create assignments."""
@@ -24,7 +28,11 @@ class TestAssignmentCreation:
             'course_id': 6,
             'name': 'New Assignment'
         })
-        assert response.status_code == 403
+        # Returns 200 with success=False for auth failures
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'instructor' in data['message'].lower()
     
     def test_new_assignment_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot create assignments in courses they don't teach."""
@@ -34,7 +42,11 @@ class TestAssignmentCreation:
             'course_id': 6,
             'name': 'Unauthorized Assignment'
         })
-        assert response.status_code == 403
+        # Returns 200 with success=False for auth failures
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'instructor' in data['message'].lower()
     
     def test_new_assignment_instructor_allowed(self, client, test_data, act_as):
         """Instructors can create assignments in their courses."""
@@ -73,8 +85,10 @@ class TestAssignmentCreation:
         response = client.post('/assignments/new', data={
             'name': 'Missing Course ID'
         })
-        # Should fail due to missing required parameter
-        assert response.status_code in [400, 403]
+        # Should fail due to missing required parameter, returns 200 with success=False
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is False
 
 
 class TestAssignmentRetrieval:

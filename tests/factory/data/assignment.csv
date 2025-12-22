@@ -1,33 +1,33 @@
-id,date_created,date_modified,url,name,status,version,owner_id,course_id,assignment_group_id,forked_id,forked_version,type,reviewed,hidden,public,subordinate_to_id,ip_ranges,points,settings,instructions,on_run,on_change,on_eval,starting_code,extra_instructor_files,extra_starting_files
-index,datetime,datetime,string,string,AssignmentStatus,integer,integer,integer,integer,integer,integer,AssignmentTypes,boolean,boolean,boolean,integer,string,integer,string,string,string,string,string,string,string,string
+id,date_created,date_modified,url,name,status,version,owner_id,course_id,forked_id,forked_version,type,reviewed,hidden,public,subordinate,ip_ranges,points,settings,instructions,on_run,on_change,on_eval,starting_code,extra_instructor_files,extra_starting_files
+index,datetime,datetime,string,string,AssignmentStatus,integer,integer,integer,integer,integer,AssignmentTypes,boolean,boolean,boolean,boolean,string,integer,string,string,string,string,string,string,string,string
 
 # Assignments for course 6 (cs1_f20) group 1 (Homework 1) - Ada is instructor
-100,,,variables,Variables and Types,published,1,10,6,,,,,blockpy,false,false,false,,,,5,"<p>Learn about variables</p>",,,,print('Hello'),, 
-101,,,conditionals,If Statements,published,1,10,6,,,,,blockpy,false,false,false,,,,10,"<p>Practice conditionals</p>",,,,x = 5,,
-102,,,loops,For Loops,published,1,10,6,,,,,blockpy,false,false,false,,,,15,"<p>Learn looping</p>",,,,for i in range(10):,,
+100,,,variables,Variables and Types,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,5,"<p>Learn about variables</p>",,,,print('Hello'),
+101,,,conditionals,If Statements,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,10,"<p>Practice conditionals</p>",,,,x = 5,
+102,,,loops,For Loops,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,15,"<p>Learn looping</p>",,,,for i in range(10):,
 
 # Assignments for course 6 group 2 (Homework 2)
-103,,,lists,Working with Lists,published,1,10,6,,,,,blockpy,false,false,false,,,,10,"<p>Learn lists</p>",,,,numbers = [],,
-104,,,functions,Defining Functions,published,1,10,6,,,,,blockpy,false,false,false,,,,10,"<p>Learn functions</p>",,,,def my_function():,,
+103,,,lists,Working with Lists,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,10,"<p>Learn lists</p>",,,,numbers = [],
+104,,,functions,Defining Functions,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,10,"<p>Learn functions</p>",,,,def my_function():,
 
 # Assignments for course 6 group 3 (Quizzes)
-105,,,quiz1,Quiz 1,published,1,10,6,,,,,quiz,false,false,false,,,,20,"<p>First quiz</p>",,,,,,
+105,,,quiz1,Quiz 1,PUBLISHED,1,10,6,,,QUIZ,false,false,false,false,,,20,"<p>First quiz</p>",,,,,,
 
 # Assignments for course 6 group 4 (Labs)
-106,,,lab1,Lab 1 - Python Basics,published,1,10,6,,,,,blockpy,false,false,false,,,,25,"<p>Lab on basics</p>",,,,# Lab code here,,
+106,,,lab1,Lab 1 - Python Basics,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,25,"<p>Lab on basics</p>",,,,# Lab code here,
 
 # Assignments for course 8 (cs1_f21) group 5 (Homework 1) - Ada is instructor, private course
-110,,,hw1_prob1,Problem 1,published,1,10,8,,,,,blockpy,false,false,false,,,,10,"<p>Problem 1</p>",,,,,,
-111,,,hw1_prob2,Problem 2,draft,1,10,8,,,,,blockpy,false,false,false,,,,10,"<p>Problem 2 (draft)</p>",,,,,,
+110,,,hw1_prob1,Problem 1,PUBLISHED,1,10,8,,,BLOCKPY,false,false,false,false,,,10,"<p>Problem 1</p>",,,,,,
+111,,,hw1_prob2,Problem 2,DRAFT,1,10,8,,,BLOCKPY,false,false,false,false,,,10,"<p>Problem 2 (draft)</p>",,,,,,
 
 # Assignments for course 8 group 6 (Exam) - private course
-112,,,midterm,Midterm Exam,published,1,10,8,,,,,quiz,false,false,false,,"192.168.1.0/24",100,"<p>Midterm</p>",,,,,,
+112,,,midterm,Midterm Exam,PUBLISHED,1,10,8,,,QUIZ,false,false,false,false,"192.168.1.0/24",100,"<p>Midterm</p>",,,,,,
 
 # Assignments for course 3 (cs2) group 10 - Babbage is instructor
-120,,,cs2_hw1,CS2 Homework 1,published,1,11,3,,,,,blockpy,false,false,false,,,,15,"<p>Advanced topic</p>",,,,,,
+120,,,cs2_hw1,CS2 Homework 1,PUBLISHED,1,11,3,,,BLOCKPY,false,false,false,false,,,15,"<p>Advanced topic</p>",,,,,,
 
 # Assignments not in any group (orphaned) for course 6
-130,,,orphaned1,Orphaned Assignment,published,1,10,6,,,,,blockpy,false,false,false,,,,5,"<p>Not in a group</p>",,,,,,
+130,,,orphaned1,Orphaned Assignment,PUBLISHED,1,10,6,,,BLOCKPY,false,false,false,false,,,5,"<p>Not in a group</p>",,,,,,
 
 # Public assignment in course 2 (template course)
-140,,,public_example,Public Example,published,1,10,2,,,,,blockpy,false,false,true,,,,5,"<p>Public assignment</p>",,,,print('public'),, 
+140,,,public_example,Public Example,PUBLISHED,1,10,2,,,BLOCKPY,false,false,true,false,,,5,"<p>Public assignment</p>",,,,print('public'),
