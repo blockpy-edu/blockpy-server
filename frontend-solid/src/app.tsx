@@ -17,6 +17,8 @@ import { ModelSelector, type Model } from './components/management/ModelSelector
 import { UserEditor } from './components/management/UserEditor';
 import { CodingAssignment } from './components/coding/CodingAssignment';
 import type { CodingAssignmentData } from './components/coding/types';
+import { SubmissionFilterTable } from './components/submissions/SubmissionFilterTable';
+import type { SubmissionFilterTableProps } from './components/submissions/types';
 
 // Export components for external use
 export { Watcher } from './components/watcher/Watcher';
@@ -51,6 +53,10 @@ export { UserEditor, SortOrder, RenderStyle } from './components/management/User
 // Export coding component
 export { CodingAssignment } from './components/coding/CodingAssignment';
 export type { CodingAssignmentData, Runtime, ExecutionResult, FeedbackMessage, ExecutionTrace } from './components/coding/types';
+
+// Export submission components
+export { SubmissionFilterTable } from './components/submissions/SubmissionFilterTable';
+export type { SubmissionData, UserData, AssignmentData, CourseData, SubmissionFilterTableProps, GroupHeader } from './components/submissions/types';
 
 // Export models
 export { User } from './models/user';
@@ -308,6 +314,27 @@ export function initCodingAssignment(
   render(() => <CodingAssignment {...props} />, element);
 }
 
+/**
+ * Initialize a SubmissionFilterTable component in the given container
+ * @param container - DOM element or selector where the component should be mounted
+ * @param props - Props for the SubmissionFilterTable component
+ */
+export function initSubmissionFilterTable(
+  container: HTMLElement | string,
+  props: SubmissionFilterTableProps
+) {
+  const element = typeof container === 'string'
+    ? document.querySelector(container)
+    : container;
+
+  if (!element) {
+    console.error('Container element not found:', container);
+    return;
+  }
+
+  render(() => <SubmissionFilterTable {...props} />, element);
+}
+
 // Make it available globally for template usage
 if (typeof window !== 'undefined') {
   (window as any).frontendSolid = {
@@ -322,6 +349,7 @@ if (typeof window !== 'undefined') {
     initModelSelector,
     initUserEditor,
     initCodingAssignment,
+    initSubmissionFilterTable,
     Watcher,
     Quizzer,
     QuizEditor,
@@ -333,6 +361,7 @@ if (typeof window !== 'undefined') {
     ModelSelector,
     UserEditor,
     CodingAssignment,
+    SubmissionFilterTable,
     WatchMode,
   };
 }
