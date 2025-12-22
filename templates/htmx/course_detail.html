@@ -1,0 +1,72 @@
+{% extends 'htmx/layout.html' %}
+
+{% block title %}{{ course.name }}{% endblock %}
+
+{% block body %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('htmx_routes.courses') }}">Courses</a></li>
+        <li class="breadcrumb-item active">{{ course.name }}</li>
+    </ol>
+</nav>
+
+<h1>{{ course.name }}</h1>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Course Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Course ID:</dt>
+                    <dd class="col-sm-9">{{ course.id }}</dd>
+                    
+                    <dt class="col-sm-3">Service:</dt>
+                    <dd class="col-sm-9">
+                        {% if course.service == 'native' %}
+                            <span class="badge bg-primary">Native</span>
+                        {% else %}
+                            <span class="badge bg-info">{{ course.service }}</span>
+                        {% endif %}
+                    </dd>
+                    
+                    {% if course.term %}
+                    <dt class="col-sm-3">Term:</dt>
+                    <dd class="col-sm-9">{{ course.term }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div id="assignments-container">
+            <button class="btn btn-primary mb-3"
+                    hx-get="{{ url_for('htmx_routes.course_assignments', course_id=course.id) }}"
+                    hx-target="#assignments-list"
+                    hx-swap="innerHTML">
+                Load Assignments
+            </button>
+            <div id="assignments-list"></div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('courses.course', course_id=course.id) }}" class="btn btn-outline-secondary btn-block mb-2 d-block">
+                    View in Classic Mode
+                </a>
+                {% if course.is_instructor(g.user.id) %}
+                <a href="{{ url_for('courses.course', course_id=course.id) }}" class="btn btn-outline-primary btn-block d-block">
+                    Manage Course
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

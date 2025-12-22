@@ -1,0 +1,72 @@
+{% extends 'htmx/layout.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block body %}
+<div class="jumbotron bg-light p-5 rounded-3">
+    <h1 class="display-4">Welcome to BlockPy HTMX!</h1>
+    <p class="lead">This is the new HTMX-powered frontend for BlockPy Server.</p>
+    <hr class="my-4">
+    <p>This experimental version uses HTMX instead of Knockout.js for dynamic interactions, providing a more modern and lightweight approach to building interactive web applications.</p>
+    
+    {% if g.user and not g.user.anonymous %}
+        <div class="mt-3">
+            <a href="{{ url_for('htmx_routes.courses') }}" class="btn btn-primary btn-lg">View Courses</a>
+            {% if g.user.is_admin() %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary btn-lg">Administration</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="mt-3">
+            <strong>Instructors and administrators:</strong>
+            <a class="btn btn-outline-secondary" href="{{ url_for('security.login') }}">Log in</a> or
+            <a class="btn btn-outline-secondary" href="{{ url_for('security.register') }}">Register</a>
+        </p>
+        <p><strong>Students:</strong> Use your school's Learning Management System (e.g., Canvas).</p>
+    {% endif %}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt"></i> HTMX Features
+                </h5>
+                <ul>
+                    <li>No heavy JavaScript frameworks</li>
+                    <li>Server-side rendering with dynamic updates</li>
+                    <li>Simpler, more maintainable code</li>
+                    <li>Progressive enhancement</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-exchange-alt"></i> Comparison
+                </h5>
+                <p>The classic version uses Knockout.js for client-side state management. This HTMX version moves logic to the server for a cleaner separation of concerns.</p>
+                <a href="{{ url_for('basic.index') }}" class="btn btn-sm btn-outline-primary">Try Classic Version</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h3>Demo: Simple HTMX Interaction</h3>
+    <div class="card">
+        <div class="card-body">
+            <button class="btn btn-primary" 
+                    hx-get="{{ url_for('htmx_routes.demo_response') }}" 
+                    hx-target="#demo-result"
+                    hx-swap="innerHTML">
+                Click me for HTMX demo
+            </button>
+            <div id="demo-result" class="mt-3 alert alert-info" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
