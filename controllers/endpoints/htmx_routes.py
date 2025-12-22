@@ -2,8 +2,11 @@
 HTMX-based routes for the new frontend.
 This provides an alternative to the Knockout.js-based interface.
 """
-from flask import Blueprint, render_template, request, g, jsonify
+from flask import Blueprint, render_template, request, g, jsonify, flash, redirect, url_for
 from models.course import Course
+from models.assignment import Assignment
+from models.assignment_group import AssignmentGroup
+from models.submission import Submission
 from models.user import User
 from datetime import datetime
 
@@ -107,3 +110,148 @@ def course_assignments(course_id):
     return render_template('htmx/partials/assignments_list.html', 
                          assignments=assignments,
                          course=course)
+
+
+@htmx_routes.route('/assignments/<int:assignment_id>', methods=['GET'])
+def assignment_detail(assignment_id):
+    """
+    Show details for a specific assignment.
+    """
+    assignment = Assignment.by_id(assignment_id)
+    if not assignment:
+        return "<div class='alert alert-danger'>Assignment not found</div>", 404
+    
+    course_id = request.args.get('course_id')
+    if not course_id:
+        return "<div class='alert alert-danger'>Course ID required</div>", 400
+    
+    course = Course.by_id(course_id)
+    if not course or not course.is_user(g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    return render_template('htmx/assignment_detail.html', 
+                         assignment=assignment,
+                         course=course)
+
+
+@htmx_routes.route('/assignment-groups/<int:group_id>/toggle', methods=['POST'])
+def toggle_assignment_group(group_id):
+    """
+    Toggle visibility of an assignment group (HTMX endpoint).
+    """
+    group = AssignmentGroup.by_id(group_id)
+    if not group:
+        return "<div class='alert alert-danger'>Group not found</div>", 404
+    
+    course = Course.by_id(group.course_id)
+    if not course or not course.is_instructor(g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    # Toggle some property (example)
+    # In a real implementation, you'd update the database
+    return f"""
+    <button class="btn btn-sm btn-success" 
+            hx-post="{url_for('htmx_routes.toggle_assignment_group', group_id=group_id)}"
+            hx-swap="outerHTML">
+        Toggled!
+    </button>
+    """
+
+
+@htmx_routes.route('/assignments/<int:assignment_id>/submissions', methods=['GET'])
+def assignment_submissions(assignment_id):
+    """
+    Get submissions for an assignment (HTMX partial).
+    """
+    assignment = Assignment.by_id(assignment_id)
+    if not assignment:
+        return "<div class='alert alert-danger'>Assignment not found</div>", 404
+    
+    course_id = request.args.get('course_id')
+    course = Course.by_id(course_id)
+    if not course or not course.is_instructor(g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    # Get submissions (simplified - in real implementation would paginate)
+    submissions = assignment.get_submissions()[:10]  # Limit to 10 for demo
+    
+    return render_template('htmx/partials/submissions_list.html',
+                         submissions=submissions,
+                         assignment=assignment,
+                         course=course)
+
+
+@htmx_routes.route('/assignments/<int:assignment_id>/stats', methods=['GET'])
+def assignment_stats(assignment_id):
+    """
+    Get statistics for an assignment (HTMX partial).
+    """
+    assignment = Assignment.by_id(assignment_id)
+    if not assignment:
+        return "<div class='alert alert-danger'>Assignment not found</div>", 404
+    
+    course_id = request.args.get('course_id')
+    course = Course.by_id(course_id)
+    if not course or not course.is_user(g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    # Calculate some basic stats
+    total_submissions = len(assignment.get_submissions())
+    
+    return f"""
+    <dl class="row">
+        <dt class="col-sm-6">Total Submissions:</dt>
+        <dd class="col-sm-6">{total_submissions}</dd>
+        
+        <dt class="col-sm-6">Assignment ID:</dt>
+        <dd class="col-sm-6">{assignment.id}</dd>
+    </dl>
+    <small class="text-muted">Statistics loaded at {datetime.now().strftime('%I:%M %p')}</small>
+    """
+
+
+
+
+@htmx_routes.route('/submissions/<int:submission_id>', methods=['GET'])
+def submission_detail(submission_id):
+    """
+    Get details for a specific submission (HTMX partial).
+    """
+    submission = Submission.by_id(submission_id)
+    if not submission:
+        return "<div class='alert alert-danger'>Submission not found</div>", 404
+    
+    # Check access - must be instructor or owner
+    assignment = submission.assignment
+    course = assignment.course
+    
+    if not (course.is_instructor(g.user.id) or submission.user_id == g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    return render_template('htmx/partials/submission_detail.html',
+                         submission=submission,
+                         assignment=assignment,
+                         course=course)
+
+
+@htmx_routes.route('/submissions/<int:submission_id>/code', methods=['GET'])
+def submission_code(submission_id):
+    """
+    Get code for a submission (HTMX partial).
+    """
+    submission = Submission.by_id(submission_id)
+    if not submission:
+        return "<div class='alert alert-danger'>Submission not found</div>", 404
+    
+    # Check access
+    assignment = submission.assignment
+    course = assignment.course
+    
+    if not (course.is_instructor(g.user.id) or submission.user_id == g.user.id):
+        return "<div class='alert alert-danger'>Access denied</div>", 403
+    
+    code = submission.code if submission.code else "No code available"
+    
+    return f"""
+    <pre class="bg-light p-3 rounded"><code>{code}</code></pre>
+    """
