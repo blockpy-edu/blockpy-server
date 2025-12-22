@@ -255,3 +255,137 @@ def submission_code(submission_id):
     return f"""
     <pre class="bg-light p-3 rounded"><code>{code}</code></pre>
     """
+
+
+# Example routes for demonstrating HTMX patterns
+@htmx_routes.route('/examples', methods=['GET'])
+def examples():
+    """
+    Page showing various HTMX pattern examples.
+    """
+    return render_template('htmx/examples.html')
+
+
+@htmx_routes.route('/examples/load', methods=['GET'])
+def example_load():
+    """Simple load example."""
+    return f"""
+    <div class="alert alert-success">
+        <strong>Loaded!</strong> Content loaded at {datetime.now().strftime('%H:%M:%S')}
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/load-once', methods=['GET'])
+def example_load_once():
+    """Load once example."""
+    return """
+    <div class="alert alert-info">
+        <strong>Loaded Once!</strong> This content was loaded once and won't reload.
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/search', methods=['GET'])
+def example_search():
+    """Search with debounce example."""
+    query = request.args.get('q', '')
+    if not query:
+        return '<p class="text-muted">Start typing to see results...</p>'
+    
+    # Simulate search results
+    results = [
+        f"Result for '{query}' #1",
+        f"Result for '{query}' #2",
+        f"Result for '{query}' #3",
+    ]
+    
+    html = '<ul class="list-group">'
+    for result in results:
+        html += f'<li class="list-group-item">{result}</li>'
+    html += '</ul>'
+    return html
+
+
+@htmx_routes.route('/examples/form', methods=['POST'])
+def example_form():
+    """Form submission example."""
+    name = request.form.get('name', 'Anonymous')
+    return f"""
+    <div class="alert alert-success">
+        <strong>Success!</strong> Form submitted by <strong>{name}</strong> at {datetime.now().strftime('%H:%M:%S')}
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/delete', methods=['DELETE'])
+def example_delete():
+    """Delete example."""
+    return """
+    <div class="alert alert-warning">
+        <strong>Deleted!</strong> The item has been removed.
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/poll', methods=['GET'])
+def example_poll():
+    """Polling/auto-refresh example."""
+    return f"""
+    <div class="alert alert-primary">
+        Current time: <strong>{datetime.now().strftime('%H:%M:%S')}</strong>
+        <br><small>Auto-refreshing every 3 seconds...</small>
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/edit-form', methods=['GET'])
+def example_edit_form():
+    """Inline edit form example."""
+    return """
+    <form hx-post="{}" hx-target="#editable-content" hx-swap="outerHTML">
+        <div class="mb-2">
+            <input type="text" name="content" class="form-control" 
+                   value="Click me to edit! This is some editable content." required>
+        </div>
+        <button type="submit" class="btn btn-sm btn-success">Save</button>
+        <button type="button" class="btn btn-sm btn-secondary"
+                hx-get="{}" hx-target="#editable-content" hx-swap="outerHTML">
+            Cancel
+        </button>
+    </form>
+    """.format(
+        url_for('htmx_routes.example_edit_save'),
+        url_for('htmx_routes.example_edit_cancel')
+    )
+
+
+@htmx_routes.route('/examples/edit-save', methods=['POST'])
+def example_edit_save():
+    """Save inline edit example."""
+    content = request.form.get('content', 'Default content')
+    return f"""
+    <div id="editable-content"
+         hx-get="{url_for('htmx_routes.example_edit_form')}"
+         hx-target="this"
+         hx-swap="outerHTML"
+         class="p-3 border rounded bg-success text-white"
+         style="cursor: pointer;">
+        <strong>Saved!</strong> {content}
+    </div>
+    """
+
+
+@htmx_routes.route('/examples/edit-cancel', methods=['GET'])
+def example_edit_cancel():
+    """Cancel inline edit example."""
+    return """
+    <div id="editable-content"
+         hx-get="{}"
+         hx-target="this"
+         hx-swap="outerHTML"
+         class="p-3 border rounded"
+         style="cursor: pointer;">
+        <strong>Click me to edit!</strong> This is some editable content.
+    </div>
+    """.format(url_for('htmx_routes.example_edit_form'))
