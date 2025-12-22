@@ -3,7 +3,7 @@ Tests for the User model.
 """
 from flask_security.utils import verify_password
 
-from tests.factories import UserFactory
+from tests.factory.factories import UserFactory
 from models.user import User
 from models.role import Role
 from models.enums.roles import UserRoles

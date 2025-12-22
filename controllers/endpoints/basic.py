@@ -4,7 +4,7 @@ Any of the basic app pages, like the site-map and the about page.
 import os
 from urllib.parse import unquote
 
-from flask import render_template, current_app, send_from_directory, url_for, Blueprint
+from flask import render_template, current_app, send_from_directory, url_for, Blueprint, g, jsonify
 
 basic = Blueprint('basic', __name__)
 
@@ -55,3 +55,11 @@ def site_map():
         line = unquote("<td>{:50s}</td><td>{:20s}</td><td>{}</td>".format(rule.endpoint, methods, url))
         output.append(line)
     return "<table><tr>{}</tr></table>".format("</tr><tr>".join(sorted(output)))
+
+@basic.route('/whoami', methods=['GET', 'POST'])
+def whoami():
+    """
+    A simple page that tells you who you are according to the server.
+    Useful for debugging authentication issues.
+    """
+    return jsonify(g.user.encode_json())

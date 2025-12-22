@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 import pytest
 from flask import Flask
+from tests.factory.loader import test_data
 
 from main import create_app
 from models import db
@@ -34,8 +35,6 @@ def run_server():
             'SQLALCHEMY_DATABASE_URI_ALEMBIC': f'sqlite:///{db_path}',
             'TASK_DB_URI': task_db_path,
         })
-        print("BLUEPRINTS", app.blueprints.keys())
-        print("RULES", [r.rule for r in app.url_map.iter_rules()])
 
         with app.app_context():
             db.create_all()

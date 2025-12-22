@@ -1,0 +1,25 @@
+id,date_created,date_modified,url,name,owner_id,kind,service,external_id,lms_id,endpoint,version,visibility,term,settings,locked
+index,datetime,datetime,string,string,integer,string,string,string,string,string,integer,string,string,string,boolean
+1,,,default,Default Course,1,default,native,,,,1,public,,{},false
+2,,,cs1,Introduction to CS1,10,template,native,,,,1,public,,{},false
+3,,,cs2,Introduction to CS2,11,template,native,,,,1,public,,{},false
+4,,,old_cs1,OLD CS1,10,template,native,,,,1,archived,,{},true
+5,,,old_cs2,OLD CS2,11,template,native,,,,1,archived,,{},true
+6,,,cs1_f20,Introduction to CS1 Fall 2020,10,offering,native,,,,1,public,Fall 2020,{},false
+7,,,cs1_s21,Introduction to CS1 Spring 2021,10,offering,native,,,,1,public,Spring 2021,{},false
+8,,,cs1_f21,Introduction to CS1 Fall 2021,10,offering,native,,,,1,private,Fall 2021,{},false
+9,,,cs1_s22,Introduction to CS1 Spring 2022,10,offering,native,,,,1,private,Spring 2022,{},false
+10,,,cs2_f20,Introduction to CS2 Fall 2020,11,offering,native,,,,1,public,Fall 2020,{},false
+11,,,cs2_s21,Introduction to CS2 Spring 2021,11,offering,native,,,,1,public,Spring 2021,{},false
+12,,,cs2_f21,Introduction to CS2 Fall 2021,11,offering,native,,,,1,private,Fall 2021,{},false
+13,,,cs2_s22,Introduction to CS2 Spring 2022,11,offering,native,,,,1,private,Spring 2022,{},false
+14,,,cs1_s22_010,Introduction to CS1 Spring 2022 Section 010,10,offering,native,,,,1,private,Spring 2022,{},false
+15,,,cs1_s22_011,Introduction to CS1 Spring 2022 Section 011,10,offering,native,,,,1,private,Spring 2022,{},false
+16,,,cs1_s22_012,Introduction to CS1 Spring 2022 Section 012,10,offering,native,,,,1,archived,Spring 2022,"{\"notes\": \"Cancelled\"}",false
+17,,,cs1_demo,Introduction to CS1 Demo,10,offering,native,,,,1,students,,{},false
+
+30,,,cs1_f24,Introduction to CS1 Fall 2024,12,offering,native,,,,1,public,Fall 2024,{},false
+31,,,cs1_s25,Introduction to CS1 Spring 2025,12,offering,native,,,,1,public,Spring 2025,{},false
+
+50,,,cs1_exams,CS1 Exams,10,template,native,,,,1,private,,{},false
+51,,,cs1_exams_honors,CS1 Exams Honors,13,template,native,,,,1,private,,{},false

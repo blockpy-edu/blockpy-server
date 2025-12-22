@@ -266,41 +266,43 @@ class SampleDataGenerator:
         """Create a complete course with users, assignments, and submissions."""
         # Create course and instructor
         instructor = UserFactory.create_instructor()
-        course = CourseFactory.create_course(
+        course1 = CourseFactory.create_course(
             name="Introduction to Programming",
             owner=instructor
         )
+        courses = [course1]
         
         # Create students
         students = [
-            UserFactory.create_student(course=course, first_name=f"Student{i}")
+            UserFactory.create_student(course=course1, first_name=f"Student{i}")
             for i in range(3)
         ]
         
         # Create assignment group
-        group = AssignmentGroupFactory.create_assignment_group(
+        group1 = AssignmentGroupFactory.create_assignment_group(
             name="Programming Basics",
-            course=course,
+            course=course1,
             owner=instructor
         )
+        groups = [group1]
         
         # Create assignments
         assignments = [
             AssignmentFactory.create_assignment(
                 name="Hello World",
-                course=course,
+                course=course1,
                 owner=instructor,
                 assignment_type=AssignmentTypes.PYTHON
             ),
             AssignmentFactory.create_assignment(
                 name="Variables and Types",
-                course=course,
+                course=course1,
                 owner=instructor,
                 assignment_type=AssignmentTypes.PYTHON
             ),
             AssignmentFactory.create_assignment(
                 name="Control Structures",
-                course=course,
+                course=course1,
                 owner=instructor,
                 assignment_type=AssignmentTypes.PYTHON
             )
@@ -313,17 +315,17 @@ class SampleDataGenerator:
                 submission = SubmissionFactory.create_submission(
                     assignment=assignment,
                     user=student,
-                    course=course,
+                    course=course1,
                     code=f"# Solution by {student.first_name}\nprint('Assignment: {assignment.name}')",
                     correct=(student.id + assignment.id) % 2 == 0  # Some correct, some not
                 )
                 submissions.append(submission)
         
         return {
-            'course': course,
+            'courses': courses,
             'instructor': instructor,
             'students': students,
-            'group': group,
+            'groups': groups,
             'assignments': assignments,
             'submissions': submissions
         }

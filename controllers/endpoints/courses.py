@@ -271,7 +271,7 @@ def users():
         return ajax_failure("You are not in a course context.")
     is_grader = user.is_grader(course_id)
     if not is_grader and user_ids != str(user_id):
-        return ajax_failure("You do not have permissions to see those users.")
+        return ajax_failure("You do not have permissions to see those users.", 403)
     users = []
     errors = []
     # If blank, then get all the available users
