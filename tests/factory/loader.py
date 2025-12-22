@@ -11,6 +11,7 @@ from models.user import User
 from models.course import Course
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
+from models.assignment_group_membership import AssignmentGroupMembership
 from models.submission import Submission
 from models.role import Role
 from models.enums.roles import UserRoles
@@ -23,6 +24,9 @@ TABLES_AND_DATA = [
     ('users', 'user.csv', User),
     ('courses', 'course.csv', Course),
     ('roles', 'role.csv', Role),
+    ('assignment_groups', 'assignment_group.csv', AssignmentGroup),
+    ('assignments', 'assignment.csv', Assignment),
+    ('assignment_memberships', 'assignment_membership.csv', AssignmentGroupMembership),
 ]
 
 @pytest.fixture

@@ -1,2 +1,27 @@
 id,assignment_group_id,assignment_id,position,policy
 index,integer,integer,integer,string
+
+# Group 1 (Homework 1 in course 6) memberships
+1,1,100,1,{}
+2,1,101,2,{}
+3,1,102,3,{}
+
+# Group 2 (Homework 2 in course 6) memberships
+4,2,103,1,{}
+5,2,104,2,{}
+
+# Group 3 (Quizzes in course 6) memberships
+6,3,105,1,{}
+
+# Group 4 (Labs in course 6) memberships
+7,4,106,1,{}
+
+# Group 5 (Homework 1 in course 8) memberships
+8,5,110,1,{}
+9,5,111,2,{}
+
+# Group 6 (Exam in course 8) memberships
+10,6,112,1,{}
+
+# Group 10 (CS2 Homework in course 3) memberships
+11,10,120,1,{}

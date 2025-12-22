@@ -1,2 +1,16 @@
-id,date_created,date_modified,url,name,forked_id,forked_version,owner_id,course_id,position,version
-index,datetime,datetime,string,string,integer,integer,integer,integer,integer,integer
+id,date_created,date_modified,url,name,forked_id,forked_version,owner_id,course_id,position,version,category
+index,datetime,datetime,string,string,integer,integer,integer,integer,integer,integer,AssignmentGroupCategory
+
+# Assignment groups for course 6 (cs1_f20) - Ada is instructor
+1,,,homework1,Homework 1,,,10,6,1,1,homework
+2,,,homework2,Homework 2,,,10,6,2,1,homework
+3,,,quizzes,Quizzes,,,10,6,3,1,quiz
+4,,,labs,Labs,,,10,6,4,1,lab
+
+# Assignment groups for course 8 (cs1_f21) - Ada is instructor
+5,,,homework1_f21,Homework 1,,,10,8,1,1,homework
+6,,,exam1,Midterm Exam,,,10,8,2,1,exam
+
+# Assignment groups for course 3 (cs2) - Babbage is instructor
+10,,,cs2_homework,CS2 Homework,,,11,3,1,1,homework
+11,,,cs2_projects,CS2 Projects,,,11,3,2,1,project
