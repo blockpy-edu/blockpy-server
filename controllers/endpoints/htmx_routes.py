@@ -389,3 +389,11 @@ def example_edit_cancel():
         <strong>Click me to edit!</strong> This is some editable content.
     </div>
     """.format(url_for('htmx_routes.example_edit_form'))
+
+
+@htmx_routes.route('/comparison', methods=['GET'])
+def comparison():
+    """
+    Page comparing Knockout.js and HTMX implementations.
+    """
+    return render_template('htmx/comparison.html')
