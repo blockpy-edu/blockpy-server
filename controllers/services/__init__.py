@@ -19,6 +19,10 @@ Lower priority models that I may add later:
 """
 from typing import TypeVar, Optional
 from dataclasses import dataclass
+
+from natsort import natsorted
+from werkzeug.exceptions import HTTPException
+
 from common.flask_extensions import safe_request
 from flask import abort, jsonify, make_response
 
@@ -27,6 +31,7 @@ from models.user import User
 from models.submission import Submission
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
+from models.course import Course
 
 
 class PermissionLayer:
@@ -109,7 +114,7 @@ class ValidUserPermissionLayer(PermissionLayer):
                 return GRADER, assignment
         # Otherwise the assignment is hidden, so we have to do our security checks.
         if assignment.is_allowed(safe_request.remote_addr):
-            possible_passcode = safe_request.get_maybe_str('passcode')
+            possible_passcode = safe_request.get_maybe_str('passcode', '')
             if assignment.passcode_fails(possible_passcode):
                 self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
             return STUDENT_ASSIGNMENT, assignment
@@ -150,7 +155,7 @@ class ValidUserPermissionLayer(PermissionLayer):
             if self.user.id == submission.user_id:
                 # Still have to pass security checks
                 if assignment.is_allowed(safe_request.remote_addr):
-                    possible_passcode = safe_request.get_maybe_str('passcode')
+                    possible_passcode = safe_request.get_maybe_str('passcode', '')
                     if assignment.passcode_fails(possible_passcode):
                         self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
                     if self.user.is_grader(submission_course_id):
@@ -163,7 +168,7 @@ class ValidUserPermissionLayer(PermissionLayer):
                 return GRADER, submission
             elif assignment.public:
                 if assignment.is_allowed(safe_request.remote_addr):
-                    possible_passcode = safe_request.get_maybe_str('passcode')
+                    possible_passcode = safe_request.get_maybe_str('passcode', '')
                     if assignment.passcode_fails(possible_passcode):
                         self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
                     return ANONYMOUS, submission
@@ -172,7 +177,7 @@ class ValidUserPermissionLayer(PermissionLayer):
         # If the user owns the submission, they can see it IF they pass security checks.
         if self.user.id == submission.user_id:
             if assignment.is_allowed(safe_request.remote_addr):
-                possible_passcode = safe_request.get_maybe_str('passcode')
+                possible_passcode = safe_request.get_maybe_str('passcode', '')
                 if assignment.passcode_fails(possible_passcode):
                     self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
                 return STUDENT_SUBMISSION, submission
@@ -181,6 +186,30 @@ class ValidUserPermissionLayer(PermissionLayer):
         else:
             # If the user is not the owner, they cannot see the submission.
             self.abort_with_error("You cannot view this submission. You are not an instructor in the course, and you do not own the submission.", 403)
+
+    def load_submitted_assignments_grouped(self, course_id: int, key = None, abort_on_error=True):
+        if key is None:
+            key = lambda r: (r.AssignmentGroup.name if r.AssignmentGroup is not None else "~~~~~~~~",
+                             r.Assignment.name)
+        course = Course.by_id(course_id)
+        course = self.check_resource_exists(course, "Course", course_id)
+        grouped_assignments = course.get_submitted_assignments_grouped()
+        grouped_assignments = natsorted(grouped_assignments, key=key)
+        kept = []
+        errors = []
+        scopes = []
+        for ga in grouped_assignments:
+            try:
+                scope, _ = self._assignment_checks(ga.Assignment, using_course_id=course_id)
+                scopes.append(scope)
+                kept.append(ga)
+            except HTTPException as e:
+                if abort_on_error:
+                    raise e
+                else:
+                    errors.append((ga, str(e)))
+        return grouped_assignments, scopes, errors
+
 
     def abort_with_error(self, message, code):
         if self.custom_message:

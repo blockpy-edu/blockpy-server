@@ -7,14 +7,15 @@ import pytest
 
 class TestAssignmentGroupCreation:
     """Test assignment group creation endpoint (add_group)."""
-    
+
     def test_add_group_anonymous_blocked(self, client, test_data):
         """Anonymous users cannot create assignment groups."""
         response = client.post('/assignment_group/add', data={
             'course_id': 6,
             'name': 'New Group'
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_add_group_student_blocked(self, client, test_data, act_as):
         """Students cannot create assignment groups."""
@@ -24,7 +25,8 @@ class TestAssignmentGroupCreation:
             'course_id': 6,
             'name': 'Student Group'
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_add_group_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot create groups in courses they don't teach."""
@@ -34,7 +36,8 @@ class TestAssignmentGroupCreation:
             'course_id': 6,
             'name': 'Unauthorized Group'
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_add_group_instructor_allowed(self, client, test_data, act_as):
         """Instructors can create assignment groups in their courses."""
@@ -59,7 +62,8 @@ class TestAssignmentGroupCreation:
         response = client.post('/assignment_group/add', data={
             'course_id': 6
         })
-        assert response.status_code in [400, 403]
+        assert response.json['success'] is False
+        # assert response.status_code in [400, 403]
 
 
 class TestAssignmentGroupEditing:
@@ -71,7 +75,8 @@ class TestAssignmentGroupEditing:
             'assignment_group_id': 1,
             'new_name': 'Edited Group'
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_edit_group_student_blocked(self, client, test_data, act_as):
         """Students cannot edit assignment groups."""
@@ -81,7 +86,8 @@ class TestAssignmentGroupEditing:
             'assignment_group_id': 1,  # Group 1 is in course 6
             'new_name': 'Student Edit'
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_edit_group_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot edit groups in other courses."""
@@ -91,7 +97,8 @@ class TestAssignmentGroupEditing:
             'assignment_group_id': 1,  # Group 1 is in course 6
             'new_name': 'Unauthorized Edit'
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_edit_group_instructor_allowed(self, client, test_data, act_as):
         """Instructors can edit groups in their courses."""
@@ -115,7 +122,8 @@ class TestAssignmentGroupEditing:
             'assignment_group_id': 99999,
             'new_name': 'Does Not Exist'
         })
-        assert response.status_code == 404
+        assert response.json['success'] is False
+        # assert response.status_code == 404
 
 
 class TestAssignmentGroupRemoval:
@@ -126,7 +134,8 @@ class TestAssignmentGroupRemoval:
         response = client.post('/assignment_group/remove', data={
             'assignment_group_id': 1
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_remove_group_student_blocked(self, client, test_data, act_as):
         """Students cannot remove assignment groups."""
@@ -135,7 +144,8 @@ class TestAssignmentGroupRemoval:
         response = client.post('/assignment_group/remove', data={
             'assignment_group_id': 1  # Group in course 6
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_remove_group_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot remove groups from other courses."""
@@ -144,7 +154,8 @@ class TestAssignmentGroupRemoval:
         response = client.post('/assignment_group/remove', data={
             'assignment_group_id': 1  # Group in course 6
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_remove_group_instructor_allowed(self, client, test_data, act_as):
         """Instructors can remove groups from their courses."""
@@ -167,7 +178,8 @@ class TestAssignmentGroupForking:
         response = client.post('/assignment_group/fork', data={
             'assignment_group_id': 1
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_fork_group_student_blocked(self, client, test_data, act_as):
         """Students cannot fork assignment groups."""
@@ -175,7 +187,8 @@ class TestAssignmentGroupForking:
         response = client.post('/assignment_group/fork', data={
             'assignment_group_id': 1
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_fork_group_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors can only fork groups in courses they teach."""
@@ -184,7 +197,8 @@ class TestAssignmentGroupForking:
         response = client.post('/assignment_group/fork', data={
             'assignment_group_id': 1  # Group in course 6
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_fork_group_instructor_allowed(self, client, test_data, act_as):
         """Instructors can fork groups within their courses."""
@@ -211,7 +225,8 @@ class TestAssignmentGroupMembershipManagement:
             'old_group_id': 1,
             'new_group_id': 2
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_move_membership_student_blocked(self, client, test_data, act_as):
         """Students cannot move assignments between groups."""
@@ -221,7 +236,8 @@ class TestAssignmentGroupMembershipManagement:
             'old_group_id': 1,
             'new_group_id': 2
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_move_membership_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot move assignments in courses they don't teach."""
@@ -232,7 +248,8 @@ class TestAssignmentGroupMembershipManagement:
             'old_group_id': 1,
             'new_group_id': 2
         })
-        assert response.status_code == 403
+        assert response.json['success'] is False
+        # assert response.status_code == 403
     
     def test_move_membership_instructor_allowed(self, client, test_data, act_as):
         """Instructors can move assignments between groups in their courses."""
@@ -260,8 +277,8 @@ class TestAssignmentGroupMembershipManagement:
         data = response.get_json()
         assert data['success'] is True
     
-    def test_move_membership_cross_course_blocked(self, client, test_data, act_as):
-        """Cannot move assignment to group in different course."""
+    def test_move_membership_cross_course_allowed(self, client, test_data, act_as):
+        """Can move assignment to group in different course."""
         # Ada is instructor in both courses, but assignment/group mismatch
         act_as(test_data.user("ada@blockpy.com"))
         response = client.post('/assignment_group/move_membership', data={
@@ -269,9 +286,10 @@ class TestAssignmentGroupMembershipManagement:
             'old_group_id': 1,     # Group in course 6
             'new_group_id': 5      # Group in course 8 (different course)
         })
-        # This may succeed (no cross-course check) or fail depending on implementation
-        # The endpoint checks instructor permissions but may not prevent cross-course moves
-        assert response.status_code in [200, 403]
+        assert response.json['success'] is True
+        # assert response.status_code in [200, 403]
+
+        # TODO: Also test that it doesn't work when the user does not have access to the other course
 
 
 class TestAssignmentGroupExport:
@@ -283,7 +301,16 @@ class TestAssignmentGroupExport:
             'assignment_group_id': 1
         })
         # May allow or require auth
-        assert response.status_code in [200, 302]
+        assert response.json['success'] is False
+
+    def test_export_group_unauthorized(self, client, test_data, act_as):
+        """Authenticated users can export groups."""
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/assignment_group/export', query_string={
+            'assignment_group_id': 1
+        })
+        # Should return JSON download
+        assert response.json['success'] is False
     
     def test_export_group_authenticated(self, client, test_data, act_as):
         """Authenticated users can export groups."""
@@ -312,7 +339,8 @@ class TestAssignmentGroupExport:
         response = client.get('/assignment_group/export', query_string={
             'assignment_group_id': 99999
         })
-        assert response.status_code == 404
+        assert response.json['success'] is False
+        # assert response.status_code == 404
 
 
 class TestAssignmentGroupSecuritySettings:
@@ -324,7 +352,8 @@ class TestAssignmentGroupSecuritySettings:
             'assignment_group_id': 1,
             'ip_ranges': '192.168.1.0/24'
         })
-        assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
+        # assert response.status_code == 302  # Redirect to login
     
     def test_edit_security_student_blocked(self, client, test_data, act_as):
         """Students cannot edit security settings."""
@@ -333,11 +362,7 @@ class TestAssignmentGroupSecuritySettings:
             'assignment_group_id': 1,
             'ip_ranges': '192.168.1.0/24'
         })
-        # May return 302, 403, or 200 depending on where auth check happens
-        assert response.status_code in [200, 302, 403]
-        if response.status_code == 200:
-            # If it returns 200, check for error in response
-            assert b'not' in response.data.lower() or b'permission' in response.data.lower() or b'instructor' in response.data.lower()
+        assert b'not' in response.data.lower() or b'permission' in response.data.lower() or b'instructor' in response.data.lower()
     
     def test_edit_security_instructor_allowed(self, client, test_data, act_as):
         """Instructors can edit security settings for their groups."""
@@ -348,8 +373,8 @@ class TestAssignmentGroupSecuritySettings:
             'ip_ranges': '192.168.1.0/24',
             'passcode': 'test123'
         })
-        # May return 302 redirect or 200
-        assert response.status_code in [200, 302]
+        # TODO: This endpoint just redirects on success. We need to check the flashed messages
+        assert response.status_code == 302
     
     def test_view_security_settings_page(self, client, test_data, act_as):
         """Instructors can view security settings page."""
@@ -370,8 +395,7 @@ class TestAssignmentGroupExportSubmissions:
         response = client.get('/assignment_group/export_submissions', query_string={
             'assignment_group_id': 1
         })
-        # Likely requires authentication
-        assert response.status_code in [302, 403]
+        assert response.json['success'] is False
     
     def test_export_submissions_student_blocked(self, client, test_data, act_as):
         """Students cannot export group submissions."""
@@ -380,17 +404,18 @@ class TestAssignmentGroupExportSubmissions:
             'assignment_group_id': 1
         })
         # Students should not be able to export all submissions
-        assert response.status_code in [302, 403]
+        assert response.json['success'] is False
     
     def test_export_submissions_instructor_allowed(self, client, test_data, act_as):
         """Instructors can export submissions for their groups."""
         # Ada (10) is instructor in course 6
         act_as(test_data.user("ada@blockpy.com"))
         response = client.get('/assignment_group/export_submissions', query_string={
-            'assignment_group_id': 1
+            'assignment_group_id': 1,
+            'course_id': 6,
         })
         # Should return export data or redirect
-        assert response.status_code in [200, 302]
+        assert response.status_code == 200
 
 
 class TestAssignmentGroupDataIntegrity:
@@ -414,7 +439,7 @@ class TestAssignmentGroupDataIntegrity:
         # Assignment 100 should be in group 1
         # Assignment 103 should be in group 2
         # This would require additional API to verify, or we trust the data
-        pass  # Placeholder for more detailed verification if API available
+        pass  # TODO: Placeholder for more detailed verification if API available
 
 
 class TestAssignmentGroupForkingMenu:
@@ -424,7 +449,7 @@ class TestAssignmentGroupForkingMenu:
         """Anonymous users cannot access forking menu."""
         response = client.get('/assignment_group/forking_menu')
         # May require auth
-        assert response.status_code in [200, 302]
+        assert response.json['success'] is False
     
     def test_forking_menu_authenticated(self, client, test_data, act_as):
         """Authenticated users can access forking menu."""

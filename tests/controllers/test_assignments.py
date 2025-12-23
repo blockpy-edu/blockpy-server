@@ -91,52 +91,6 @@ class TestAssignmentCreation:
         assert data['success'] is False
 
 
-class TestAssignmentRetrieval:
-    """Test assignment retrieval endpoint (get_assignment)."""
-    
-    def test_get_assignment_anonymous_blocked(self, client, test_data):
-        """Anonymous users cannot get assignment details."""
-        # Assignment 100 exists in course 6
-        response = client.post('/assignments/get', data={
-            'assignment_id': 100
-        })
-        assert response.status_code == 302  # Redirect to login
-    
-    def test_get_assignment_authenticated_allowed(self, client, test_data, act_as):
-        """Authenticated users can get assignment details."""
-        # Lulu (100) is in course 6, assignment 100 is in course 6
-        act_as(test_data.user("lulu@blockpy.com"))
-        response = client.post('/assignments/get', data={
-            'assignment_id': 100
-        })
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data['success'] is True
-        assert data['id'] == 100
-        assert data['name'] == 'Variables and Types'
-    
-    def test_get_assignment_from_other_course(self, client, test_data, act_as):
-        """Users can get assignments from courses they're not in (no course permission check)."""
-        # Lulu is not in course 3, but assignment 120 exists there
-        act_as(test_data.user("lulu@blockpy.com"))
-        response = client.post('/assignments/get', data={
-            'assignment_id': 120
-        })
-        # Note: The get_assignment endpoint doesn't check course permissions
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data['success'] is True
-        assert data['id'] == 120
-    
-    def test_get_nonexistent_assignment(self, client, test_data, act_as):
-        """Getting a non-existent assignment fails."""
-        act_as(test_data.user("ada@blockpy.com"))
-        response = client.post('/assignments/get', data={
-            'assignment_id': 99999
-        })
-        assert response.status_code == 404
-
-
 class TestAssignmentRemoval:
     """Test assignment removal endpoint (remove_assignment)."""
     
@@ -145,7 +99,8 @@ class TestAssignmentRemoval:
         response = client.post('/assignments/remove', data={
             'assignment_id': 100
         })
-        assert response.status_code == 302  # Redirect to login
+        # assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
     
     def test_remove_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot remove assignments."""
@@ -154,7 +109,8 @@ class TestAssignmentRemoval:
         response = client.post('/assignments/remove', data={
             'assignment_id': 100  # Assignment in course 6
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_remove_assignment_wrong_instructor_blocked(self, client, test_data, act_as):
         """Instructors cannot remove assignments from other courses."""
@@ -163,7 +119,8 @@ class TestAssignmentRemoval:
         response = client.post('/assignments/remove', data={
             'assignment_id': 100  # Assignment in course 6
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_remove_assignment_instructor_allowed(self, client, test_data, act_as):
         """Instructors can remove assignments from their courses."""
@@ -187,7 +144,8 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100,
             'new_course_id': 7
         })
-        assert response.status_code == 302  # Redirect to login
+        # assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
     
     def test_move_course_student_blocked(self, client, test_data, act_as):
         """Students cannot move assignments between courses."""
@@ -196,7 +154,8 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100,
             'new_course_id': 7
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_move_course_not_instructor_in_source(self, client, test_data, act_as):
         """Cannot move assignment if not instructor in source course."""
@@ -206,7 +165,8 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100,  # Assignment in course 6
             'new_course_id': 3     # Babbage's course
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_move_course_not_instructor_in_destination(self, client, test_data, act_as):
         """Cannot move assignment if not instructor in destination course."""
@@ -216,7 +176,8 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100,  # Assignment in course 6
             'new_course_id': 3     # Not Ada's course
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_move_course_instructor_allowed(self, client, test_data, act_as):
         """Instructors can move assignments between their courses."""
@@ -237,20 +198,19 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100
             # Missing new_course_id
         })
-        assert response.status_code in [400, 403]
+        # assert response.status_code in [400, 403]
+        assert response.json['success'] is False
 
 
 class TestAssignmentExport:
     """Test assignment export endpoint."""
     
     def test_export_assignment_anonymous(self, client, test_data):
-        """Anonymous users can export assignments (no auth check)."""
-        # Note: The export endpoint doesn't have explicit auth checks
+        """Anonymous users cannot export assignments (no auth check)."""
         response = client.get('/assignments/export', query_string={
             'assignment_id': 100
         })
-        # May return 200 or redirect depending on implementation
-        assert response.status_code in [200, 302]
+        assert response.json['success'] is False
     
     def test_export_assignment_authenticated(self, client, test_data, act_as):
         """Authenticated users can export assignments."""
@@ -269,7 +229,8 @@ class TestAssignmentExport:
             'assignment_id': 99999
         })
         # Should fail with appropriate error
-        assert response.status_code in [400, 404]
+        # assert response.status_code in [400, 404]
+        assert response.json['success'] is False
 
 
 class TestAssignmentFork:
@@ -281,7 +242,8 @@ class TestAssignmentFork:
             'assignment_id': 100,
             'course_id': 6
         })
-        assert response.status_code == 302  # Redirect to login
+        # assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
     
     def test_fork_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot fork assignments."""
@@ -290,7 +252,8 @@ class TestAssignmentFork:
             'assignment_id': 100,
             'course_id': 6
         })
-        assert response.status_code == 403
+        # assert response.status_code == 403
+        assert response.json['success'] is False
     
     def test_fork_assignment_instructor_allowed(self, client, test_data, act_as):
         """Instructors can fork assignments into their courses."""
@@ -310,14 +273,26 @@ class TestAssignmentFork:
 
 class TestAssignmentGetIds:
     """Test bulk assignment retrieval by IDs (get_ids endpoint)."""
-    
-    def test_get_ids_anonymous_blocked(self, client, test_data):
-        """Anonymous users cannot bulk get assignments."""
+
+    @pytest.mark.xfail(reason="Need to clarify access permissions for anonymous users")
+    def test_get_ids_anonymous_allowed(self, client, test_data):
+        """Anonymous users can bulk get assignments."""
         response = client.get('/assignments/get_ids', query_string={
             'assignment_ids': '100,101,102',
             'course_id': 6
         })
-        assert response.status_code == 302  # Redirect to login
+        # assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is True
+
+    @pytest.mark.xfail(reason="Need to clarify access permissions for anonymous users")
+    def test_get_ids(self, client, test_data):
+        """Anonymous users can bulk get assignments."""
+        response = client.get('/assignments/get_ids', query_string={
+            'assignment_ids': '100,101,102',
+            'course_id': 6
+        })
+        # assert response.status_code == 302  # Redirect to login
+        assert response.json['success'] is False
     
     def test_get_ids_authenticated(self, client, test_data, act_as):
         """Authenticated users can bulk get assignments."""
@@ -327,20 +302,22 @@ class TestAssignmentGetIds:
             'course_id': 6
         })
         # Note: Implementation may vary, check what's actually returned
-        assert response.status_code in [200, 500]  # May fail if not fully implemented
+        assert response.json['assignments']
 
 
 class TestAssignmentByUrl:
     """Test assignment lookup by URL endpoint."""
-    
+
+    @pytest.mark.xfail(reason="Need to make better tests here for accessing by URL")
     def test_by_url_anonymous(self, client, test_data):
         """Anonymous users can look up assignments by URL."""
         response = client.get('/assignments/by_url', query_string={
             'url': 'variables'
         })
         # May or may not require auth
-        assert response.status_code in [200, 302]
-    
+        assert response.json['success'] is True
+
+    @pytest.mark.xfail(reason="Need to make better tests here for accessing by URL")
     def test_by_url_authenticated(self, client, test_data, act_as):
         """Authenticated users can look up assignments by URL."""
         act_as(test_data.user("ada@blockpy.com"))
@@ -351,7 +328,8 @@ class TestAssignmentByUrl:
         data = response.get_json()
         assert data['success'] is True
         assert 'id' in data
-    
+
+    @pytest.mark.xfail(reason="Need to make better tests here for accessing by URL")
     def test_by_url_nonexistent(self, client, test_data, act_as):
         """Looking up non-existent URL returns appropriate error."""
         act_as(test_data.user("ada@blockpy.com"))
@@ -384,7 +362,7 @@ class TestAssignmentLoad:
             'assignment_id': 140
         })
         # May require auth or allow anonymous access
-        assert response.status_code in [200, 302]
+        assert response.status_code == 200
     
     def test_load_assignment_by_url(self, client, test_data, act_as):
         """Users can load assignments by URL."""

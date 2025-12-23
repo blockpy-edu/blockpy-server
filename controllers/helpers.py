@@ -1,3 +1,16 @@
+"""
+Helper functions for Flask controllers.
+
+This includes a bunch of security/permission checks. Previously, this would
+return 200 responses with success=False, but we will eventually use proper HTTP status codes
+and Flask's abort() function to handle errors. Unfortunately, the frontend
+is not yet configured to use this new approach. So we're in a transition period.
+
+Each of these functions can receive a keyword argument `as_html` which,
+if True, will return HTML error messages instead of JSON. This is useful for
+endpoints that are expected to return HTML pages rather than JSON responses.
+"""
+
 # Built-in imports
 from urllib.parse import quote as url_quote
 import json
@@ -19,32 +32,6 @@ from models.log_tables import SubmissionLog as Log
 from models.log_tables import RoleLog, CourseLog, ErrorLog, AccessLog, AssignmentLog, SubmissionLog
 
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if g.user is None:
-            return redirect(url_for('security.login', next=request.url))
-        if not g.user.is_admin():
-            flash("This portion of the site is only for administrators.")
-            return redirect(url_for('courses.index'))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
-def instructor_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if g.user is None:
-            return redirect(url_for('security.login', next=request.url))
-        if not g.user.is_instructor():
-            flash("This portion of the site is only for instructors.")
-            return redirect(url_for('courses.index'))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -58,11 +45,19 @@ def login_required(f):
     return decorated_function
 
 
-def require_course_instructor(user, course_id, addendum=""):
+def abort_with_failure(code, message, as_html=False):
+    if as_html:
+        abort(code, message)
+    else:
+        abort(make_response(jsonify(success=False, message=message), code))
+
+
+def require_course_instructor(user, course_id, addendum="", as_html=False):
     if not user.is_instructor(course_id):
-        message = f'You are not an instructor (course ID {course_id}). {addendum}'
-        abort(make_response(jsonify(success=False, message=message), 200))
-        return False
+        if user.anonymous:
+            abort_with_failure(200, f'You are not logged in. Please log in as an instructor (course ID {course_id}). {addendum}', as_html)
+        else:
+            abort_with_failure(200, f'You are not an instructor (course ID {course_id}). {addendum}', as_html)
     return True
 
 
@@ -396,3 +391,42 @@ def get_assignments_in_groups(course):
     assignments_by_group[None] = assignments_by_group.pop(None, None)
     return grouped_assignments, assignments_by_group, group_headers, groups
 
+
+def admin_required(f):
+    """
+    Deprecated.
+
+    :param f:
+    :return:
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for('security.login', next=request.url))
+        if not g.user.is_admin():
+            flash("This portion of the site is only for administrators.")
+            return redirect(url_for('courses.index'))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def instructor_required(f):
+    """
+    Deprecated
+
+    :param f:
+    :return:
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for('security.login', next=request.url))
+        if not g.user.is_instructor():
+            flash("This portion of the site is only for instructors.")
+            return redirect(url_for('courses.index'))
+        return f(*args, **kwargs)
+
+    return decorated_function

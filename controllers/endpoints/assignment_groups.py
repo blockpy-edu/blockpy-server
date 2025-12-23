@@ -1,6 +1,6 @@
 import json
 
-from flask import Blueprint, send_from_directory, Response, render_template, flash
+from flask import Blueprint, send_from_directory, Response, render_template, flash, abort
 from flask import Flask, redirect, url_for, session, request, jsonify, g, current_app
 
 from common.maybe import maybe_bool
@@ -8,7 +8,7 @@ from controllers.auth import get_user
 from controllers.helpers import (require_request_parameters, require_course_instructor, login_required,
                                  require_course_adopter,
                                  check_resource_exists, get_select_menu_link, get_course_id, ajax_success,
-                                 maybe_int, require_course_grader, make_log_entry)
+                                 maybe_int, require_course_grader, make_log_entry, abort_with_failure)
 from models import Course, Submission, AssignmentLog
 
 from models.enums.logs import AssignmentLogEvent
@@ -146,9 +146,15 @@ def export():
     user, user_id = get_user()
     # Verify exists
     check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
-    # Perform action
+    # Verify permissions
+    require_course_instructor(g.user, assignment_group.course_id)
+    # Get linked data
     assignments = assignment_group.get_assignments()
     memberships = assignment_group.get_memberships()
+    # Verify permissions of linked resources
+    for assignment in assignments:
+        require_course_instructor(g.user, assignment.course_id)
+    # Perform action
     bundle = export_bundle(groups=[assignment_group], assignments=assignments,
                            memberships=memberships)
     filename = assignment_group.get_filename()
@@ -353,11 +359,13 @@ def export_submissions():
     # Get associated assignments and memberships
     assignments = assignment_group.get_assignments()
     # Verify permissions
+    require_course_instructor(user, course_id)
+    require_course_instructor(user, assignment_group.course_id)
     for assignment in assignments:
         assignment_id = assignment.id
         assignment = Assignment.by_id(int(assignment_id))
-        if course_id is None or not user.is_instructor(int(course_id)):
-            return "You are not an instructor or the owner of the assignment: " + str(assignment_id)
+        if not user.is_instructor(int(assignment.course_id)):
+            abort(403, "You are not an instructor or the owner of the assignment: " + str(assignment_id))
     # Get data
     course = Course.by_id(course_id)
     submissions, users = set(), set()

@@ -352,7 +352,10 @@ class TestCourseSettings:
             'course_id': 6,
             'settings': '{}'
         })
-        assert response.status_code in [302, 403]  # Blocked or redirected
+        assert response.json['success'] is False
+        # assert response.status_code in [302, 403]  # Blocked or redirected
+        # TODO: This currently just redirects on success
+        # assert response.json['success'] is False
     
     def test_edit_settings_instructor_allowed(self, client, test_data, act_as):
         """Instructors can edit settings for their courses."""
@@ -362,8 +365,8 @@ class TestCourseSettings:
             'course_id': 6,
             'settings': '{"test": true}'
         })
-        # May return success or error based on implementation
-        assert response.status_code in [200, 302]
+        assert response.status_code == 302
+        # assert response.json['success'] is True
     
     def test_edit_textbooks_student_blocked(self, client, test_data, act_as):
         """Students cannot edit course textbooks."""
@@ -373,7 +376,8 @@ class TestCourseSettings:
             'course_id': 6,
             'textbooks': '[]'
         })
-        assert response.status_code in [302, 403]  # Blocked or redirected
+        # assert response.status_code in [302, 403]  # Blocked or redirected
+        assert response.json['success'] is False
     
     def test_edit_textbooks_instructor_allowed(self, client, test_data, act_as):
         """Instructors can edit textbooks for their courses."""
@@ -384,7 +388,8 @@ class TestCourseSettings:
             'textbooks': '[]'
         })
         # May return success or error based on implementation
-        assert response.status_code in [200, 302]
+        assert response.status_code == 302
+        # assert response.json['success'] is True
 
 
 class TestCourseExport:

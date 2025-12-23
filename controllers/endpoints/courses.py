@@ -869,6 +869,7 @@ def get_updated_settings(group_or_assignment, obj):
 @login_required
 def edit_settings():
     user, user_id, course, course_id, groups = bulk_assignment_editor_setup()
+    require_course_instructor(user, course_id)
     # Perform action
     if request.method == 'POST':
         check_course_unlocked(course)

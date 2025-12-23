@@ -3,6 +3,7 @@ import json
 import zipfile
 
 from natsort import natsorted
+from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
 from models.assignment_group_membership import AssignmentGroupMembership
@@ -220,6 +221,10 @@ def new_assignment():
 @blueprint_assignments.route('/get', methods=['GET', 'POST'])
 @login_required
 def get_assignment():
+    """
+    Pretty sure this is deprecated.
+    :return:
+    """
     assignment_id = int(request.values.get('assignment_id'))
     assignment = Assignment.by_id(assignment_id)
     is_embedded = ('embed' == request.values.get('menu', "select"))
@@ -306,27 +311,30 @@ def get_assignments():
     assignment_ids = request.values.get('assignment_ids', "")
     course_id = get_course_id()
     user, user_id = get_user()
-    # TODO: verify that they have the permissions to see these assignments
+    # TODO: Remove any that are not valid for this user to view
+    # Alternatively, ONLY send the IDs back, not the full assignment information
     assignments, groups = [], []
     errors = []
     if not assignment_ids:
-        course: Course = Course.by_id(course_id)
-        check_resource_exists(course, "Course", course_id)
-        grouped_assignments = natsorted(course.get_submitted_assignments_grouped(),
-                                        key=lambda r: (r.AssignmentGroup.name if r.AssignmentGroup is not None else "~~~~~~~~",
-                                                       r.Assignment.name))
+        grouped_assignments, scopes, errors = g.safely.load_submitted_assignments_grouped(int(course_id), abort_on_error=False)
+        grouped_assignments = [ga for ga, scope in zip(grouped_assignments, scopes)
+                               if scope.can_grade]
         assignments = [a.Assignment.encode_json() for a in grouped_assignments]
         groups = [a.AssignmentGroup.encode_json() if a.AssignmentGroup is not None else None for a in grouped_assignments]
+        errors = [f"Error loading Assignment ID {failed_ga.Assignment.id!r}: {str(error)}"
+                  for failed_ga, error in errors]
     else:
         for assignment_id in assignment_ids.split(","):
             if not assignment_id or not assignment_id.isdigit():
                 errors.append(f"Unknown Assignment ID: {assignment_id!r}")
                 continue
-            assignment_id = int(assignment_id)
-            # With Course Role Information
-            assignment = Assignment.by_id(assignment_id)
-            check_resource_exists(assignment, "Assignment", assignment_id)
-            assignments.append(assignment.encode_json())
+            try:
+                scope, assignment = g.safely.load_assignment_by_id(int(assignment_id), int(course_id))
+            except HTTPException as e:
+                errors.append(f"Error loading Assignment ID {assignment_id!r}: {str(e)}")
+                continue
+            if scope.can_grade:
+                assignments.append(assignment.encode_json())
     return ajax_success(dict(assignments=assignments, errors=errors, groups=groups))
 
 
@@ -356,6 +364,9 @@ def export():
     # Verify exists
     check_resource_exists(assignment, "Assignment", assignment_id)
     # Verify permissions
+    require_course_instructor(user, course_id)
+    require_course_instructor(user, assignment.course_id)
+    # Perform action
     bundle = export_bundle(assignments=[assignment])
     filename = assignment.get_filename()
     return Response(json.dumps(bundle), mimetype='application/json',
