@@ -72,6 +72,7 @@ class Submission(EnhancedBase):
     reviews: Mapped[list["Review"]] = db.relationship(back_populates="submission")
     grade_history: Mapped[list["GradeHistory"]] = db.relationship(back_populates="submission")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="submission")
+    submission_counts: Mapped[Optional["SubmissionCounts"]] = db.relationship(back_populates="submission", uselist=False)
 
     __table_args__ = (Index('submission_index', "course_id",
                             "assignment_id", "user_id"),
@@ -320,6 +321,7 @@ class Submission(EnhancedBase):
 
     @staticmethod
     def from_assignment(assignment, user_id, course_id, assignment_group_id=None):
+        from models.counters.helpers import increment_submission_count
         submission = Submission(assignment_id=assignment.id,
                                 user_id=user_id,
                                 assignment_group_id=assignment_group_id,
@@ -332,6 +334,8 @@ class Submission(EnhancedBase):
         # TODO: Log extra starting files!
         SubmissionLog.new(submission.id, submission.version, assignment.id, assignment.version, course_id, user_id,
                 "File.Create", "answer.py", "", "", assignment.starting_code, "", "")
+        # Track submission counts
+        increment_submission_count(assignment.id, course_id, user_id)
         return submission
 
     @staticmethod

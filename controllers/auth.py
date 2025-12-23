@@ -257,11 +257,18 @@ def create_user_token() -> dict:
 
 
 def handle_login_change(old_user):
+    from models.counters.helpers import update_user_activity
     if old_user != g.user:
         flask_security.utils.logout_user()
         flask_security.utils.login_user(g.user, remember=True)
+        # Track login activity
+        if g.user and g.user.id:
+            update_user_activity(g.user.id, 'login')
     elif not old_user:
         flask_security.utils.login_user(g.user, remember=True)
+        # Track login activity
+        if g.user and g.user.id:
+            update_user_activity(g.user.id, 'login')
 
 
 def load_jwt_user(user_id, claims):

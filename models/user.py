@@ -59,6 +59,7 @@ class User(Base, UserMixin):
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="user", foreign_keys="Invite.user_id")
     approvals: Mapped[list["Invite"]] = db.relationship(back_populates="approver", foreign_keys="Invite.approver_id")
     grade_history: Mapped[list["GradeHistory"]] = db.relationship(back_populates="grader")
+    user_counts: Mapped[Optional["UserCounts"]] = db.relationship(back_populates="user", uselist=False)
 
     def encode_json(self, use_owner=True):
         return {
@@ -235,15 +236,19 @@ class User(Base, UserMixin):
     ### Adding and updating roles ###
 
     def add_role(self, name, course_id):
+        from models.counters.helpers import increment_course_user_count
         if name in [id for id, _ in USER_DISPLAY_ROLES.items()]:
             new_role = models.Role(name=name, user_id=self.id,
                                    course_id=maybe_int(course_id))
             db.session.add(new_role)
             db.session.commit()
+            # Track user addition to course
+            increment_course_user_count(maybe_int(course_id), name.lower())
             return new_role
         return None
 
     def update_roles(self, new_roles, course_id):
+        from models.counters.helpers import increment_course_user_count
         old_roles = [role for role in self.roles if role.course_id == maybe_int(course_id)]
         new_role_names = set(new_role_name.lower() for new_role_name in new_roles)
         for old_role in old_roles:
@@ -254,6 +259,8 @@ class User(Base, UserMixin):
             if new_role_name.lower() not in old_role_names:
                 new_role = models.Role(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
                 db.session.add(new_role)
+                # Track user addition to course
+                increment_course_user_count(maybe_int(course_id), new_role_name.lower())
         db.session.commit()
 
     def determine_role(self, assignments, submissions):
