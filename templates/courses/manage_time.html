@@ -43,6 +43,35 @@ function modifyTimeLimit(studentId, amount, resultTarget) {
     );
 }
 
+function resetStartDate(studentId, resultTarget) {
+    var selected = $("#assignment-select").val().join(",");
+    if (selected === null || selected.length === 0) {
+        alert("Please select at least one assignment to update.");
+        return;
+    }
+    if (!confirm("Are you sure you want to reset the start date for this student? This will allow them to restart the exam timer.")) {
+        return;
+    }
+    $.post(
+        {{ url_for('courses.reset_start_date')|tojson}},
+        {
+            assignment_ids: selected,
+            student_id: studentId,
+            course_id: {{ course_id }}
+        },
+        function(data) {
+            if (data.success) {
+                const message = data.reset_assignments.map(
+                    update => `${update.assignment.name}: Start date reset`
+                ).join(", ");
+                $("#"+resultTarget).html(message + "<br><em>Student can now restart the timer.</em>");
+            } else {
+                alert("Error: " + data.message);
+            }
+        },
+    );
+}
+
 function MainModel() {
     var self = this;
 }
@@ -153,6 +182,11 @@ $().ready(function() {
                     <button class="btn btn-sm btn-outline-secondary" id="quick-set-time-unset"
                     onclick="modifyTimeLimit({{ user.id }},'', 'time-limit-report-{{ user.id }}')">
                         Unset (use default time)
+                    </button>
+                    <br><br>
+                    <button class="btn btn-sm btn-outline-warning" id="reset-start-date-{{ user.id }}"
+                    onclick="resetStartDate({{ user.id }}, 'time-limit-report-{{ user.id }}')">
+                        Reset Start Date
                     </button>
 {#                    <span class="ml-4">#}
 {#                        <input type="text" id="custom-set-time-amount">#}
