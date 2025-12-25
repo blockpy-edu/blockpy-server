@@ -29,7 +29,7 @@ from models.submission import Submission
 from models.assignment import Assignment
 from models.report import Report
 from models.log_tables import SubmissionLog as Log
-# from tasks import tasks  # Deferred import to avoid circular dependency
+from tasks import tasks
 
 courses = Blueprint('courses', __name__, url_prefix='/courses')
 

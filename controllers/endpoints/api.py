@@ -16,7 +16,7 @@ from models.report import Report
 from models.data_formats.portation import export_bundle, import_bundle
 from models.user import User
 from huey.exceptions import TaskException
-# from tasks import tasks  # Deferred import to avoid circular dependency
+from tasks import tasks
 
 blueprint_api = Blueprint('api', __name__, url_prefix='/api')
 
