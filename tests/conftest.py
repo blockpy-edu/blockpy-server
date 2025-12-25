@@ -4,6 +4,7 @@ Pytest configuration and fixtures for BlockPy tests.
 import os
 import tempfile
 from contextlib import contextmanager
+import asyncio
 
 import pytest
 from quart import Quart
@@ -41,14 +42,23 @@ def run_server():
             'TASK_DB_URI': task_db_path,
         })
 
-        with app.app_context():
+        # For Quart, manually handle the app context using asyncio
+        # This is a workaround for synchronous tests with Quart
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        ctx = app.app_context()
+        loop.run_until_complete(ctx.push())
+        try:
             db.create_all()
+            yield app
+        finally:
             try:
-                yield app
-            finally:
                 db.session.remove()
                 db.drop_all()
                 db.engine.dispose()
+            finally:
+                loop.run_until_complete(ctx.pop())
+                loop.close()
 
 @pytest.fixture
 def app():
@@ -60,8 +70,9 @@ def app():
 @pytest.fixture
 def client(app):
     """A test client for the app."""
-    with app.test_client() as client:
-        yield client
+    # Quart's test_client() also returns a context manager
+    # but we can use it directly for most test operations
+    return app.test_client()
 
 
 @pytest.fixture
