@@ -128,6 +128,38 @@ def load():
     return load_editor(editor_information)
 
 
+@blueprint_blockpy.route('/load2', methods=['GET', 'POST'])
+@blueprint_blockpy.route('/load2/', methods=['GET', 'POST'])
+def load2():
+    """
+    Load the new SolidJS editor (editor2.html) explicitly.
+    This route forces use_solid=True regardless of query parameters.
+    """
+    editor_information = parse_assignment_load()
+    # Force the use of SolidJS editor
+    return load_editor_solid(editor_information)
+
+
+def load_editor_solid(editor_information):
+    """
+    Render the SolidJS editor specifically.
+    This is a helper function for the /load2 route.
+    :param editor_information:
+    :return:
+    """
+    by_type = {name: [] for name in ASSIGNMENT_TYPES}
+    for assignment in editor_information.get('assignments', []):
+        for name, types in ASSIGNMENT_TYPES.items():
+            if assignment.type in types:
+                by_type[name].append(assignment.id)
+                break
+    
+    response = make_response(render_template('blockpy/editor2.html', ip=request.remote_addr,
+                           **by_type,
+                           **editor_information))
+    return response
+
+
 ASSIGNMENT_TYPES = {
     'quiz_questions': ('quiz', ),
     'readings': ('reading', ),
@@ -143,13 +175,20 @@ def load_editor(editor_information):
     :param editor_information:
     :return:
     """
+    # Check if we should use the new SolidJS editor
+    use_solid_editor = safe_request.get_maybe_bool('use_solid', False) or safe_request.get_maybe_bool('editor2', False)
+    
     by_type = {name: [] for name in ASSIGNMENT_TYPES}
     for assignment in editor_information.get('assignments', []):
         for name, types in ASSIGNMENT_TYPES.items():
             if assignment.type in types:
                 by_type[name].append(assignment.id)
                 break
-    response = make_response(render_template('blockpy/editor.html', ip=request.remote_addr,
+    
+    # Choose template based on parameter
+    template_name = 'blockpy/editor2.html' if use_solid_editor else 'blockpy/editor.html'
+    
+    response = make_response(render_template(template_name, ip=request.remote_addr,
                            **by_type,
                            **editor_information))
     return response
