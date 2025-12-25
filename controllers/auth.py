@@ -14,7 +14,7 @@ import traceback
 import json
 from functools import wraps
 
-from flask import current_app, g, jsonify, make_response, request, abort
+from quart import current_app, g, jsonify, make_response, request, abort
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.wrappers import Request
 from flask_jwt_extended import create_access_token, get_jwt_identity, verify_jwt_in_request, \
@@ -24,7 +24,7 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_rebar import RequestSchema
 from marshmallow import fields
 
-from flask import session, g, request, flash, render_template
+from quart import session, g, request, flash, render_template
 from flask_security.core import current_user
 import flask_security
 from controllers.pylti.flask import LTI_SESSION_KEY, LTI, LTIException

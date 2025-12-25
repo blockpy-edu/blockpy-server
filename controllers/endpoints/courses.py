@@ -7,8 +7,8 @@ from natsort import natsorted
 from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
 
-from flask import Blueprint, send_from_directory
-from flask import Flask, redirect, url_for, session, request, jsonify, g, \
+from quart import Blueprint, send_from_directory
+from quart import Quart, redirect, url_for, session, request, jsonify, g, \
     make_response, Response, render_template, flash, abort, current_app
 
 from common.highlighters import strip_tags

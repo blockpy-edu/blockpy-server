@@ -10,7 +10,7 @@ import pytz
 from flask_admin import Admin, BaseView, expose, form
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.fileadmin import FileAdmin
-from flask import g, Blueprint, request, url_for, render_template, Response, current_app
+from quart import g, Blueprint, request, url_for, render_template, Response, current_app
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from flask_admin.model.filters import BaseFilter
 from markupsafe import Markup

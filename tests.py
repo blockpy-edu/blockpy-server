@@ -4,7 +4,7 @@ Testing functionality specifically related to LTI login/access.
 
 import unittest
 
-from flask import g
+from quart import g
 
 from main import create_app
 

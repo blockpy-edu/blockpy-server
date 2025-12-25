@@ -1,4 +1,4 @@
-flask~=3.0.0
+quart~=0.20.0
 flask-admin
 flask-sqlalchemy
 Flask-Security-Too
@@ -9,7 +9,7 @@ flask-wtf
 flask-assets
 Flask-JWT-Extended
 flask-migrate
-flask_cors
+quart-cors
 flask-debugtoolbar
 flask-marshmallow
 flask-rebar
@@ -43,7 +43,7 @@ psycopg2
 email-validator
 Werkzeug
 alembic~=1.13.1
-gunicorn
+hypercorn
 redis
 huey~=2.5.0
 compare50

@@ -4,9 +4,9 @@ import time
 import random
 
 import flask_security
-from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory, render_template
+from quart import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory, render_template
 
-from flask import current_app
+from quart import current_app
 from controllers.auth import get_user
 from controllers.helpers import get_course_id, check_resource_exists, require_request_parameters, maybe_int
 from models.assignment import Assignment

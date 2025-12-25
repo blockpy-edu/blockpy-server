@@ -6,7 +6,7 @@ import time
 import json
 from datetime import datetime, timedelta, timezone
 
-from flask import current_app
+from quart import current_app
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum
 from sqlalchemy_utc import UtcDateTime

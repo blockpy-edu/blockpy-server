@@ -9,7 +9,7 @@ from natsort import natsorted
 from common.text import compare_string_equality
 from common.highlighters import highlight_python_code, highlight_java_code, highlight_javascript_code, highlight_json, \
     highlight_typescript_code
-from flask import request, g
+from quart import request, g
 from markdown import Markdown
 
 

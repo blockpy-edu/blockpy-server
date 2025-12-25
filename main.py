@@ -2,14 +2,14 @@
 import json
 import os
 
-# Flask
-from common.flask_extensions import CustomFlask
-from flask import Flask
+# Quart (Flask replacement)
+from common.flask_extensions import CustomQuart
+from quart import Quart
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
 
 
-def create_app(test_config=None, instance_config="configuration.py") -> Flask:
+def create_app(test_config=None, instance_config="configuration.py") -> Quart:
     """
     Per the App Factory pattern, this creates a new instance of the BlockPy app.
     :param test_config: 'testing' for unit tests, or a specific config object.
@@ -17,7 +17,7 @@ def create_app(test_config=None, instance_config="configuration.py") -> Flask:
     """
     # create and configure the app
     instance_path = os.path.join(os.path.dirname(__file__), './instance')
-    app = CustomFlask('blockpy', instance_relative_config=True, static_folder='static',
+    app = CustomQuart('blockpy', instance_relative_config=True, static_folder='static',
                 instance_path=instance_path)
                 #static_url_path='/static')
     # load the test config if passed in
@@ -85,19 +85,18 @@ def create_app(test_config=None, instance_config="configuration.py") -> Flask:
     setup_mail(app)
 
     # Set up all the endpoints
-    with app.app_context():
+    # Note: In Quart, app_context() is async and not needed for setup operations
+    # Modify Jinja2
+    from controllers.jinja_filters import setup_jinja_filters
+    setup_jinja_filters(app)
 
-        # Modify Jinja2
-        from controllers.jinja_filters import setup_jinja_filters
-        setup_jinja_filters(app)
+    # Logging
+    from controllers.interaction_logger import setup_logging
+    setup_logging(app)
 
-        # Logging
-        from controllers.interaction_logger import setup_logging
-        setup_logging(app)
-
-        # Load up all the controllers
-        from controllers import create_blueprints
-        create_blueprints(app)
-        print("Loaded all endpoints successfully!")
+    # Load up all the controllers
+    from controllers import create_blueprints
+    create_blueprints(app)
+    print("Loaded all endpoints successfully!")
 
     return app

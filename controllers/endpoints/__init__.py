@@ -1,4 +1,4 @@
-from flask import current_app
+from quart import current_app
 from controllers.endpoints.basic import basic as blueprint_basic
 from controllers.endpoints.courses import courses as blueprint_courses
 from controllers.endpoints.assignments import blueprint_assignments

@@ -6,7 +6,7 @@ from typing import Tuple
 from slugify import slugify
 from natsort import natsorted
 
-from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, current_app
+from quart import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, current_app
 from werkzeug.utils import secure_filename
 
 from models import db

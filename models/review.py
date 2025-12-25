@@ -4,7 +4,7 @@ import time
 
 import base64
 
-from flask import url_for, current_app
+from quart import url_for, current_app
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, Index, func, String, Enum
 

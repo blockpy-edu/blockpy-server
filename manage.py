@@ -4,7 +4,7 @@ import json
 import click
 from flask.cli import FlaskGroup
 from flask_migrate import Migrate
-from flask import current_app
+from quart import current_app
 
 from scripts.setup import cli
 import scripts.db_commands

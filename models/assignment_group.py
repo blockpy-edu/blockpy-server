@@ -1,6 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from flask import url_for
+from quart import url_for
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey, func, Enum, UniqueConstraint, Index
 from natsort import natsorted

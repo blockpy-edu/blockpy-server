@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from quart import Quart
 from flask_assets import Bundle, Environment
 from webassets.filter import get_filter
 
@@ -172,7 +172,7 @@ def get_bundles(app):
     }
 
 
-def setup_assets(app: Flask) -> Environment:
+def setup_assets(app: Quart) -> Environment:
     assets = Environment(app)
     assets.register(get_bundles(app))
     return assets

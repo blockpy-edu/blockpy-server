@@ -33,8 +33,8 @@ touch /usr/src/app/logs/blockpy_errors.log
 touch /usr/src/app/logs/blockpy_events.log
 touch /usr/src/app/logs/blockpy_tasks.log
 touch /usr/src/app/logs/uwsgi_blockpy.log
-touch /usr/src/app/logs/gunicorn_error.log
-touch /usr/src/app/logs/gunicorn_access.log
+touch /usr/src/app/logs/hypercorn_error.log
+touch /usr/src/app/logs/hypercorn_access.log
 
 # Ensure log files have correct ownership and permissions
 # chown www-data:www-data /usr/src/app/logs/*.log
@@ -67,6 +67,5 @@ echo "Database ready"
 # Confirm that the environment variables were substituted
 # ls -l /etc/uwsgi/sites/uwsgi.ini
 
-# Start the uWSGI Emperor
-# exec uwsgi --emperor /etc/uwsgi/sites --uid www-data --gid www-data
-exec gunicorn --chdir /usr/src/app -w 4 -b 0.0.0.0:8888 wsgi:application --error-logfile /usr/src/app/logs/gunicorn_error.log --access-logfile /usr/src/app/logs/gunicorn_access.log
+# Start Hypercorn (ASGI server for Quart)
+exec hypercorn --chdir /usr/src/app -w 4 -b 0.0.0.0:8888 asgi:application --error-logfile /usr/src/app/logs/hypercorn_error.log --access-logfile /usr/src/app/logs/hypercorn_access.log

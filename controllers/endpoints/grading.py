@@ -10,7 +10,7 @@ from flask.views import MethodView
 from slugify import slugify
 from natsort import natsorted
 
-from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, make_response, current_app, flash
+from quart import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, make_response, current_app, flash
 
 from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.post_grade import grade_submission, get_outcomes, calculate_submissions_score

@@ -1,5 +1,5 @@
-from flask import g, request, redirect, url_for, make_response, current_app, render_template
-from flask import flash, session, jsonify, abort
+from quart import g, request, redirect, url_for, make_response, current_app, render_template
+from quart import flash, session, jsonify, abort
 import controllers.pylti.common
 
 
