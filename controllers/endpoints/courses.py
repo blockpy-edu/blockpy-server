@@ -8,7 +8,7 @@ from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
 
 from quart import Blueprint, send_from_directory
-from quart import Flask, redirect, url_for, session, request, jsonify, g, \
+from quart import Quart, redirect, url_for, session, request, jsonify, g, \
     make_response, Response, render_template, flash, abort, current_app
 
 from common.highlighters import strip_tags
@@ -29,7 +29,7 @@ from models.submission import Submission
 from models.assignment import Assignment
 from models.report import Report
 from models.log_tables import SubmissionLog as Log
-from tasks import tasks
+# from tasks import tasks  # Deferred import to avoid circular dependency
 
 courses = Blueprint('courses', __name__, url_prefix='/courses')
 

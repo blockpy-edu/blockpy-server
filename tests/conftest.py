@@ -6,7 +6,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
-from quart import Flask
+from quart import Quart
 from tests.factory.loader import test_data
 
 from main import create_app

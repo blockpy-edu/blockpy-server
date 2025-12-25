@@ -29,21 +29,16 @@ from models.course import Course
 from models.enums import GradingStatuses, AssignmentTypes
 from tasks.similarity_report import make_report
 
-ctx = current_app.app_context()
-
-@current_app.huey.context_task(ctx, context=True)
 def get_events(course_id, user_id, task=None):
     """Background task that runs a long function with progress reports."""
     history = Log.get_history(course_id, assignment_id=None, user_id=user_id)
     return history
 
 
-@current_app.huey.context_task(ctx, context=True)
 def bulk_retry_all_failed_grades(course_id, json_lti):
     pass
 
 
-@current_app.huey.context_task(ctx, context=True)
 def check_similarity(user_id, assignment_id, exclude_courses, target_course, passes, use_starting_code,
                      number_of_matches, task=None):
     """
@@ -115,7 +110,6 @@ def check_similarity(user_id, assignment_id, exclude_courses, target_course, pas
     report.finish(result="output/index.html")
 
 
-@current_app.huey.context_task(ctx, context=True)
 def queue_grade_submission(previous_report, attempts, force_update, overwrite_human_grades, submission_score, at_time, task=None):
     report = Report.new('queue_lti_post_grade', json.dumps(
         dict(**asdict(previous_report),
@@ -159,7 +153,6 @@ def queue_grade_submission(previous_report, attempts, force_update, overwrite_hu
         report.error("Too many retries, giving up.")
     return False
 
-@current_app.huey.context_task(ctx, context=True)
 def queue_lti_post_grade(json_lti, post_params,
                          submission_id, assignment_group_id, user_id, course_id,
                          attempts, log_params, subscore, task=None):
@@ -227,7 +220,6 @@ class SimilarityRings:
         self.suspects.add(s2)
 
 
-@current_app.huey.context_task(ctx, context=True)
 def check_similarity_simple(user_id, assignment_id, exclude_courses, target_course,
                             other_student_threshold=95, starter_change_threshold=95,
                             minimum_file_length=100,
@@ -297,7 +289,6 @@ CODING_ASSIGNMENTS = (AssignmentTypes.PYTHON, AssignmentTypes.BLOCKPY, Assignmen
 # Generate a RFR Index for each student, sort students by that, and then show all their submissions
 # that had a Red Flag, ordering the assignments by the number of red flags
 
-@current_app.huey.context_task(ctx, context=True)
 def make_red_flag_report(user_id, target_course, short_threshold, characters_per_second_threshold, max_backstep_threshold, base_url="", task=None):
     """
 
@@ -589,7 +580,6 @@ def diff_positions(a, b):
             yield i
 
 
-@current_app.huey.context_task(ctx, context=True)
 def quiz_report(user_id, assignment_id, course_id,
                 adjacent_courses, included_roles,
                 close_open_quizzes, regrade_quizzes, lower_scores,

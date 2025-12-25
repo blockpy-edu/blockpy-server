@@ -85,19 +85,18 @@ def create_app(test_config=None, instance_config="configuration.py") -> Quart:
     setup_mail(app)
 
     # Set up all the endpoints
-    with app.app_context():
+    # Note: In Quart, app_context() is async and not needed for setup operations
+    # Modify Jinja2
+    from controllers.jinja_filters import setup_jinja_filters
+    setup_jinja_filters(app)
 
-        # Modify Jinja2
-        from controllers.jinja_filters import setup_jinja_filters
-        setup_jinja_filters(app)
+    # Logging
+    from controllers.interaction_logger import setup_logging
+    setup_logging(app)
 
-        # Logging
-        from controllers.interaction_logger import setup_logging
-        setup_logging(app)
-
-        # Load up all the controllers
-        from controllers import create_blueprints
-        create_blueprints(app)
-        print("Loaded all endpoints successfully!")
+    # Load up all the controllers
+    from controllers import create_blueprints
+    create_blueprints(app)
+    print("Loaded all endpoints successfully!")
 
     return app
