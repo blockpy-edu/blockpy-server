@@ -11,7 +11,7 @@ from dataclasses import asdict
 
 from emoji import emoji_count
 from thefuzz import fuzz
-from flask import current_app, render_template, url_for
+from quart import current_app, render_template, url_for
 
 from common.filesystem import ensure_dirs
 from common.urls import append_parameters

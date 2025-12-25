@@ -19,8 +19,8 @@ from functools import wraps
 from natsort import natsorted
 
 # Flask imports
-from flask import g, request, redirect, url_for, make_response, current_app
-from flask import flash, session, jsonify, abort
+from quart import g, request, redirect, url_for, make_response, current_app
+from quart import flash, session, jsonify, abort
 
 from common.dates import from_canvas_isotime
 from common.maybe import maybe_bool, maybe_int

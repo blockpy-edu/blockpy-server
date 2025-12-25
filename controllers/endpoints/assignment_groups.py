@@ -1,7 +1,7 @@
 import json
 
-from flask import Blueprint, send_from_directory, Response, render_template, flash, abort
-from flask import Flask, redirect, url_for, session, request, jsonify, g, current_app
+from quart import Blueprint, send_from_directory, Response, render_template, flash, abort
+from quart import Flask, redirect, url_for, session, request, jsonify, g, current_app
 
 from common.maybe import maybe_bool
 from controllers.auth import get_user

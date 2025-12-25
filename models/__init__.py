@@ -1,7 +1,7 @@
 """
 The models and database connections
 """
-from flask import Flask
+from quart import Quart
 
 from models.generics.models import db, migrate, ma
 from models.role import Role
@@ -31,12 +31,12 @@ from models.generics.schemas import (UserSchema, RoleSchema, CourseSchema, Assig
                                      CourseLogSchema, AssignmentLogSchema, SubmissionLogSchema)
 
 
-def init_database(app: Flask) -> Flask:
+def init_database(app: Quart) -> Quart:
     """
     Initialize the database.
 
-    :param app: The main Flask application
-    :return: The same (modified) Flask application
+    :param app: The main Quart application
+    :return: The same (modified) Quart application
     """
     db.init_app(app)
 

@@ -6,7 +6,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
-from flask import Flask
+from quart import Flask
 from tests.factory.loader import test_data
 
 from main import create_app
@@ -85,7 +85,7 @@ def act_as(client):
             # Example for Flask-Login:
             sess["_user_id"] = str(user.get_id())
             sess["_fresh"] = True
-        #from flask import session
+        #from quart import session
         #print(session["_user_id"])
         return client
     return _act_as

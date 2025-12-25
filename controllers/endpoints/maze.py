@@ -1,5 +1,5 @@
 # Flask imports
-from flask import Blueprint, render_template, g, request
+from quart import Blueprint, render_template, g, request
 
 from models.assignment import Assignment
 

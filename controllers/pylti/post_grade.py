@@ -1,5 +1,5 @@
 from typing import Optional, Tuple
-from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
+from quart import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
     send_from_directory, current_app
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs

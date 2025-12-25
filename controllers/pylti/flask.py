@@ -6,8 +6,8 @@ from functools import wraps
 import logging
 import json
 
-from flask import session as flask_session, current_app, Flask, g
-from flask import request as flask_request
+from quart import session as flask_session, current_app, Flask, g
+from quart import request as flask_request
 
 from .common import (
     LTI_SESSION_KEY,
