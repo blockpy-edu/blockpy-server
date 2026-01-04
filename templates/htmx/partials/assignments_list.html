@@ -1,0 +1,35 @@
+{% if assignments %}
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">Assignments</h6>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for assignment in assignments %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ assignment.title() }}</strong>
+                    {% if assignment.version %}
+                        <span class="badge bg-secondary">v{{ assignment.version }}</span>
+                    {% endif %}
+                    <br>
+                    <small class="text-muted">
+                        Modified: {{ assignment.date_modified.strftime("%b %d, %Y") if assignment.date_modified else "N/A" }}
+                    </small>
+                </div>
+                <div>
+                    <a href="{{ url_for('assignments.load', assignment_id=assignment.id, course_id=course.id) }}" 
+                       class="btn btn-sm btn-primary">
+                        Open
+                    </a>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <small>No assignments found for this course.</small>
+</div>
+{% endif %}

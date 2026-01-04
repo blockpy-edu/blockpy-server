@@ -1,0 +1,52 @@
+<div class="card mt-2">
+    <div class="card-body">
+        <h6 class="card-title">Submission Details</h6>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">ID:</dt>
+            <dd class="col-sm-9">{{ submission.id }}</dd>
+            
+            <dt class="col-sm-3">Student:</dt>
+            <dd class="col-sm-9">
+                {% if submission.user %}
+                    {{ submission.user.name() }} ({{ submission.user.email }})
+                {% else %}
+                    Unknown
+                {% endif %}
+            </dd>
+            
+            <dt class="col-sm-3">Status:</dt>
+            <dd class="col-sm-9">
+                {% if submission.correct %}
+                    <span class="badge bg-success">Correct</span>
+                {% else %}
+                    <span class="badge bg-warning">In Progress</span>
+                {% endif %}
+            </dd>
+            
+            <dt class="col-sm-3">Last Modified:</dt>
+            <dd class="col-sm-9">
+                {{ submission.date_modified.strftime("%b %d, %Y at %I:%M %p") if submission.date_modified else "N/A" }}
+            </dd>
+            
+            {% if submission.code %}
+            <dt class="col-sm-3">Code:</dt>
+            <dd class="col-sm-9">
+                <button class="btn btn-sm btn-outline-secondary"
+                        hx-get="{{ url_for('htmx_routes.submission_code', submission_id=submission.id) }}"
+                        hx-target="#code-{{ submission.id }}"
+                        hx-swap="innerHTML">
+                    Show Code
+                </button>
+                <div id="code-{{ submission.id }}" class="mt-2"></div>
+            </dd>
+            {% endif %}
+        </dl>
+        
+        <div class="mt-2">
+            <a href="{{ url_for('assignments.load', assignment_id=assignment.id, course_id=course.id, submission_id=submission.id) }}" 
+               class="btn btn-sm btn-primary">
+                View Full Submission
+            </a>
+        </div>
+    </div>
+</div>

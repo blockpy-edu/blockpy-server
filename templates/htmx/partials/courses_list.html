@@ -1,0 +1,43 @@
+{% if courses %}
+    <div class="list-group">
+        {% for course in courses %}
+        <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">
+                    <a href="{{ url_for('htmx_routes.course_detail', course_id=course.id) }}">
+                        {{ course.name }}
+                    </a>
+                </h5>
+                <small class="text-muted">
+                    {% if course.service == 'native' %}
+                        <span class="badge bg-primary">Native</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ course.service }}</span>
+                    {% endif %}
+                </small>
+            </div>
+            {% if course.get_user_count() %}
+            <p class="mb-1">
+                <small class="text-muted">
+                    <i class="fas fa-users"></i> {{ course.get_user_count() }} members
+                </small>
+            </p>
+            {% endif %}
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-primary"
+                        hx-get="{{ url_for('htmx_routes.course_assignments', course_id=course.id) }}"
+                        hx-target="#course-{{ course.id }}-assignments"
+                        hx-swap="innerHTML"
+                        hx-trigger="click once">
+                    View Assignments
+                </button>
+            </div>
+            <div id="course-{{ course.id }}-assignments" class="mt-2"></div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>No courses found. {% if is_instructor %}You can create a new course to get started.{% endif %}</p>
+    </div>
+{% endif %}
