@@ -121,14 +121,14 @@ def get_bundles(app):
         #     output="gen/doppio.js"
         # ),
 
-        "doppio_css": Bundle(
-            "libs/doppio/css/bitter.css",
-            "libs/doppio/css/style.css",
+        #"doppio_css": Bundle(
+            #"libs/doppio/css/bitter.css",
+            #"libs/doppio/css/style.css",
             #"libs/doppio/css/bootstrap.min.css",
-            "libs/doppio/css/xterm.css",
+            #"libs/doppio/css/xterm.css",
             # Output
-            output='gen/doppio.css'
-        ),
+        #    output='gen/doppio.css'
+        #),
 
         'libs_css': Bundle(
             # FontAwesome
