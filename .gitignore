@@ -15,6 +15,7 @@ kennel.sock
 # The per-installation config for flask
 instance/*
 !instance/configuration.py.template
+!instance/certs/
 instance/certs/*
 !instance/certs/.gitkeep
 
@@ -44,10 +45,12 @@ static/public/*
 
 # Databases, logs, etc.
 database/
-logs/
+logs/*
+!logs/.gitkeep
 log/
 queued_logs/
-backups/
+backups/*
+!logs/.gitkeep
 
 kennel.wsgi
 certs/*
