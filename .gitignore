@@ -13,8 +13,10 @@ docs/~*
 kennel.sock
 
 # The per-installation config for flask
-instance/
+instance/*
 !instance/configuration.py.template
+instance/certs/*
+!instance/certs/.gitkeep
 
 # Frontend
 node_modules/
@@ -25,12 +27,20 @@ venv_old/
 env/
 
 # Certain static files
-static/.webassets-cache/
-static/gen/
-static/uploads/
+static/.webassets-cache/*
+static/.webassets-cache/.gitkeep
+static/gen/*
+!static/gen/.gitkeep
+static/uploads/*
+!static/uploads/submission_blocks/
+static/uploads/submission_blocks/*
+!static/uploads/submission_blocks/.gitkeep
+!static/uploads/.gitkeep
 static/canvas/
-static/reports/
-static/public/
+static/reports/*
+!static/reports/.gitkeep
+static/public/*
+!static/public/.gitkeep
 
 # Databases, logs, etc.
 database/
@@ -40,7 +50,8 @@ queued_logs/
 backups/
 
 kennel.wsgi
-certs/
+certs/*
+!certs/.gitkeep
 settings/*.json
 settings/*.yaml
 
