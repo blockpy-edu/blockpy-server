@@ -320,10 +320,31 @@ def log_event():
     category = safe_request.get_maybe_str('category', "")
     label = safe_request.get_maybe_str('label', "")
     message = safe_request.get_maybe_str('message', "")
+    extended = safe_request.get_maybe_bool('extended', False)
     # Load the models
     scope, submission = g.safely.load_submission_by_id(submission_id)
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can log events for a submission.")
+    # Handle certain events specially
+    if event_type == "Intervention" and extended:
+        try:
+            full_data = json.loads(message)
+            message = full_data['message']
+            '''
+            {
+                "message": "",
+                "syntaxError": true,
+                "runtimeError": true,
+                "unitTests": {
+                    "tests": 0,
+                    "feedbacks": 0,
+                    "successes": 0,
+                    "feedbackSuccess": 0
+                }
+            }
+            '''
+        except Exception as e:
+            return ajax_failure("Could not parse intervention message: " + str(e))
     # Make the entry
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                              event_type, file_path, category, label, message)

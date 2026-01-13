@@ -43,7 +43,7 @@
       var Sk2 = {};
       Sk2.build = {
         githash: "35b8d84b",
-        date: "2026-01-08T17:05:10.129Z"
+        date: "2026-01-09T17:27:24.236Z"
       };
       Sk2.global = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
       Sk2.exportSymbol = function(name, object) {
@@ -10078,8 +10078,8 @@
         if (!(this instanceof Sk.builtin.code)) {
           return new Sk.builtin.code(trace);
         }
-        this.co_filename = trace.filename || "<unknown>";
-        this.co_name = trace.scope || "<unknown>";
+        this.co_filename = trace.filename ? Sk.builtin.checkString(trace.filename) ? Sk.ffi.remapToJs(trace.filename) : trace.filename : "unknown";
+        this.co_name = trace.scope ? Sk.builtin.checkString(trace.scope) ? Sk.ffi.remapToJs(trace.scope) : trace.scope : "<unknown>";
         this.co_firstlineno = trace.lineno || -1;
         this.__class__ = Sk.builtin.code;
         return this;
