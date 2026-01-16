@@ -9,6 +9,7 @@ class ValidChoicesMixin:
 class SubmissionStatuses(ValidChoicesMixin, StrEnum):
     # Not yet begun - the value if the submission does not exist
     INITIALIZED = "Initialized"
+    NOT_READY = "NotReady"
     # Started -> not yet run
     STARTED = "Started"
     # inProgress -> Run, but not yet marked formally as "submitted"
