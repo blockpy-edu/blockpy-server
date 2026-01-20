@@ -1,0 +1,43 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Watch Events - SolidJS
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<!-- SolidJS Frontend -->
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/blockpy_server_solid/frontend-solid.css') }}">
+<script src="{{ url_for('static', filename='libs/blockpy_server_solid/frontend-solid.js') }}"></script>
+
+<script type='text/javascript'>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get parameters from server-side template
+        let userIds = {{ request.values.get('user_ids')|tojson }} || "";
+        let assignmentIds = {{ request.values.get('assignment_ids')|tojson }} || "";
+        
+        // Initialize the SolidJS Watcher component
+        frontendSolid.initWatcher('#watcher-container', {
+            courseId: {{ course_id|tojson }},
+            assignmentIds: assignmentIds,
+            userIds: userIds,
+            defaultWatchMode: frontendSolid.WatchMode.SUMMARY
+        });
+    });
+</script>
+{% endblock %}
+
+{% block body %}
+    <h1>Watch Events (SolidJS Prototype)</h1>
+    
+    <div class="alert alert-info" role="alert">
+        <strong>Note:</strong> This is a SolidJS prototype of the Watcher component.
+        It demonstrates the new reactive frontend architecture.
+    </div>
+
+    <!-- Container where the SolidJS Watcher component will be mounted -->
+    <div id="watcher-container"></div>
+
+{% endblock %}

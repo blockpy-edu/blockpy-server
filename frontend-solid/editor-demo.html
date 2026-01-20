@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Editor Demo - SolidJS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 20px;
+      background-color: #f8f9fa;
+    }
+    .demo-header {
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="demo-header">
+      <h1>Quiz Editor Demo</h1>
+      <p class="lead">Interactive quiz creation with undo/redo functionality</p>
+      <div class="alert alert-info">
+        <strong>Features:</strong>
+        <ul class="mb-0">
+          <li>Add, edit, delete, and reorder questions</li>
+          <li>Change question types</li>
+          <li>Undo/Redo with keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z)</li>
+          <li>Click on question body to edit inline</li>
+          <li>Select a question to see more options</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="quiz-editor"></div>
+  </div>
+
+  <script type="module" src="/src/app.tsx"></script>
+  
+  <script type="module">
+    import { initQuizEditor, QuizFeedbackType, QuizPoolRandomness } from '/src/app.tsx';
+    
+    // Sample quiz data with a few initial questions
+    const sampleQuiz = {
+      assignmentId: 301,
+      courseId: 1,
+      userId: 1,
+      instructions: {
+        settings: {
+          attemptLimit: -1,
+          coolDown: -1,
+          feedbackType: QuizFeedbackType.IMMEDIATE,
+          questionsPerPage: -1,
+          poolRandomness: QuizPoolRandomness.NONE,
+          readingId: null
+        },
+        pools: [],
+        questions: {
+          'q1': {
+            id: 'q1',
+            type: 'multiple_choice_question',
+            body: '<p>What is the capital of France?</p>',
+            points: 1,
+            answers: ['London', 'Paris', 'Berlin', 'Madrid']
+          },
+          'q2': {
+            id: 'q2',
+            type: 'true_false_question',
+            body: '<p>Python is a compiled language.</p>',
+            points: 1
+          },
+          'q3': {
+            id: 'q3',
+            type: 'short_answer_question',
+            body: '<p>What keyword is used to define a function in Python?</p>',
+            points: 2
+          }
+        }
+      },
+      submission: {
+        studentAnswers: {},
+        attempt: {
+          attempting: false,
+          count: 0,
+          mulligans: 0
+        },
+        feedback: {}
+      }
+    };
+
+    // Handle save callback
+    function handleSave(quizData) {
+      console.log('Quiz saved:', quizData);
+      
+      // Show success message
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+      alert.style.zIndex = '9999';
+      alert.innerHTML = `
+        <strong>Success!</strong> Quiz saved with ${Object.keys(quizData.instructions.questions).length} questions.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      document.body.appendChild(alert);
+      
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => {
+        alert.remove();
+      }, 3000);
+    }
+
+    // Initialize the editor
+    initQuizEditor('#quiz-editor', sampleQuiz, handleSave);
+  </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

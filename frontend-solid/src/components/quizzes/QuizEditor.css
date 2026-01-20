@@ -1,0 +1,61 @@
+/* Quiz Editor Styles */
+
+.quiz-editor {
+  outline: none;
+}
+
+.editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white !important;
+}
+
+.question-card {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.question-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-card.border-primary {
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+.question-body {
+  border: 2px dashed transparent;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.question-body:hover {
+  border-color: #0d6efd;
+  background-color: #f8f9fa;
+}
+
+.question-options {
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-group .btn {
+  margin: 0;
+}
+
+/* Ensure Bootstrap icons work */
+.bi::before {
+  vertical-align: middle;
+}
