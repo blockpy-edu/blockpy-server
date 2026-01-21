@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 import models
 from common.maybe import maybe_int
 from common.text import make_flavored_uuid_generator
-from models.enums import CourseVisibility, CourseKind, CourseService
+from models.enums import CourseVisibility, CourseKind, CourseService, CourseLogEvent, RoleLogEvent
 from models.generics.models import db, ma
 from models.generics.base import EnhancedBase, Base, VersionedBase
 from common.dates import datetime_to_string, string_to_datetime
@@ -120,6 +120,11 @@ class Course(Base):
     @staticmethod
     def remove(course_id, remove_linked=False):
         course_id = maybe_int(course_id)
+        # Get course info before deleting
+        course = Course.query.get(course_id)
+        if course:
+            # Log the course deletion
+            models.CourseLog.new(course_id, course.owner_id, CourseLogEvent.DELETE)
         Course.query.filter_by(id=course_id).delete()
         if remove_linked:
             for m in models.AssignmentGroupMembership.by_course(course_id):
@@ -291,22 +296,33 @@ class Course(Base):
 
     def edit(self, name=None, url=None, visibility=None, term=None, settings=None):
         modified = False
-        if name is not None:
+        changes = {}
+        if name is not None and self.name != name:
+            changes['name'] = name
             self.name = name
             modified = True
-        if url is not None:
+        if url is not None and self.url != url:
+            changes['url'] = url
             self.url = url
             modified = True
-        if visibility is not None:
+        if visibility is not None and self.visibility != visibility:
+            changes['visibility'] = visibility
             self.visibility = visibility
             modified = True
-        if term is not None:
+        if term is not None and self.term != term:
+            changes['term'] = term
             self.term = term
             modified = True
-        if settings is not None:
+        if settings is not None and self.settings != settings:
+            changes['settings'] = settings
             self.settings = settings
             modified = True
         db.session.commit()
+        # Log each field change
+        if modified:
+            for field, value in changes.items():
+                models.CourseLog.new(self.id, self.owner_id, CourseLogEvent.EDIT, 
+                                     field=field, value=str(value))
         return modified
 
     @staticmethod
@@ -321,10 +337,15 @@ class Course(Base):
                 return None
         new_course = Course(name=name, owner_id=owner_id, visibility=visibility, term=term, url=url)
         db.session.add(new_course)
-        db.session.flush()
+        db.session.flush()  # Ensure the course gets an ID before creating the role
         new_role = models.Role(name='instructor', user_id=owner_id, course_id=new_course.id)
         db.session.add(new_role)
         db.session.commit()
+        # Log the course creation
+        models.CourseLog.new(new_course.id, owner_id, CourseLogEvent.CREATE)
+        # Log the initial instructor role creation
+        models.RoleLog.new(new_role.id, new_course.id, owner_id, owner_id,
+                           RoleLogEvent.GIVEN, new_role.name)
         return new_course
 
     @staticmethod
