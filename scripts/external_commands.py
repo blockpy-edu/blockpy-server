@@ -2,7 +2,7 @@ from shutil import copy
 import os
 import shutil
 
-from flask import current_app
+from quart import current_app
 import click
 
 from scripts.setup import cli

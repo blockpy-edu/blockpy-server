@@ -5,7 +5,7 @@ import json
 from pprint import pprint
 
 import click
-from flask import current_app
+from quart import current_app
 from sqlalchemy import text as sqla_text
 
 from models import db

@@ -4,7 +4,7 @@ Any of the basic app pages, like the site-map and the about page.
 import os
 from urllib.parse import unquote
 
-from flask import render_template, current_app, send_from_directory, url_for, Blueprint, g, jsonify
+from quart import render_template, current_app, send_from_directory, url_for, Blueprint, g, jsonify
 
 basic = Blueprint('basic', __name__)
 

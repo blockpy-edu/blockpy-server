@@ -1,6 +1,6 @@
 from typing import Optional, cast
 
-from flask import Flask, Request, abort, jsonify, make_response, request, g
+from quart import Quart, Request, abort, jsonify, make_response, request, g
 
 from common.maybe import maybe_int, maybe_float, maybe_bool
 
@@ -108,7 +108,7 @@ class SafeRequest(Request):
         }
 
 
-class CustomFlask(Flask):
+class CustomQuart(Quart):
     request_class = SafeRequest
 
 

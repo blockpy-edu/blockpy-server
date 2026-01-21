@@ -8,7 +8,7 @@ from flask.views import MethodView
 from slugify import slugify
 from natsort import natsorted
 
-from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, current_app, flash
+from quart import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, current_app, flash
 
 from controllers.pylti.common import LTIPostMessageException
 from models import Report

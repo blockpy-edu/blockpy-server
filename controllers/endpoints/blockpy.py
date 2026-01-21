@@ -9,7 +9,7 @@ from typing import Tuple
 from slugify import slugify
 from natsort import natsorted
 
-from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
+from quart import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
     send_from_directory, current_app, make_response
 from werkzeug.utils import secure_filename
 

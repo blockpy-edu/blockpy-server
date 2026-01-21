@@ -4,7 +4,7 @@ import json
 from typing import Tuple, List, Optional, Any, TYPE_CHECKING
 from dataclasses import dataclass
 
-from flask import url_for
+from quart import url_for
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Text, Integer, ForeignKey, UniqueConstraint, Boolean, Enum, Index
 from werkzeug.utils import secure_filename

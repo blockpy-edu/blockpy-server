@@ -24,7 +24,7 @@ from natsort import natsorted
 from werkzeug.exceptions import HTTPException
 
 from common.flask_extensions import safe_request
-from flask import abort, jsonify, make_response
+from quart import abort, jsonify, make_response
 
 from controllers.helpers import make_log_entry
 from models.user import User

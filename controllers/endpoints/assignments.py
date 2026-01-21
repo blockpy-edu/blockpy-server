@@ -15,7 +15,7 @@ try:
 except:
     from urllib import quote as url_quote
 
-from flask import (Blueprint, g, session, render_template, url_for, request, jsonify, abort, make_response,
+from quart import (Blueprint, g, session, render_template, url_for, request, jsonify, abort, make_response,
                    flash, redirect, Response, current_app)
 
 from common.highlighters import strip_tags
