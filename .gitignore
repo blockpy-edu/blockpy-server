@@ -72,4 +72,4 @@ __pycache__/
 # Spyder project settings
 .spyderproject
 
-.idea/
+.idea//tmp/

@@ -1080,6 +1080,38 @@ def modify_time():
         new_limits.append({"assignment": assignment.encode_json(), "time_limit": shown_amount})
     return ajax_success({'new_limits': new_limits})
 
+@courses.route('/reset_start_date', methods=['POST'])
+@courses.route('/reset_start_date/', methods=['POST'])
+@login_required
+def reset_start_date():
+    course_id = get_course_id(False)
+    user, user_id = get_user()
+    student_id = maybe_int(request.values.get("student_id", ""))
+    assignment_ids = request.values.get("assignment_ids", "")
+    # Check permissions
+    require_course_instructor(g.user, course_id)
+    # Load Resources
+    course = Course.by_id(course_id)
+    student = User.by_id(student_id)
+    check_resource_exists(student, "User", student_id)
+    check_resource_exists(course, "Course", course_id)
+    # Reset the date_started for the assignments of this user
+    reset_assignments = []
+    for assignment_id in assignment_ids.split(","):
+        assignment_id = maybe_int(assignment_id)
+        if assignment_id is None:
+            continue
+        assignment = Assignment.by_id(assignment_id)
+        submission = assignment.load_or_new_submission(student_id, course_id)
+        # Reset the start date
+        old_date = submission.date_started
+        submission.edit(dict(date_started=None))
+        make_log_entry(submission.id, submission.version, assignment_id, assignment.version,
+                       course_id, student_id, SubmissionLogEvent.RESET_START_DATE,
+                       message=f"User {user_id} reset start date from `{old_date}`")
+        reset_assignments.append({"assignment": assignment.encode_json(), "old_date": str(old_date) if old_date else None})
+    return ajax_success({'reset_assignments': reset_assignments})
+
 @courses.route('/manage_time', methods=['GET', 'POST'])
 @courses.route('/manage_time/', methods=['GET', 'POST'])
 @login_required
