@@ -398,33 +398,39 @@ def add_missing_counters(limit_users):
     tracking information. Populates any missing fields with the appropriate
     data to backfill.
     """
-    click.echo("Finding users without tracking")
-    from models.user import User
-    from models.counters.user_counts import UserCounts
+    click.echo("Finding missing counters")
+    from models.log_tables import SubmissionLog
+    from models.submission import Submission
+    from models.counters.submission_counts import SubmissionCounts
 
-    users_without_counts = (User.query
-                            .filter(User.user_counts == None)
-                            .limit(limit_users if limit_users > 0 else None).all()
-    )
-    click.echo(f"Found {len(users_without_counts)} users without counts")
-    if click.confirm("Would you like to create counts for these users?"):
-        created = 0
-        with click.progressbar(users_without_counts) as bar:
-            for user in bar:
-                UserCounts.create_from_user(user, batch_mode=True)
-                created += 1
-        db.session.commit()
-        click.echo(f"Created {created} users")
 
-    click.echo("Finding users with tracking")
-    users_with_counts = User.query.filter(User.user_counts != None).all()
-    click.echo(f"Found {len(users_with_counts)} users with counts")
-
-    if click.confirm("Would you like to backfill all these users?"):
-        backfilled = 0
-        with click.progressbar(users_with_counts) as bar:
-            for user in bar:
-                user.user_counts.backfill(only_if_missing=True, batch_mode=True)
-                backfilled += 1
-        db.session.commit()
-        click.echo(f"Backfilled {backfilled} users")
+    # click.echo("Finding users without tracking")
+    # from models.user import User
+    # from models.counters.user_counts import UserCounts
+    #
+    # users_without_counts = (User.query
+    #                         .filter(User.user_counts == None)
+    #                         .limit(limit_users if limit_users > 0 else None).all()
+    # )
+    # click.echo(f"Found {len(users_without_counts)} users without counts")
+    # if click.confirm("Would you like to create counts for these users?"):
+    #     created = 0
+    #     with click.progressbar(users_without_counts) as bar:
+    #         for user in bar:
+    #             UserCounts.create_from_user(user, batch_mode=True)
+    #             created += 1
+    #     db.session.commit()
+    #     click.echo(f"Created {created} users")
+    #
+    # click.echo("Finding users with tracking")
+    # users_with_counts = User.query.filter(User.user_counts != None).all()
+    # click.echo(f"Found {len(users_with_counts)} users with counts")
+    #
+    # if click.confirm("Would you like to backfill all these users?"):
+    #     backfilled = 0
+    #     with click.progressbar(users_with_counts) as bar:
+    #         for user in bar:
+    #             user.user_counts.backfill(only_if_missing=True, batch_mode=True)
+    #             backfilled += 1
+    #     db.session.commit()
+    #     click.echo(f"Backfilled {backfilled} users")

@@ -4,11 +4,11 @@ from collections import OrderedDict
 import time
 import json
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, List
 
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum, Boolean
 from sqlalchemy_utc import utcnow
 
 import models
@@ -21,6 +21,10 @@ from common.databases import get_enum_values
 from models.user import User
 from models.course import Course
 from models.assignment import Assignment
+
+
+if TYPE_CHECKING:
+    from models import *
 
 
 class SubmissionLog(Base):
@@ -38,8 +42,9 @@ class SubmissionLog(Base):
     file_path: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
     category: Mapped[str] = mapped_column(String(255), default="")
     label: Mapped[str] = mapped_column(String(255), default="")
-    # Message will be JSON encoded data
+    # Message will be JSON encoded data, if extended is true
     message: Mapped[str] = mapped_column(Text(), default="")
+    extended: Mapped[bool] = mapped_column(Boolean(), default=False)
     client_timestamp: Mapped[Optional[str]] = mapped_column(String(255), default="")
     client_timezone: Mapped[Optional[str]] = mapped_column(String(255), default="")
 

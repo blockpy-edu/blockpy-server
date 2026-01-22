@@ -20,6 +20,7 @@ from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
 from controllers.pylti.post_grade import get_groups_submissions, calculate_submissions_score,  grade_submission
 from models.assignment_tag import AssignmentTag
+from models.counters import SubmissionCounts
 from models.course import Course
 
 from models import db
@@ -174,13 +175,14 @@ def load_assignment():
     # Get arguments
     assignment_id = safe_request.get_maybe_int('assignment_id')
     student_id = safe_request.get_maybe_int('student_id')
+    given_user_id = safe_request.get_maybe_int('user_id')
     force_download = safe_request.get_maybe_bool('force_download', False)
     force_quiz = safe_request.get_maybe_bool('force_quiz', False)
     with_history = safe_request.get_maybe_bool('with_history', False)
     course_id = safe_request.get_course_id(True)
     user, user_id = g.safely.get_user()
     if student_id is None:
-        student_id = user_id
+        student_id = given_user_id or user_id
     # Load models
     scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
     # Start processing
@@ -255,6 +257,7 @@ def save_student_file(filename, course_id, user):
     version_change = submission.assignment.version != submission.assignment_version
     new_code = submission.save_code(filename, code, part_id)
     # TODO: What is a grader is uploading code for a student?
+    SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {})
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
                    course_id, submission.user_id,
                    SubmissionLogEvent.BLOCKPY_FILE_EDIT,
@@ -326,29 +329,14 @@ def log_event():
     scope, submission = g.safely.load_submission_by_id(submission_id)
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can log events for a submission.")
-    # Handle certain events specially
-    if event_type == "Intervention" and extended:
-        try:
-            full_data = json.loads(message)
-            message = full_data['message']
-            '''
-            {
-                "message": "",
-                "syntaxError": true,
-                "runtimeError": true,
-                "unitTests": {
-                    "tests": 0,
-                    "feedbacks": 0,
-                    "successes": 0,
-                    "feedbackSuccess": 0
-                }
-            }
-            '''
-        except Exception as e:
-            return ajax_failure("Could not parse intervention message: " + str(e))
     # Make the entry
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                              event_type, file_path, category, label, message)
+    # Handle certain events specially
+    try:
+        submission.track_event(submission_id, event_type, message, extended)
+    except Exception as e:
+        return ajax_failure("Could not track the event: " + str(e))
     return ajax_success({"log_id": new_log.id})
 
 

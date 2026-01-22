@@ -375,6 +375,8 @@ def export_submissions():
         assignment_users = [sua[1] for sua in suas]
         submissions.update(assignment_submissions)
         users.update(assignment_users)
+
+    # TODO: Download cleaned version
     # Generate the bundle
     if format == "pdf":
         bundle = export_pdf_zip(assignments=assignments, submissions=submissions, users=users,

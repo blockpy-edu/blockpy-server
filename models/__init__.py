@@ -20,6 +20,7 @@ from models.sample_submission import SampleSubmission
 from models.invite import Invite
 from models.report import Report
 from models.grade_history import GradeHistory
+from models.counters import SubmissionCounts
 
 
 from models.generics.schemas import (UserSchema, RoleSchema, CourseSchema, AssignmentSchema, AssignmentTagSchema,
@@ -54,5 +55,6 @@ ALL_TABLES = (
     Submission, Review, SampleSubmission,
     User, Role, Authentication,
     Report, GradeHistory,
-    AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog
+    AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog,
+    SubmissionCounts
 )

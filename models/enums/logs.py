@@ -51,5 +51,6 @@ class SubmissionLogEvent(StrEnum):
     START_TIMER = "start_timer"
 
     BLOCKPY_RESET = "X-File.Reset"
+    BLOCKPY_PASTE = "X-Editor.Paste"
     BLOCKPY_FILE_EDIT = "File.Edit"
     BLOCKPY_FILE_CREATE = "File.Create"

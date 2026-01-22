@@ -275,10 +275,12 @@ def grade_submission(submission_id: int, assignment_group_id,
     elif client_status:
         valid_status = submission.update_submission_status(client_status)
         report.log(LogEventType.SUBMIT, f"{client_status}|{valid_status}")
+        submission.mark_attempt()
         if not valid_status:
             return report.add_reason(FailureReasons.INVALID_SUBMISSION_STATUS)
     else:
         report.changed = False
+        submission.mark_attempt()
     # Handle human grading
     if by_human:
         submission.update_grading_status(GradingStatuses.FULLY_GRADED)

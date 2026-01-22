@@ -430,7 +430,7 @@ class Submission(EnhancedBase):
             extra_files=build_extra_starting_files(assignment.extra_starting_files),
             assignment_version=assignment.version,
         )
-        # counters.track_new_submission(submission)
+        models.SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {})
         # TODO: Log extra starting files!
         SubmissionLog.new(
             submission.id,
@@ -577,8 +577,13 @@ class Submission(EnhancedBase):
             self.date_submitted = date_submitted or datetime.now(timezone.utc)
         if was_changed and do_change_grading_date:
             self.date_graded = date_submitted or datetime.now(timezone.utc)
+        self.attempts += 1
         db.session.commit()
         return was_changed
+
+    def mark_attempt(self):
+        self.attempts += 1
+        db.session.commit()
 
     def mark_graded(self):
         self.date_graded = datetime.now(timezone.utc)
@@ -801,6 +806,15 @@ class Submission(EnhancedBase):
         time = first_session.date_created
         offset = time.astimezone().utcoffset()
         return int(round(1000 * (time + offset).timestamp()))
+
+    def track_event(self, submission_id, event_type, message, extended=False):
+        full_data = models.SubmissionCounts.parse_message(event_type, message, extended)
+        models.SubmissionCounts.track_event(submission_id, event_type, full_data)
+
+        if event_type == "Intervention":
+            self.feedback = message
+            db.session.commit()
+
 
     def estimate_duration(self, inactivity_threshold=5):
         logs = SubmissionLog.get_history(
