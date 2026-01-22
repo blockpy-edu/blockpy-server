@@ -90,20 +90,6 @@ export class CourseListInterface {
 
     changePinStatus(course: Course) {
         this.updatePin(course.id, !this.getPin(course.id));
-        // showOverlay();
-        // ajax_post("courses/pin_course", {
-        //     course_id: course.id, pin_status: !course.isPinned()
-        // }).then((response) => {
-        //     if (response.success) {
-        //         console.log(response);
-        //         course.settings(response.updatedSettings);
-        //     } else {
-        //         console.error(response);
-        //         alert("Failed to set pin status:"+response.message);
-        //     }
-        // }).always(() => {
-        //     hideOverlay();
-        // });
     }
 }
 
