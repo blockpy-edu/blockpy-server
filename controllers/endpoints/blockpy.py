@@ -39,6 +39,8 @@ from controllers.helpers import (ajax_failure, parse_assignment_load, require_re
 from common.highlighters import highlight_python_code
 from tasks.tasks import queue_lti_post_grade
 from models.user import User
+from models.counters.helpers import (update_edit_time, update_run_count, update_error_counts,
+                                      increment_submission_count, update_user_activity)
 
 blueprint_blockpy = Blueprint('blockpy', __name__, url_prefix='/blockpy')
 
@@ -258,6 +260,10 @@ def save_student_file(filename, course_id, user):
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
                    course_id, submission.user_id,
                    "File.Edit", filename + ("#" + part_id if part_id else ""), message=new_code)
+    
+    # Update user activity timestamp
+    update_user_activity(submission.user_id, 'edit')
+    
     return ajax_success({"version_change": version_change})
 
 
@@ -348,6 +354,19 @@ def log_event():
     # Make the entry
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                              event_type, file_path, category, label, message)
+    
+    # Update counts based on event type
+    if event_type == 'X-run' or event_type == 'Run':
+        update_run_count(submission_id)
+    elif event_type == 'feedback':
+        # Track error types based on feedback category
+        if 'syntax' in category.lower() or 'syntax' in label.lower():
+            update_error_counts(submission_id, 'syntax')
+        elif 'runtime' in category.lower() or 'runtime' in label.lower():
+            update_error_counts(submission_id, 'runtime')
+        elif 'instructor' in category.lower() or 'test' in category.lower():
+            update_error_counts(submission_id, 'instructor_test')
+    
     return ajax_success({"log_id": new_log.id})
 
 
