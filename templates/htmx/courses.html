@@ -1,0 +1,41 @@
+{% extends 'htmx/layout.html' %}
+
+{% block title %}Courses{% endblock %}
+
+{% block body %}
+<h1>My Courses</h1>
+
+{% if g.user and not g.user.anonymous %}
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="input-group">
+                <input type="text" 
+                       class="form-control" 
+                       placeholder="Search courses..."
+                       name="search"
+                       hx-get="{{ url_for('htmx_routes.courses') }}"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#courses-list"
+                       hx-include="[name='filter']">
+                <select name="filter" 
+                        class="form-select"
+                        hx-get="{{ url_for('htmx_routes.courses') }}"
+                        hx-trigger="change"
+                        hx-target="#courses-list">
+                    <option value="all">All Courses</option>
+                    <option value="teaching">Teaching</option>
+                    <option value="enrolled">Enrolled</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="courses-list">
+        {% include 'htmx/partials/courses_list.html' %}
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        <p>Please <a href="{{ url_for('security.login') }}">log in</a> to view your courses.</p>
+    </div>
+{% endif %}
+{% endblock %}
