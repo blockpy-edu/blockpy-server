@@ -1056,7 +1056,7 @@ def modify_time():
     course_id = get_course_id(False)
     user, user_id = get_user()
     student_id = maybe_int(request.values.get("student_id", ""))
-    assignment_ids = request.values.get("assignment_ids", "")
+    assignment_group_ids = request.values.get("assignment_group_ids", "")
     amount = request.values.get("amount", "")
     # Check permissions
     require_course_instructor(g.user, course_id)
@@ -1067,18 +1067,20 @@ def modify_time():
     check_resource_exists(course, "Course", course_id)
     # Load or create the submission for the assignments of this user
     new_limits = []
-    for assignment_id in assignment_ids.split(","):
-        assignment_id = maybe_int(assignment_id)
-        if assignment_id is None:
+    for assignment_group_id in assignment_group_ids.split(","):
+        assignment_group_id = maybe_int(assignment_group_id)
+        if assignment_group_id is None:
             continue
-        assignment = Assignment.by_id(assignment_id)
-        submission = assignment.load_or_new_submission(student_id, course_id)
-        submission.edit(dict(time_limit=amount))
-        make_log_entry(submission.id, submission.version, assignment_id, assignment.version,
-                       course_id, student_id, SubmissionLogEvent.EXTEND_TIME,
-                       message=f"User {user_id} set time limit to `{amount}`")
-        shown_amount = amount if amount else "default"
-        new_limits.append({"assignment": assignment.encode_json(), "time_limit": shown_amount})
+        assignment_group = AssignmentGroup.by_id(assignment_group_id)
+        assignments = assignment_group.get_assignments()
+        for assignment in assignments:
+            submission = assignment.load_or_new_submission(student_id, course_id)
+            submission.edit(dict(time_limit=amount))
+            make_log_entry(submission.id, submission.version, assignment.id, assignment.version,
+                           course_id, student_id, SubmissionLogEvent.EXTEND_TIME,
+                           message=f"User {user_id} set time limit to `{amount}`")
+            shown_amount = amount if amount else "default"
+            new_limits.append({"assignment": assignment.encode_json(), "time_limit": shown_amount})
     return ajax_success({'new_limits': new_limits})
 
 @courses.route('/manage_time', methods=['GET', 'POST'])
@@ -1087,19 +1089,47 @@ def modify_time():
 def manage_time():
     course_id = get_course_id(False)
     user, user_id = get_user()
-    chosen_assignment_ids = request.values.get("assignment_ids", "")
+    chosen_assignment_group_ids = request.values.get("assignment_group_ids", "")
     # Check permissions
     require_course_instructor(g.user, course_id)
     # Load Resources
     course = Course.by_id(course_id)
     # Get all timed assignments that are available to this user
     all_timed_assignments = Assignment.get_timed_assignments()
-    all_timed_assignments = {a.id: a for a in all_timed_assignments}
+    all_timed_groups = {}
+    assignment_groups = {}
+    for assignment in all_timed_assignments:
+        for membership in assignment.memberships:
+            if membership.assignment_group:
+                group = membership.assignment_group
+                all_timed_groups[group.id] = group
+                if group.id not in assignment_groups:
+                    assignment_groups[group.id] = []
+                assignment_groups[group.id].append(assignment)
 
-    if chosen_assignment_ids:
-        chosen_assignment_ids = [int(aid) for aid in chosen_assignment_ids.split(",") if maybe_int(aid) is not None]
+    all_timed_assignments = { a.id: a for a in all_timed_assignments }
+
+    # Confirm that all assignments in group have time limits
+    missing_assignments = []
+    for group_id, assignments in assignment_groups.items():
+        group = all_timed_groups.get(group_id)
+        actual_assignments = group.get_assignments()
+        assignment_lookup = {a.id: a for a in actual_assignments}
+        actual_ids = {a.id for a in actual_assignments}
+        timed_ids = {a.id for a in assignments}
+        if actual_ids != timed_ids:
+            missing_ids = actual_ids - timed_ids
+            for aid in missing_ids:
+                assignment = assignment_lookup.get(aid)
+                missing_assignments.append(
+                    (group, aid, assignment)
+                )
+
+
+    if chosen_assignment_group_ids:
+        chosen_assignment_group_ids = [int(gid) for gid in chosen_assignment_group_ids.split(",") if maybe_int(gid) is not None]
     else:
-        chosen_assignment_ids = []
+        chosen_assignment_group_ids = []
 
     # Get all the users in the course
     all_users = course.get_users()
@@ -1107,8 +1137,9 @@ def manage_time():
     # Get the submissions for the chosen assignments, grouped by user
     submissions_by_user = {
         user.id: [
-            Submission.get_submission(aid, user.id, course_id)
-            for aid in chosen_assignment_ids
+            Submission.get_submission(assignment.id, user.id, course_id)
+            for gid in chosen_assignment_group_ids
+            for assignment in assignment_groups.get(gid, [])
         ]
         for role, user in all_users
     }
@@ -1122,8 +1153,11 @@ def manage_time():
     return render_template("courses/manage_time.html",
                             course_id=course_id,
                             course=course,
+                            all_timed_groups=all_timed_groups,
                             all_timed_assignments=all_timed_assignments,
-                            chosen_assignment_ids=chosen_assignment_ids,
+                            chosen_assignment_group_ids=chosen_assignment_group_ids,
                             all_users=all_users,
-                            submissions_by_user=submissions_by_user
+                            assignment_groups=assignment_groups,
+                            submissions_by_user=submissions_by_user,
+                            missing_assignments=missing_assignments
                            )

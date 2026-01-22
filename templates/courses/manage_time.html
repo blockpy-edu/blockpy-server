@@ -16,16 +16,23 @@ function modifyTimeLimit(studentId, amount, resultTarget) {
     if (amount === null) {
         alert("Please enter a valid time amount.");
         return;
+    } else if (amount == 'custom') {
+        amount = $("#custom-set-time-amount-"+studentId).val();
+        if (amount === null || amount.length === 0 || isNaN(amount) || parseInt(amount, 10) <= 0) {
+            alert("Please enter a valid number of minutes for custom time.");
+            return;
+        }
+        amount = amount + "min";
     }
-    var selected = $("#assignment-select").val().join(",");
+    var selected = $("#assignment-group-select").val().join(",");
     if (selected === null || selected.length === 0) {
-        alert("Please select at least one assignment to update.");
+        alert("Please select at least one assignment group to update.");
         return;
     }
     $.post(
         {{ url_for('courses.modify_time')|tojson}},
         {
-            assignment_ids: selected,
+            assignment_group_ids: selected,
             student_id: studentId,
             amount: amount,
             course_id: {{ course_id }}
@@ -50,13 +57,13 @@ mainModel = new MainModel();
 $().ready(function() {
     ko.applyBindings(mainModel);
 
-    $("#update-assignments-button").click(function() {
-        var selected = $("#assignment-select").val().join(",");
+    $("#update-assignment-groups-button").click(function() {
+        var selected = $("#assignment-group-select").val().join(",");
         if (selected === null || selected.length === 0) {
-            alert("Please select at least one assignment to update.");
+            alert("Please select at least one assignment group to update.");
             return;
         }
-        window.location.href = {{ url_for('courses.manage_time', course_id=course_id)|tojson }}+"&assignment_ids=" + selected;
+        window.location.href = {{ url_for('courses.manage_time', course_id=course_id)|tojson }}+"&assignment_group_ids=" + selected;
     });
 
 
@@ -85,34 +92,55 @@ $().ready(function() {
         This page allows you to edit students' exam time for a given assignment group.
     </p>
 
+    {% if missing_assignments %}
+
+        <div class="alert alert-warning">
+            <strong>Warning:</strong> The following assignments are missing time limit settings, even though other assignments in the same group have time limits set:
+            <ul>
+            {% for group, aid, assignment in missing_assignments %}
+                <li>{{ group.name }} ({{ group.url }}): {{ assignment.name }} ({{ assignment.url }})</li>
+            {% endfor %}
+            </ul>
+            Please set time limits for these assignments to ensure consistent behavior when modifying exam times.
+        </div>
+
+    {% endif %}
+
 
     <p>
-        To find a set of assignments to modify, you can select from the multi-select below.
+        To find a set of assignment groups to modify, you can select from the multi-select below.
     </p>
 
-    {% if all_timed_assignments %}
+    {% if all_timed_groups %}
 
         <div class="row">
             <div class="col-sm-6">
-                <select multiple="multiple" size="10" id="assignment-select">
-                {% for assignment in all_timed_assignments.values() %}
-                    <option value="{{ assignment.id }}"
-                        {% if assignment.id in chosen_assignment_ids %}
+                <select multiple="multiple" size="10" id="assignment-group-select">
+                {% for assignment_group in all_timed_groups.values() %}
+                    <option value="{{ assignment_group.id }}"
+                        {% if assignment_group.id in chosen_assignment_group_ids %}
                             selected="selected"
                         {% endif %}
-                    >{{ assignment.name }} ({{ assignment.url }})</option>
+                    >{{ assignment_group.name }} ({{ assignment_group.url }})</option>
                 {% endfor %}
                 </select>
                 <br><br>
-                <button id="update-assignments-button" class="btn btn-primary">Refresh assignment display</button>
+                <button id="update-assignment-groups-button" class="btn btn-primary">Refresh assignment group display</button>
             </div>
             <div class="col-sm-6">
                 <p>
-                    Currently displayed assignments:
+                    Currently displayed assignment groups:
                     <ul>
-                        {% for assignment in all_timed_assignments.values() %}
-                            {% if assignment.id in chosen_assignment_ids %}
-                                <li>{{ assignment.name }} ({{ assignment.url }}): {{ assignment.get_setting('time_limit', None) }}</li>
+                        {% for assignment_group in all_timed_groups.values() %}
+                            {% if assignment_group.id in chosen_assignment_group_ids %}
+                                <li>
+                                {{ assignment_group.name }} ({{ assignment_group.url }}):
+                                    <ul>
+                                    {% for assignment in assignment_groups[assignment_group.id] %}
+                                        <li>{{ assignment.name }} ({{ assignment.url }}): {{ assignment.get_setting('time_limit', None) }}</li>
+                                    {% endfor %}
+                                    </ul>
+                                </li>
                             {% endif %}
                         {% endfor %}
                     </ul>
@@ -154,11 +182,14 @@ $().ready(function() {
                     onclick="modifyTimeLimit({{ user.id }},'', 'time-limit-report-{{ user.id }}')">
                         Unset (use default time)
                     </button>
-{#                    <span class="ml-4">#}
-{#                        <input type="text" id="custom-set-time-amount">#}
-{#                        <button class="btn btn-sm btn-outline-secondary" #}
-{#                                id="custom-set-time">Set custom amount</button>#}
-{#                    </span>#}
+                    <br><br>
+                    <span class="ml-4">
+                        <input type="number" id="custom-set-time-amount-{{ user.id }}" placeholder="Minutes" style="width: 100px;">
+                        <button class="btn btn-sm btn-outline-secondary"
+                                id="custom-set-time"
+                                onclick="modifyTimeLimit({{ user.id }}, 'custom', 'time-limit-report-{{user.id }}')"
+                        >Set custom number of minutes</button>
+                    </span>
 
                 </td>
                 </tr>
@@ -169,7 +200,7 @@ $().ready(function() {
 
     {% else %}
 
-        <p><strong>No timed assignments found for this course.</strong></p>
+        <p><strong>No timed assignment groups found for this course.</strong></p>
 
     {% endif %}
 
