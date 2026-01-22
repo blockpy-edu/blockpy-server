@@ -4,13 +4,14 @@ import csv
 import io
 import os.path as op
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytz
 # Import Flask
 from flask_admin import Admin, BaseView, expose, form
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.fileadmin import FileAdmin
-from flask import g, Blueprint, request, url_for, render_template, Response, current_app
+from flask import g, Blueprint, request, url_for, render_template, Response, current_app, session
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from flask_admin.model.filters import BaseFilter
 from markupsafe import Markup
@@ -55,15 +56,35 @@ def make_ajax_fields(*fields):
         'minimum_input_length': 0
     }
 
-
+DATE_ARGS_FORMAT = dict(format='%Y-%m-%dT%H:%M')
+DATE_WIDGET_ARGS_FORMAT = {
+    'data-date-format': '%Y-%m-%dT%H:%M',
+    'data-role': 'none',
+    'type': 'datetime-local',
+}
 
 class RegularView(ModelView):
     model_form_converter = CustomConverter
+    _UTC_FIELDS = []
+
 
     def is_accessible(self):
         if g.user:
             return g.user.is_admin()
         return False
+
+
+    def on_model_change(self, form, model, is_created):
+        #user_timezone = session.get("timezone", current_app.config.get('LOCAL_TIMEZONE', 'US/Eastern'))
+        user_timezone = "UTC"
+
+        for field_name, field_value in form.data.items():
+            if isinstance(field_value, datetime):
+                if field_name in self._UTC_FIELDS:
+                    aware_time = field_value.replace(tzinfo=ZoneInfo(user_timezone))
+                    utc_time = aware_time.astimezone(ZoneInfo('UTC'))
+                    setattr(model, field_name, utc_time)
+        super().on_model_change(form, model, is_created)
 
 
 
@@ -391,12 +412,30 @@ class AuthenticationView(ModelIdView):
         'user': make_ajax_fields('first_name', 'last_name', 'email', 'id')
     }
 
+    _UTC_FIELDS = ["expires_at"]
+
+    form_args = dict(
+        expires_at=DATE_ARGS_FORMAT,
+    )
+    form_widget_args = dict(
+        expires_at=DATE_WIDGET_ARGS_FORMAT,
+    )
+
 
 class InviteView(ModelIdView):
     form_ajax_refs = {
         'user': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
         'course': make_ajax_fields('id', 'url', 'name')
     }
+
+    _UTC_FIELDS = ["expires"]
+
+    form_args = dict(
+        expires=DATE_ARGS_FORMAT,
+    )
+    form_widget_args = dict(
+        expires=DATE_WIDGET_ARGS_FORMAT,
+    )
 
 
 class ReportView(ModelIdView):
@@ -446,6 +485,21 @@ class SubmissionView(RegularView):
     }
     form_excluded_columns = ('reviews', 'grade_history', 'submission_logs')
     simple_list_pager = True
+    _UTC_FIELDS = ["date_started", "date_submitted", "date_graded", "date_due", "date_locked"]
+    form_args = dict(
+        date_started=DATE_ARGS_FORMAT,
+        date_submitted=DATE_ARGS_FORMAT,
+        date_graded=DATE_ARGS_FORMAT,
+        date_due=DATE_ARGS_FORMAT,
+        date_locked=DATE_ARGS_FORMAT,
+    )
+    form_widget_args = dict(
+        date_started=DATE_WIDGET_ARGS_FORMAT,
+        date_submitted=DATE_WIDGET_ARGS_FORMAT,
+        date_graded=DATE_WIDGET_ARGS_FORMAT,
+        date_due=DATE_WIDGET_ARGS_FORMAT,
+        date_locked=DATE_WIDGET_ARGS_FORMAT,
+    )
 
 
 class GradeHistoryView(RegularView):

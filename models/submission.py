@@ -60,7 +60,7 @@ class Submission(EnhancedBase):
     code: Mapped[str] = mapped_column(Text(), default="")
     extra_files: Mapped[str] = mapped_column(Text(), default="")
     url: Mapped[str] = mapped_column(
-        Text(), default=make_flavored_uuid_generator("submission_url"), unique=True
+        Text(), default=make_flavored_uuid_generator("submission_url"), unique=True, nullable=True
     )
     endpoint: Mapped[str] = mapped_column(Text(), default="")
     # Should be treated as out of X/100
