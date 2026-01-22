@@ -1,11 +1,11 @@
-import * as ko from 'knockout';
-import {Server} from "../services/server";
-import {User} from "../models/user";
-import {Assignment} from "../models/assignment";
-import {Submission} from "../models/submission";
-import {formatAmount} from "../utilities/dates";
-import {formatClock} from "../utilities/text";
-import {generateUUID} from "../utilities/random";
+import * as ko from "knockout";
+import { Server } from "../services/server";
+import { User } from "../models/user";
+import { Assignment } from "../models/assignment";
+import { Submission } from "../models/submission";
+import { formatAmount } from "../utilities/dates";
+import { formatClock } from "../utilities/text";
+import { generateUUID } from "../utilities/random";
 
 export interface AssignmentInterfaceJson {
     server: Server;
@@ -17,7 +17,10 @@ export interface AssignmentInterfaceJson {
     markCorrect: (id: number) => void;
 }
 
-function parseTimeLimit(timeLimit: string, studentLimit: string | null): number {
+function parseTimeLimit(
+    timeLimit: string,
+    studentLimit: string | null
+): number {
     let modifier = 1;
     if (studentLimit) {
         if (studentLimit.includes("min")) {
@@ -40,7 +43,6 @@ function parseTimeLimit(timeLimit: string, studentLimit: string | null): number 
         return minutes * 60 * modifier;
     }
 }
-
 
 export class AssignmentInterface {
     server: Server;
@@ -71,12 +73,12 @@ export class AssignmentInterface {
         this.submission = ko.observable(null);
         this.markCorrect = params.markCorrect;
 
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         BlockPyServer.altLogEntry = this.logEvent.bind(this);
 
-        if (window['$TIME_CHECKER_ID']) {
-            clearInterval(window['$TIME_CHECKER_ID']);
-            console.log("Killing old time checker", window['$TIME_CHECKER_ID']);
+        if (window["$TIME_CHECKER_ID"]) {
+            clearInterval(window["$TIME_CHECKER_ID"]);
+            console.log("Killing old time checker", window["$TIME_CHECKER_ID"]);
         }
         this.timeChecker = setInterval(() => {
             try {
@@ -88,36 +90,34 @@ export class AssignmentInterface {
                     "timer",
                     "time_error",
                     JSON.stringify({
-                        "error": e.toString(),
-                        "stack": e.stack
+                        error: e.toString(),
+                        stack: e.stack,
                     }),
                     this.assignment() ? this.assignment().url() : "",
                     () => {}
-                )
-                $(".assignment-selector-countdown").html(
-                    "Error with timer"
                 );
+                $(".assignment-selector-countdown").html("Error with timer");
             }
         }, 5000);
-        window['$TIME_CHECKER_ID'] = this.timeChecker;
+        window["$TIME_CHECKER_ID"] = this.timeChecker;
     }
 
     handleTimeCheck() {
         // There can be only one time checker at a time on the page
-        if (this.timeChecker !== window['$TIME_CHECKER_ID']) {
+        if (this.timeChecker !== window["$TIME_CHECKER_ID"]) {
             // If this is not the current time checker, then we stop
             if (this.timeChecker != null) {
                 clearInterval(this.timeChecker);
                 console.log("Killing old time checker", this.timeChecker);
                 this.timeChecker = null;
                 this.logEvent(
-                        "timer_cleared",
-                        "timer",
-                        "time_clear",
-                        "",
-                        this.assignment().url(),
-                        () => {}
-                    )
+                    "timer_cleared",
+                    "timer",
+                    "time_clear",
+                    "",
+                    this.assignment().url(),
+                    () => {}
+                );
             }
             return;
         }
@@ -131,24 +131,33 @@ export class AssignmentInterface {
             }
             try {
                 settings = JSON.parse(rawSettings);
-            } catch (e){
-                console.error("Failed to parse assignment settings", rawSettings, e);
+            } catch (e) {
+                console.error(
+                    "Failed to parse assignment settings",
+                    rawSettings,
+                    e
+                );
                 return;
             }
             if (!settings.time_limit) {
                 return;
             }
-            const timeLimit = parseTimeLimit(settings.time_limit, this.submission().timeLimit());
+            const timeLimit = parseTimeLimit(
+                settings.time_limit,
+                this.submission().timeLimit()
+            );
             const startTime = this.submission().dateStarted();
             if (startTime) {
                 const startDate = new Date(startTime);
                 // console.log(startTime, startDate, now.getTime());
-                const elapsed = Math.floor((now.getTime() - startDate.getTime()) / 1000);
+                const elapsed = Math.floor(
+                    (now.getTime() - startDate.getTime()) / 1000
+                );
                 const remaining = timeLimit - elapsed;
                 if (remaining <= 0) {
                     // Time is up, we should submit the assignment
                     // Check if overlay already exists
-                    if ($('.end-assignment-timer-box').length > 0) {
+                    if ($(".end-assignment-timer-box").length > 0) {
                         // Overlay already exists, do not create a new one
                         return;
                     }
@@ -157,21 +166,25 @@ export class AssignmentInterface {
                     }
                     // TODO: We need to allow instructors to remove the box if it appears for them!
                     // Add a box in the center of the overlay that explains
-                    const box = $('<div class="end-assignment-timer-box"> </div>');
+                    const box = $(
+                        '<div class="end-assignment-timer-box"> </div>'
+                    );
                     box.appendTo(document.body);
-                    box.html("Time is up! Your assignment will be automatically submitted now. You may not continue working on it. Please log out. Thanks for taking the exam, and best of luck!");
+                    box.html(
+                        "Time is up! Your assignment will be automatically submitted now. You may not continue working on it. Please log out. Thanks for taking the exam, and best of luck!"
+                    );
                     box.css({
-                        "position": "fixed",
-                        "width": "100%",
-                        "height": "100%",
-                        "top": "0",
-                        "left": 0,
-                        "padding": "20px",
+                        position: "fixed",
+                        width: "100%",
+                        height: "100%",
+                        top: "0",
+                        left: 0,
+                        padding: "20px",
                         "background-color": "white",
-                        "border": "1px solid black",
+                        border: "1px solid black",
                         "border-radius": "10px",
                         "text-align": "center",
-                        "z-index": "1000"
+                        "z-index": "1000",
                     });
                     this.logEvent(
                         "timer_expired",
@@ -181,24 +194,32 @@ export class AssignmentInterface {
                             elapsed: elapsed,
                             remaining: remaining,
                             time_limit: timeLimit,
-                            start_time: startTime
+                            start_time: startTime,
                         }),
                         this.assignment().url(),
                         () => {}
-                    )
+                    );
                 }
 
                 $(".assignment-selector-countdown").html(
-                    formatAmount(elapsed, " elapsed", true) + "; " +
-                    formatAmount(remaining, " left", true)
-                )
+                    formatAmount(elapsed, " elapsed", true) +
+                        "; " +
+                        formatAmount(remaining, " left", true)
+                );
                 $(".assignment-selector-clock").hide();
             }
         }
     }
 
-    logEvent(eventType: string, category: string, label: string, message: string, file_path: string, callback: any) {
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+    logEvent(
+        eventType: string,
+        category: string,
+        label: string,
+        message: string,
+        file_path: string,
+        callback: any
+    ) {
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
         let data = {
             assignment_id: this.assignment().id,
@@ -209,18 +230,24 @@ export class AssignmentInterface {
             version: this.assignment().version(),
             timestamp: now.getTime(),
             timezone: now.getTimezoneOffset(),
-            passcode: window['$MAIN_BLOCKPY_EDITOR'].model.display.passcode(),
+            passcode: window["$MAIN_BLOCKPY_EDITOR"].model.display.passcode(),
             event_type: eventType,
             category: category,
             label: label,
             file_path: file_path,
-            message: message
+            message: message,
         };
         return BlockPyServer._postRetry(data, "logEvent", 0, callback);
     }
 
-    saveFile(filename: string, contents: string, block: boolean, onSuccess: (response: any) => void, onError?: any) {
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+    saveFile(
+        filename: string,
+        contents: string,
+        block: boolean,
+        onSuccess: (response: any) => void,
+        onError?: any
+    ) {
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
         let data = {
             assignment_id: this.assignment().id,
@@ -231,27 +258,46 @@ export class AssignmentInterface {
             version: this.assignment().version(),
             timestamp: now.getTime(),
             timezone: now.getTimezoneOffset(),
-            passcode: window['$MAIN_BLOCKPY_EDITOR'].model.display.passcode(),
+            passcode: window["$MAIN_BLOCKPY_EDITOR"].model.display.passcode(),
             filename: filename,
-            code: contents
+            code: contents,
         };
         if (onError === undefined) {
             onError = (e: any, textStatus: string, errorThrown: any) => {
-                console.error("Failed to load (HTTP LEVEL)", e, textStatus, errorThrown);
+                console.error(
+                    "Failed to load (HTTP LEVEL)",
+                    e,
+                    textStatus,
+                    errorThrown
+                );
             };
         }
         if (onSuccess == null) {
             onSuccess = (response: any) => response.success; // && console.log(response);
         }
         if (block) {
-            return BlockPyServer._postBlocking("saveFile", data, 3, () => 0, onSuccess, onError);
+            return BlockPyServer._postBlocking(
+                "saveFile",
+                data,
+                3,
+                () => 0,
+                onSuccess,
+                onError
+            );
         } else {
-            return BlockPyServer._postLatestRetry(data, filename, "saveFile", 300, onError, onSuccess);
+            return BlockPyServer._postLatestRetry(
+                data,
+                filename,
+                "saveFile",
+                300,
+                onError,
+                onSuccess
+            );
         }
     }
 
     saveAssignmentSettings(settings: Record<string, any>) {
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
         let data = {
             assignment_id: this.assignment().id,
@@ -262,8 +308,8 @@ export class AssignmentInterface {
             version: this.assignment().version(),
             timestamp: now.getTime(),
             timezone: now.getTimezoneOffset(),
-            passcode: window['$MAIN_BLOCKPY_EDITOR'].model.display.passcode(),
-            ...settings
+            passcode: window["$MAIN_BLOCKPY_EDITOR"].model.display.passcode(),
+            ...settings,
         };
         /*
             // New Stuff
@@ -278,16 +324,31 @@ export class AssignmentInterface {
         };*/
 
         const onError = (e: any, textStatus: string, errorThrown: any) => {
-            window['$MAIN_BLOCKPY_EDITOR'].components.dialog.ERROR_SAVING_ASSIGNMNENT();
-            console.error("Failed to load (HTTP LEVEL)", e, textStatus, errorThrown);
+            window[
+                "$MAIN_BLOCKPY_EDITOR"
+            ].components.dialog.ERROR_SAVING_ASSIGNMNENT();
+            console.error(
+                "Failed to load (HTTP LEVEL)",
+                e,
+                textStatus,
+                errorThrown
+            );
         };
-        const onSuccess = (response: any) => response.success && console.log(response);
-        return BlockPyServer._postBlocking("saveAssignment", data, 3, () => 0, onSuccess, onError);
+        const onSuccess = (response: any) =>
+            response.success && console.log(response);
+        return BlockPyServer._postBlocking(
+            "saveAssignment",
+            data,
+            3,
+            () => 0,
+            onSuccess,
+            onError
+        );
     }
 }
 
 export enum EditorMode {
     SUBMISSION = "SUBMISSION",
     RAW = "RAW",
-    FORM = "FORM"
+    FORM = "FORM",
 }
