@@ -21,6 +21,7 @@ export class CourseListInterface {
     label: string;
     private sortMethod: ko.Observable<string>;
     sorter: (left: Course, right: Course) => number;
+    private pins: ko.Observable<Record<string, boolean>>;
 
     constructor(params: CourseListInterfaceJson) {
         this.server = params.server;
@@ -33,12 +34,31 @@ export class CourseListInterface {
         this.sortMethod.subscribe(() => {
             STORAGE_SERVICE.set("COURSE_SORT_METHOD_"+this.label, this.sortMethod());
         });
+        this.pins = this.loadPins();
+    }
+
+    loadPins() {
+        const rawPins = STORAGE_SERVICE.get("COURSE_PINS_"+this.label, "{}");
+        const pins = JSON.parse(rawPins);
+        return ko.observable<Record<string, boolean>>(pins);
+    }
+
+    updatePin(courseId: number, isPinned: boolean) {
+        let pins = this.pins();
+        pins[courseId.toString()] = isPinned;
+        this.pins(pins);
+        STORAGE_SERVICE.set("COURSE_PINS_"+this.label, JSON.stringify(pins));
+    }
+
+    getPin(courseId: number): boolean {
+        let pins = this.pins();
+        return pins[courseId.toString()] || false;
     }
 
     _sorter(left: Course, right: Course): number {
         let sortMethod = this.sortMethod();
-        if (left.isPinned() || right.isPinned()) {
-            return (+right.isPinned()||0) - (+left.isPinned()||0);
+        if (this.getPin(left.id) || this.getPin(right.id)) {
+            return (+this.getPin(right.id)||0) - (+this.getPin(left.id)||0);
         }
         if (sortMethod === "date_created_desc") {
             return left.dateCreated() === right.dateCreated() ? 0
@@ -69,20 +89,21 @@ export class CourseListInterface {
     }
 
     changePinStatus(course: Course) {
-        showOverlay();
-        ajax_post("courses/pin_course", {
-            course_id: course.id, pin_status: !course.isPinned()
-        }).then((response) => {
-            if (response.success) {
-                console.log(response);
-                course.settings(response.updatedSettings);
-            } else {
-                console.error(response);
-                alert("Failed to set pin status:"+response.message);
-            }
-        }).always(() => {
-            hideOverlay();
-        });
+        this.updatePin(course.id, !this.getPin(course.id));
+        // showOverlay();
+        // ajax_post("courses/pin_course", {
+        //     course_id: course.id, pin_status: !course.isPinned()
+        // }).then((response) => {
+        //     if (response.success) {
+        //         console.log(response);
+        //         course.settings(response.updatedSettings);
+        //     } else {
+        //         console.error(response);
+        //         alert("Failed to set pin status:"+response.message);
+        //     }
+        // }).always(() => {
+        //     hideOverlay();
+        // });
     }
 }
 
@@ -107,8 +128,8 @@ export const COURSE_LIST_HTML = `
             <div class="d-flex w-100 justify-content-between">
                 <h5 class="mb-1" data-bind="text: name"></h5>
                 <span class="fa-star align-right clickable" 
-                    data-bind="click: $parent.changePinStatus,
-                    css: {'far': !isPinned(), 'fas': isPinned()}
+                    data-bind="click: $parent.changePinStatus.bind($parent, $data),
+                    css: {'far': !$parent.getPin(id), 'fas': $parent.getPin(id)}
                     "></span>
             </div>
             <p class="mb-1">
