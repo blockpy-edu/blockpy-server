@@ -81,3 +81,16 @@ class RolePermissions:
     DEVELOPER_ROLES = [UserRoles.ADMIN, UserRoles.INSTRUCTOR,
                        UserRoles.CONTENT_DEVELOPER]
 
+def classify_role_for_count(role: UserRoles) -> str:
+    """
+    Classify the user's role as either "student", "staff", or "other".
+
+    :param role:
+    :return:
+    """
+    if role == UserRoles.LEARNER:
+        return "student"
+    if role in (UserRoles.INSTRUCTOR, UserRoles.TA, UserRoles.CONTENT_DEVELOPER,
+                UserRoles.PROCTOR):
+        return "staff"
+    return 'other'

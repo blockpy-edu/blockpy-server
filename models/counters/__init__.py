@@ -34,3 +34,4 @@ Assignment group counts
     Number of submissions
 
 """
+from models.counters.submission_counts import SubmissionCounts

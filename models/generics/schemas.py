@@ -15,7 +15,7 @@ from models.invite import Invite
 from models.report import Report
 from models.grade_history import GradeHistory
 from models.log_tables import RoleLog, AccessLog, ErrorLog, CourseLog, AssignmentLog, SubmissionLog
-
+from models.counters import SubmissionCounts
 
 class BaseSchema:
     id = ma.auto_field(required=True)
@@ -149,4 +149,10 @@ class SubmissionLogSchema(ma.SQLAlchemyAutoSchema, BaseSchema):
 class CourseLogSchema(ma.SQLAlchemyAutoSchema, BaseSchema):
     class Meta:
         model = CourseLog
+        include_fk = True
+
+
+class SubmissionCountsSchema(ma.SQLAlchemyAutoSchema, BaseSchema):
+    class Meta:
+        model = SubmissionCounts
         include_fk = True

@@ -123,19 +123,45 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
             correct = student == check.get('correct')
         return correct, correct, check.get('feedback', {}).get(student, 'Incorrect') if not correct else "Correct"
     elif question.get('type') == 'multiple_answers_question':
+        # TODO: Test per-element feedback
         answers = question.get('answers', [])
         correct = {s for s in student if s in answers} == {s for s in check.get('correct', []) if s in answers}
         #correct = set(student) == set(check.get('correct', []))
         corrects = [(s in check.get('correct', [])) == (s in student)
                     for s in answers]
-        return sum(corrects)/len(answers), correct, check.get('wrong_any', 'Incorrect') if not correct else 'Correct'
+        feedbacks = [
+            f for f, was_correct in zip(check.get('wrong'), corrects)
+            if not was_correct
+        ] if "wrong" in check else []
+        if not correct and not feedbacks:
+            feedbacks = check.get("wrong_any", "Incorrect")
+        else:
+            feedbacks = "<br>\n".join(feedbacks)
+        message = feedbacks if not correct else 'Correct'
+        return sum(corrects)/len(answers), correct, message
     elif question.get('type') == 'multiple_dropdowns_question':
-        corrects = [student.get(blank_id) == answer
-                    for blank_id, answer in check.get('correct', {}).items()]
+        # TODO: Test per-element feedback
+        # corrects = [student.get(blank_id) == answer
+        #            for blank_id, answer in check.get('correct', {}).items()]
         #feedbacks = "<br>\n".join(check.get('wrong', {}).get(blank_id, {}).get(answer, 'Correct')
         #             for blank_id, answer in student.items())
-        feedback = check.get('wrong_any', 'Incorrect') if not all(corrects) else "Correct"
-        return sum(corrects) / len(corrects) if corrects else 0, all(corrects), feedback
+        feedbacks = []
+        corrects = []
+        for blank_id, answer in check.get("correct", {}).items():
+            is_correct = student.get(blank_id) == answer
+            corrects.append(is_correct)
+            if not is_correct:
+                feedback = check.get("feedback", {}).get(blank_id)
+                if isinstance(feedback, dict):
+                    feedback = feedback.get(student.get(blank_id))
+                feedbacks.append(feedback)
+        if all(corrects):
+            message = "Correct"
+        elif not feedbacks:
+            message = check.get("wrong_any", "Incorrect")
+        else:
+            message = "<br>\n".join(feedbacks)
+        return sum(corrects) / len(corrects) if corrects else 0, all(corrects), message
     elif question.get('type') in ('short_answer_question', 'numerical_question'):
         wrong_any = check.get('wrong_any', "Incorrect")
         if 'correct' in check:
@@ -155,19 +181,46 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
     #elif question.get('type') == 'numerical_question':
     #    pass
     elif question.get('type') == 'fill_in_multiple_blanks_question':
+        # TODO: Test per-element feedback
         if 'correct' in check:
-            corrects = [compare_string_equality(student.get(blank_id, ""), answer)
-                        for blank_id, answer in check.get('correct', {}).items()]
+            corrects = {blank_id: compare_string_equality(student.get(blank_id, ""), answer)
+                        for blank_id, answer in check.get('correct', {}).items()}
         elif 'correct_exact' in check:
-            corrects = [compare_string_equality(student.get(blank_id, ""), answer)
-                        for blank_id, answer in check.get('correct_exact', {}).items()]
+            corrects = {blank_id: compare_string_equality(student.get(blank_id, ""), answer)
+                        for blank_id, answer in check.get('correct_exact', {}).items()}
         elif 'correct_regex' in check:
-            corrects = [any(re.match(reg, student.get(blank_id)) for reg in answer)
-                        for blank_id, answer in check.get('correct_regex', {}).items()]
+            corrects = {blank_id: any(re.match(reg, student.get(blank_id)) for reg in answer)
+                        for blank_id, answer in check.get('correct_regex', {}).items()}
         else:
             return 0, False, "Unknown Fill In Multiple Blanks Question Check: "+ str(check)
-        feedback = check.get('wrong_any', 'Incorrect') if not all(corrects) else 'Correct'
-        return sum(corrects) / len(corrects) if corrects else 0, all(corrects), feedback
+        all_correct = all(corrects.values())
+        wrong_any = check.get('wrong_any', 'Incorrect')
+        if "feedback" in check:
+            feedbacks = []
+            for blank_id, feedback in check.get('feedback', {}):
+                if corrects.get(blank_id):
+                    continue
+                if isinstance(feedback, str):
+                    feedbacks.append(feedback)
+                    continue
+                # Allow dict of regex->message
+                elif isinstance(feedback, dict):
+                    feedback = [feedback]
+                # Allow list of dict (regex->message), to enforce order
+                found = False
+                for reg_msg in feedback:
+                    for reg, msg in reg_msg.items():
+                        if re.match(reg, student.get(blank_id, "")):
+                            feedbacks.append(msg)
+                            found = True
+                            break
+                    if found:
+                        break
+            message = "<br>\n".join(feedbacks) if feedbacks else (wrong_any if not all_correct else 'Correct')
+        else:
+            message = wrong_any if not all_correct else 'Correct'
+        corrects = corrects.values()
+        return sum(corrects) / len(corrects) if corrects else 0, all(corrects), message
     elif question.get('type') in ('text_only_question', 'essay_question'):
         return 1, True, "Correct"
     return None

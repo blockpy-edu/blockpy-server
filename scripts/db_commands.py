@@ -9,6 +9,7 @@ from flask import current_app
 from sqlalchemy import text as sqla_text
 
 from models import db
+from models.enums import UserRoles
 from models.generics.base import find_all_linked_resources, SAFE_DELETE_ORDER
 from scripts.setup import cli
 
@@ -72,8 +73,8 @@ def populate_db(force: bool):
                            secrets.get("ADMIN_PASSWORD", "password"))
     db.session.add(admin)
     db.session.flush()
-    db.session.add(Role(name='instructor', user_id=admin.id, description=""))
-    db.session.add(Role(name='admin', user_id=admin.id, description=""))
+    db.session.add(Role.new(name='instructor', user_id=admin.id, description=""))
+    db.session.add(Role.new(name='admin', user_id=admin.id, description=""))
 
     click.echo("Adding default course")
     default_course = Course(name="Default Course", owner_id=admin.id,
@@ -81,7 +82,7 @@ def populate_db(force: bool):
                             url="default", visibility='public')
     db.session.add(default_course)
     db.session.flush()
-    db.session.add(Role(name='instructor', course_id=default_course.id, user_id=admin.id, description=""))
+    db.session.add(Role.new(name='instructor', course_id=default_course.id, user_id=admin.id, description=""))
 
     db.session.commit()
     click.echo("Populated database")
@@ -130,13 +131,13 @@ def add_test_user():
     teacher = User.new_from_instructor("klaus@acbart.com", "Klaus", "Bart", "password")
     db.session.add(teacher)
     db.session.flush()
-    db.session.add(Role(name='instructor', course_id=default_course.id, user_id=teacher.id, description=""))
+    db.session.add(Role.new(name=UserRoles.INSTRUCTOR, course_id=default_course.id, user_id=teacher.id, description=""))
 
     click.echo("Adding Student")
     student = User.new_from_instructor("ada@acbart.com", "Ada", "Bart", "password")
     db.session.add(student)
     db.session.flush()
-    db.session.add(Role(name='student', course_id=default_course.id, user_id=student.id, description=""))
+    db.session.add(Role.new(name=UserRoles.LEARNER, course_id=default_course.id, user_id=student.id, description=""))
 
     click.echo("Adding basic assignments")
     basic_group = AssignmentGroup(name="First Group", course_id=default_course.id, owner_id=teacher.id,
@@ -247,7 +248,7 @@ def dump_db(output, log_for_course):
 @click.option("--users", '-u', "users", default=None,
               help="An explicit list of comma-separated user ids to export")
 def export_progsnap2(output, log_for_course, groups, exclude, format, overwrite, partition, users):
-    from models.portation import export_progsnap2
+    from models.data_formats.portation import export_progsnap2
     if groups is not None:
         output = output + "_{}".format(groups.replace(",", "_"))
         groups = [int(g) for g in groups.split(",")]
@@ -386,3 +387,44 @@ def clear_old_anonymous_users(days, keep_active, limit):
     click.echo(f"Deleted {total} users")
 
     click.echo("Done!")
+
+
+@cli.command("add_missing_counters")
+@click.option("--limit_users", '-u', "limit_users", default=-1,
+              help="Limit the number of users to process. -1 for no limit.")
+def add_missing_counters(limit_users):
+    """
+    Looks through users, courses, submissions, etc. for missing
+    tracking information. Populates any missing fields with the appropriate
+    data to backfill.
+    """
+    click.echo("Finding users without tracking")
+    from models.user import User
+    from models.counters.user_counts import UserCounts
+
+    users_without_counts = (User.query
+                            .filter(User.user_counts == None)
+                            .limit(limit_users if limit_users > 0 else None).all()
+    )
+    click.echo(f"Found {len(users_without_counts)} users without counts")
+    if click.confirm("Would you like to create counts for these users?"):
+        created = 0
+        with click.progressbar(users_without_counts) as bar:
+            for user in bar:
+                UserCounts.create_from_user(user, batch_mode=True)
+                created += 1
+        db.session.commit()
+        click.echo(f"Created {created} users")
+
+    click.echo("Finding users with tracking")
+    users_with_counts = User.query.filter(User.user_counts != None).all()
+    click.echo(f"Found {len(users_with_counts)} users with counts")
+
+    if click.confirm("Would you like to backfill all these users?"):
+        backfilled = 0
+        with click.progressbar(users_with_counts) as bar:
+            for user in bar:
+                user.user_counts.backfill(only_if_missing=True, batch_mode=True)
+                backfilled += 1
+        db.session.commit()
+        click.echo(f"Backfilled {backfilled} users")

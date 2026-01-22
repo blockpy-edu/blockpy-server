@@ -65,13 +65,11 @@ class UserFactory:
         user = UserFactory.create_user(**kwargs)
         
         if course:
-            role = Role(
+            Role.new(
                 user_id=user.id,
                 course_id=course.id,
                 name=UserRoles.INSTRUCTOR
             )
-            db.session.add(role)
-            db.session.commit()
         
         return user
     
@@ -90,13 +88,11 @@ class UserFactory:
         user = UserFactory.create_user(**kwargs)
         
         if course:
-            role = Role(
+            Role.new(
                 user_id=user.id,
                 course_id=course.id,
                 name=UserRoles.LEARNER
             )
-            db.session.add(role)
-            db.session.commit()
         
         return user
 
@@ -252,9 +248,7 @@ class SubmissionFactory:
         if assignment_group:
             submission_kwargs["assignment_group_id"] = assignment_group.id
         
-        submission = Submission(**submission_kwargs)
-        db.session.add(submission)
-        db.session.commit()
+        submission = Submission.new(**submission_kwargs)
         return submission
 
 

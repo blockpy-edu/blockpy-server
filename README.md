@@ -455,6 +455,12 @@ $ sudo apt-get install redis
 ```
 
 Edit the `/etc/redis/redis.conf` file to require a password and change the supervised to `systemd`.
+
+```
+requirepass YOUR_CHOSEN_PASSWORD
+supervised systemd
+```
+
 Then, (re)start the Redis service.
 
 ```bash

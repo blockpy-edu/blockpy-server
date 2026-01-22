@@ -257,7 +257,8 @@ def save_student_file(filename, course_id, user):
     # TODO: What is a grader is uploading code for a student?
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
                    course_id, submission.user_id,
-                   "File.Edit", filename + ("#" + part_id if part_id else ""), message=new_code)
+                   SubmissionLogEvent.BLOCKPY_FILE_EDIT,
+                   filename + ("#" + part_id if part_id else ""), message=new_code)
     return ajax_success({"version_change": version_change})
 
 

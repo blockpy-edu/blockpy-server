@@ -49,3 +49,7 @@ class SubmissionLogEvent(StrEnum):
     CANVAS = "canvas"
     EXTEND_TIME = "extend_time"
     START_TIMER = "start_timer"
+
+    BLOCKPY_RESET = "X-File.Reset"
+    BLOCKPY_FILE_EDIT = "File.Edit"
+    BLOCKPY_FILE_CREATE = "File.Create"

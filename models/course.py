@@ -322,9 +322,7 @@ class Course(Base):
         new_course = Course(name=name, owner_id=owner_id, visibility=visibility, term=term, url=url)
         db.session.add(new_course)
         db.session.flush()
-        new_role = models.Role(name='instructor', user_id=owner_id, course_id=new_course.id)
-        db.session.add(new_role)
-        db.session.commit()
+        models.Role.new(name='instructor', user_id=owner_id, course_id=new_course.id)
         return new_course
 
     @staticmethod

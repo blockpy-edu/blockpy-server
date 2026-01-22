@@ -35,6 +35,7 @@ from models.assignment_tag import AssignmentTag
 from models.report import Report
 from models.invite import Invite
 from models.grade_history import GradeHistory
+from models.counters.submission_counts import SubmissionCounts
 from flask_admin.contrib.sqla.form import AdminModelConverter, validators
 
 
@@ -455,6 +456,14 @@ class GradeHistoryView(RegularView):
     }
     column_filters = ('id', 'submission_id', 'grader_id', 'score', 'date_submitted')
 
+class SubmissionCountView(RegularView):
+    can_export = True
+    form_ajax_refs = {
+        'submission': QueryAjaxModelLoader('submission', db.session, Submission, fields=['id'], page_size=10),
+    }
+    column_list = ('id', 'submission_id', 'metric', 'value')
+    column_filters = ('id', 'submission_id', 'metric', 'value')
+
 class ProtectedFileAdmin(FileAdmin):
     can_upload = False
     can_delete = False
@@ -485,6 +494,7 @@ def setup_admin(app):
     admin.add_view(ReportView(Report, db.session, category='Tables'))
     admin.add_view(InviteView(Invite, db.session, category='Tables'))
     admin.add_view(GradeHistoryView(GradeHistory, db.session, category='Tables'))
+    admin.add_view(SubmissionCountView(SubmissionCounts, db.session, category='Tables'))
 
     # admin.add_view(FileAdmin(app.config['BLOCKPY_LOG_DIR'], base_url='/admin/code_logs/', name='Disk Logs'))
     # TODO: Add redis console

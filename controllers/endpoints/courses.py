@@ -457,7 +457,7 @@ def remove_role(role_id):
     is_instructor = g.user.is_instructor(course_id)
     if not is_instructor:
         return "You're not an instructor in this course!"
-    Role.remove(int(role_id))
+    role.remove()
     return redirect(url_for('courses.manage_users', course_id=course_id))
 
 
@@ -1052,6 +1052,7 @@ def bulk_groups():
 @courses.route('/modify_time/', methods=['GET', 'POST'])
 @login_required
 def modify_time():
+    # TODO: This should work on assignment groups, not individual assignments
     course_id = get_course_id(False)
     user, user_id = get_user()
     student_id = maybe_int(request.values.get("student_id", ""))

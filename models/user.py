@@ -38,6 +38,12 @@ class User(Base, UserMixin):
     banned: Mapped[bool] = mapped_column(Boolean(), default=False)
 
     fs_uniquifier: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # Flask Security Too TRACKABLE fields
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(), default=None, nullable=True)
+    current_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(), default=None, nullable=True)
+    last_login_ip: Mapped[Optional[str]] = mapped_column(String(100), default=None, nullable=True)
+    current_login_ip: Mapped[Optional[str]] = mapped_column(String(100), default=None, nullable=True)
+    login_count: Mapped[Optional[int]] = mapped_column(Integer(), default=0, nullable=True)
 
     # Foreign key relationships
     roles: Mapped[list["Role"]] = db.relationship(back_populates="user")
@@ -236,10 +242,8 @@ class User(Base, UserMixin):
 
     def add_role(self, name, course_id):
         if name in [id for id, _ in USER_DISPLAY_ROLES.items()]:
-            new_role = models.Role(name=name, user_id=self.id,
+            new_role = models.Role.new(name=name, user_id=self.id,
                                    course_id=maybe_int(course_id))
-            db.session.add(new_role)
-            db.session.commit()
             return new_role
         return None
 
@@ -252,9 +256,7 @@ class User(Base, UserMixin):
         old_role_names = set(role.name.lower() for role in old_roles)
         for new_role_name in new_roles:
             if new_role_name.lower() not in old_role_names:
-                new_role = models.Role(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
-                db.session.add(new_role)
-        db.session.commit()
+                models.Role.new(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
 
     def determine_role(self, assignments, submissions):
         '''

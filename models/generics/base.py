@@ -1,11 +1,12 @@
 """
 The base model that all other models inherit from
 """
+
 import json
 from datetime import datetime
 from typing import Tuple, Dict, Optional
 
-from sqlalchemy import (Integer, Column, DateTime, func)
+from sqlalchemy import Integer, Column, DateTime, func
 from sqlalchemy.orm import mapped_column, Mapped
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_utc import UtcDateTime, utc, utcnow
@@ -19,20 +20,23 @@ class Base(db.Model):
     Base Schema of all database models for the site. Everything inherits from
     this schema.
     """
+
     # No one should instantiate this directly
     __abstract__ = True
 
     id: Mapped[int] = mapped_column(Integer(), primary_key=True, autoincrement=True)
     date_created: Mapped[datetime] = mapped_column(DateTime(), default=utcnow())
-    date_modified: Mapped[datetime] = mapped_column(DateTime(), default=utcnow(), onupdate=utcnow())
+    date_modified: Mapped[datetime] = mapped_column(
+        DateTime(), default=utcnow(), onupdate=utcnow()
+    )
 
-    SCHEMA_V1_IGNORE_COLUMNS = ('id', 'date_modified')
+    SCHEMA_V1_IGNORE_COLUMNS = ("id", "date_modified")
     SCHEMA_V2_IGNORE_COLUMNS = SCHEMA_V1_IGNORE_COLUMNS
     SCHEMA_V1_RENAME_COLUMNS = {}
     SCHEMA_V2_RENAME_COLUMNS = {}
 
     @classmethod
-    def get_schema(cls, schema_version: int) -> (Tuple[str], Dict[str, str]):
+    def get_schema(cls, schema_version: int) -> tuple[Tuple[str, ...], Dict[str, str]]:
         """
         Given the `schema_version`, provide the appropriate columns to ignore
         and rename. This gives us a simplistic mechanism to handle data versioning.

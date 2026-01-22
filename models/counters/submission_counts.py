@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum, DateTime, Float
-
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum, DateTime, Float, \
+    UniqueConstraint, BigInteger
+from sqlalchemy import update
 import models
 from models.generics.models import db, ma
 from models.generics.base import Base
@@ -13,21 +14,20 @@ from common.databases import get_enum_values
 from sqlalchemy_utc import UtcDateTime, utcnow
 import models
 
+if TYPE_CHECKING:
+    from models import Submission
+
 class SubmissionCounts(Base):
     __tablename__ = 'submission_counts'
 
     submission_id: Mapped[int] = mapped_column(Integer, ForeignKey('submission.id'), unique=True)
-    submission: Mapped["models.Submission"] = db.relationship(back_populates='submission_counts')
+    submission: Mapped["models.Submission"] = db.relationship(back_populates='counts')
 
-    runs: Mapped[int] = mapped_column(Integer, default=0)
-    average_edit_time: Mapped[Optional[float]] = mapped_column(Float, default=None)
-    average_attempt_time: Mapped[Optional[float]] = mapped_column(Float, default=None)
-    estimated_time_spent: Mapped[Optional[float]] = mapped_column(Float, default=None)
-    syntax_errors: Mapped[int] = mapped_column(Integer, default=0)
-    runtime_errors: Mapped[int] = mapped_column(Integer, default=0)
-    failed_instructor_tests: Mapped[int] = mapped_column(Integer, default=0)
+    metric: Mapped[str] = mapped_column(String(255))
+    value: Mapped[int] = mapped_column(BigInteger(), default=0)
 
     __table_args__ = (
-        Index('ix_submission_counts_submission_id', 'submission_id'),
+        UniqueConstraint('submission_id', 'metric'),
+        # Index('ix_submission_counts_metric', 'metric'),
     )
     

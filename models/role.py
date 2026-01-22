@@ -54,10 +54,19 @@ class Role(Base):
     def __str__(self):
         return '<User {} is {}>'.format(self.user_id, self.name)
 
-    @staticmethod
-    def remove(role_id):
-        Role.query.filter_by(id=role_id).delete()
+    @classmethod
+    def new(cls, name: UserRoles, user_id: int, course_id: Optional[int] = None, subname: str = "", external_id: Optional[int] = None, description: Optional[str] = None) -> "Role":
+        instance = cls(name=name, user_id=user_id, course_id=course_id, subname=subname, external_id=external_id, description=description)
+        db.session.add(instance)
         db.session.commit()
+        # counters.track_new_role(instance)
+        return instance
+
+    def remove(self):
+        course_id, user_id, name = self.course_id, self.user_id, self.name
+        Role.query.filter_by(id=self.id).delete()
+        db.session.commit()
+        # counters.track_removed_role(course_id, user_id, name)
 
     @staticmethod
     def by_course(course_id):
