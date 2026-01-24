@@ -43,7 +43,7 @@
       var Sk2 = {};
       Sk2.build = {
         githash: "35b8d84b",
-        date: "2026-01-09T17:27:24.236Z"
+        date: "2026-01-24T20:31:00.149Z"
       };
       Sk2.global = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
       Sk2.exportSymbol = function(name, object) {
@@ -6738,24 +6738,51 @@
         }
         return new Sk.builtin.str(handleWidth(m, value, "", false));
       }
+      var isDigit = /^\d+$/;
+      var regex = /{(((?:\d+)|(?:\w+))?((?:\.(\w+))|(?:\[((?:\d+)|(?:\w+))\])?))?(?:\!(.))?(?:\:([^}]*))?}/g;
       function format(args, kwargs) {
         kwargs = kwargs || [];
         const arg_dict = {};
-        const regex = /{(((?:\d+)|(?:\w+))?((?:\.(\w+))|(?:\[((?:\d+)|(?:\w+))\])?))?(?:\!([rs]))?(?:\:([^}]*))?}/g;
         for (let i = 0; i < kwargs.length; i += 2) {
           arg_dict[kwargs[i]] = kwargs[i + 1];
         }
-        for (let i in args) {
-          arg_dict[i] = args[i];
-        }
+        let currentMode;
+        const manual = "manual field specification";
+        const auto = "automatic field numbering";
+        const checkMode = (newMode) => {
+          if (currentMode === void 0) {
+            currentMode = newMode;
+          } else if (currentMode !== newMode) {
+            throw new Sk.builtin.ValueError(`cannot switch from ${currentMode} to ${newMode}`);
+          }
+        };
+        const getArg = (key) => {
+          let rv;
+          if (typeof key === "number") {
+            checkMode(manual);
+            rv = args[key];
+          } else if (isDigit.test(key)) {
+            checkMode(auto);
+            rv = args[key];
+          } else {
+            rv = arg_dict[key];
+            if (rv === void 0) {
+              throw new Sk.builtin.KeyError(key);
+            }
+          }
+          if (rv === void 0) {
+            throw new Sk.builtin.IndexError(`Replacement index ${key} out of range for positional args tuple`);
+          }
+          return rv;
+        };
         let index = 0;
         function replFunc(substring, field_name, arg_name, attr_name, attribute_name, element_index, conversion, format_spec, offset, str_whole) {
           let value;
           if (element_index !== void 0 && element_index !== "") {
-            let container = arg_dict[arg_name];
+            let container = getArg(arg_name);
             if (container.constructor === Array) {
               value = container[element_index];
-            } else if (/^\d+$/.test(element_index)) {
+            } else if (isDigit.test(element_index)) {
               value = Sk.abstr.objectGetItem(
                 container,
                 new Sk.builtin.int_(parseInt(element_index, 10)),
@@ -6766,23 +6793,26 @@
             }
             index++;
           } else if (attribute_name !== void 0 && attribute_name !== "") {
+            const arg = getArg(arg_name || index++);
             value = Sk.abstr.gattr(
-              arg_dict[arg_name || index++],
+              arg,
               new Sk.builtin.str(attribute_name)
             );
           } else if (arg_name !== void 0 && arg_name !== "") {
-            value = arg_dict[arg_name];
+            value = getArg(arg_name);
           } else if (field_name === void 0 || field_name === "") {
-            value = arg_dict[index];
+            value = getArg(index);
             index++;
-          } else if (field_name instanceof Sk.builtin.int_ || field_name instanceof Sk.builtin.float_ || field_name instanceof Sk.builtin.lng || /^\d+$/.test(field_name)) {
-            value = arg_dict[field_name];
+          } else if (isDigit.test(field_name)) {
+            value = getArg(field_name);
             index++;
           }
           if (conversion === "s") {
             value = new Sk.builtin.str(value);
           } else if (conversion === "r") {
             value = Sk.builtin.repr(value);
+          } else if (conversion === "a") {
+            value = Sk.builtin.ascii(value);
           } else if (conversion !== "" && conversion !== void 0) {
             throw new Sk.builtin.ValueError("Unknown conversion specifier " + conversion);
           }
@@ -10172,7 +10202,12 @@
         return Sk.generic.getAttr(this, name);
       };
       Sk.builtin.frame.prototype["$r"] = function() {
-        return new Sk.builtin.str("<frame object>");
+        const filename = this.trace.filename || "<unknown>";
+        const lineno = this.trace.lineno || -1;
+        const name = this.trace.scope || "<unknown>";
+        return new Sk.builtin.str(
+          `<frame object, file "${filename}", line ${lineno}, in ${name}>`
+        );
       };
       Sk.exportSymbol("Sk.builtin.frame", Sk.builtin.frame);
       Sk.builtin.traceback = function(trace) {

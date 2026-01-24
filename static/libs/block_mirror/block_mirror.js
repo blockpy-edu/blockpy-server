@@ -429,6 +429,10 @@ function BlockMirrorTextEditor(blockMirror) {
       },
       "F11": function F11(cm) {
         cm.setOption("fullScreen", !cm.getOption("fullScreen"));
+      },
+      // Remove the OVR/INS behavior
+      "Insert": function Insert(cm) {
+        cm.toggleOverwrite(false);
       }
     },
     // TODO: Hide gutters when short on space
@@ -565,7 +569,7 @@ BlockMirrorTextEditor.prototype.updateImages = function (cm, from, to) {
         inclusiveLeft: false,
         inclusiveRight: false
       });
-      console.log(imageMarker);
+      // console.log(imageMarker);
       //imageWidget.onclick = (x) => imageMarker.clear();
       _this2.imageMarkers.push(imageMarker);
     }
@@ -1068,7 +1072,7 @@ BlockMirrorBlockEditor.prototype.getPngFromBlocks = function (callback) {
       var xml = new XMLSerializer().serializeToString(blocks);
       var classes = 'class="Thrasos-renderer classic-theme" ';
       xml = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' + classes + ' width="' + bbox.width + '" height="' + bbox.height + '" viewBox="0 0 ' + bbox.width + " " + bbox.height + '"><rect width="100%" height="100%" fill="white"></rect>' + xml + "</svg>";
-      console.log(xml);
+      // console.log(xml);
       // create a file blob of our SVG.
       // Unfortunately, this crashes modern chrome for unknown reasons.
       //var blob = new Blob([ this.DOCTYPE + xml], { type: 'image/svg+xml' });
@@ -3703,7 +3707,7 @@ BlockMirrorTextToBlocks.prototype.isSimpleString = function (text) {
   return text.split("\n").length <= 2 && text.length <= 40;
 };
 BlockMirrorTextToBlocks.prototype.dedent = function (text, levels, isDocString) {
-  console.log(text, levels, isDocString);
+  // console.log(text, levels, isDocString);
   if (!isDocString && text.charAt(0) === "\n") {
     return text;
   }
@@ -3760,7 +3764,7 @@ BlockMirrorTextToBlocks.prototype['ast_Str'] = function (node, parent) {
     });
   } else {
     var _dedented = this.dedent(text, this.levelIndex - 1, false);
-    console.log("DD", _dedented);
+    // console.log("DD", dedented);
     return BlockMirrorTextToBlocks.create_block("ast_StrMultiline", node.lineno, {
       "TEXT": _dedented
     });
@@ -4891,7 +4895,7 @@ Blockly.Blocks["ast_JoinedStr"] = {
     for (var i = 0; i < this.itemCount_; i++) {
       var piece = this.getInput("ADD" + i).connection;
       var pieceType = piece.targetConnection.getSourceBlock().type;
-      console.log(piece, pieceType);
+      // console.log(piece, pieceType);
       var createName = pieceType === "ast_JoinedStrStr" ? "ast_JoinedStr_create_with_item_S" : pieceType === "ast_FormattedValueFull" ? "ast_JoinedStr_create_with_item_FVF" : "ast_JoinedStr_create_with_item_FV";
       var itemBlock = workspace.newBlock(createName);
       itemBlock.initSvg();
@@ -5108,7 +5112,7 @@ BlockMirrorTextToBlocks.prototype["ast_JoinedStr"] = function (node, parent) {
   var elements = {};
   values.forEach(function (v, i) {
     if (v._astname === "FormattedValue") {
-      console.log(v);
+      // console.log(v);
       if (!v.conversion && !v.format_spec) {
         elements["ADD" + i] = BlockMirrorTextToBlocks.create_block("ast_FormattedValue", v.lineno, {}, {
           "VALUE": _this7.convert(v.value, node)
