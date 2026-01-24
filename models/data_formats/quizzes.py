@@ -112,7 +112,8 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
     elif question.get('type') == 'matching_question':
         corrects = [check_matching_question(student_part, correct_part)
                     for student_part, correct_part in zip(student, check.get('correct', []))]
-        feedbacks = [feedback if isinstance(feedback, str) else feedback.get(student_part)
+        feedbacks = [feedback
+                     if isinstance(feedback, str) else feedback.get(student_part, "")
                      for student_part, feedback in zip(student, check.get('feedback', []))]
         message = "\n<br>".join(map(str, feedbacks)) if any(map(bool, feedbacks)) else ("Correct" if all(corrects) else 'Incorrect')
         return sum(corrects)/len(corrects) if corrects else 0, all(corrects), message
@@ -131,7 +132,7 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
                     for s in answers]
         feedbacks = [
             f for f, was_correct in zip(check.get('wrong'), corrects)
-            if not was_correct
+            if not was_correct and f
         ] if "wrong" in check else []
         if not correct and not feedbacks:
             feedbacks = check.get("wrong_any", "Incorrect")
@@ -154,7 +155,8 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
                 feedback = check.get("feedback", {}).get(blank_id)
                 if isinstance(feedback, dict):
                     feedback = feedback.get(student.get(blank_id))
-                feedbacks.append(feedback)
+                if feedback:
+                    feedbacks.append(feedback)
         if all(corrects):
             message = "Correct"
         elif not feedbacks:
@@ -174,7 +176,7 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
             correct = any(re.match(reg, student) for reg in check['correct_regex'])
             # TODO: This should be using feedback, not correct_regex!
             feedback = [check.get('feedback', {}).get(reg) for reg in check['correct_regex'] if re.match(reg, student)]
-            feedback = feedback[0] if feedback else wrong_any
+            feedback = (feedback[0] or "") if feedback else wrong_any
         else:
             return 0, False, "Unknown Short Answer Question Check: "+ str(check)
         return correct, correct, feedback if not correct else "Correct"
