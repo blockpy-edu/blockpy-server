@@ -77,7 +77,7 @@ trouble.
 
 The server will need to support SSL, so you should obtain an appropriate certificate. Some universities' or CS
 departments' tech staff can help you get a certificate. Otherwise, you could also use a site like Let's Encrypt (
-although we haven't tried that). For development, it is often sufficient to self-sign your certificates.
+although we haven't tried that). For development, it is often sufficient to self-sign your certificates (on Windows, easiest to do this from Git Bash).
 
 ```bash
 $ openssl genrsa -out certs/server.key 2048
