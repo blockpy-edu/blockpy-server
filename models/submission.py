@@ -116,8 +116,8 @@ class Submission(EnhancedBase):
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(
         back_populates="submission"
     )
-    counts: Mapped["SubmissionCounts"] = db.relationship(
-        back_populates="submission", uselist=False
+    counts: Mapped[list["SubmissionCounts"]] = db.relationship(
+        back_populates="submission", uselist=True
     )
 
     __table_args__ = (
@@ -807,9 +807,9 @@ class Submission(EnhancedBase):
         offset = time.astimezone().utcoffset()
         return int(round(1000 * (time + offset).timestamp()))
 
-    def track_event(self, submission_id, event_type, message, extended=False):
+    def track_event(self, event_type, message, extended=False):
         full_data = models.SubmissionCounts.parse_message(event_type, message, extended)
-        models.SubmissionCounts.track_event(submission_id, event_type, full_data)
+        models.SubmissionCounts.track_event(self.id, event_type, full_data)
 
         if event_type == "Intervention":
             self.feedback = message

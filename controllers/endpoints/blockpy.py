@@ -334,7 +334,7 @@ def log_event():
                              event_type, file_path, category, label, message)
     # Handle certain events specially
     try:
-        submission.track_event(submission_id, event_type, message, extended)
+        submission.track_event(event_type, message, extended)
     except Exception as e:
         return ajax_failure("Could not track the event: " + str(e))
     return ajax_success({"log_id": new_log.id})

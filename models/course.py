@@ -494,3 +494,14 @@ class Course(Base):
     @staticmethod
     def check_url_is_unique(course_url, course_id):
         return Course.query.filter_by(url=course_url).filter(Course.id != course_id).first() is None
+
+    def get_submission_counts(self):
+        submissions = self.get_submissions()
+
+        counts = []
+        for submission in submissions:
+            counts.append((submission.assignment.url,
+                           submission.user_id,
+                           submission.counts))
+
+        return counts

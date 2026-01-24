@@ -8,6 +8,7 @@ import click
 from flask import current_app
 from sqlalchemy import text as sqla_text
 
+from common.dates import datetime_to_epoch
 from models import db
 from models.enums import UserRoles
 from models.generics.base import find_all_linked_resources, SAFE_DELETE_ORDER
@@ -403,6 +404,21 @@ def add_missing_counters(limit_users):
     from models.submission import Submission
     from models.counters.submission_counts import SubmissionCounts
 
+    submissions = Submission.query.all()
+
+    updated = []
+    with click.progressbar(submissions) as bar:
+        for submission in bar:
+            events = submission.get_logs()
+            counts = submission.counts
+            if not counts:
+                for event in events:
+                    when = int(event.client_timestamp)/1000 if event.client_timestamp else datetime_to_epoch(event.date_created)
+                    full_data = SubmissionCounts.parse_message(event.event_type, event.message, event.extended)
+                    SubmissionCounts.track_event(submission.id, event.event_type, full_data, when=when)
+                updated.append(submission)
+
+    click.echo(f"Backfilled {len(updated)} submissions")
 
     # click.echo("Finding users without tracking")
     # from models.user import User

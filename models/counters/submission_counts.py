@@ -39,6 +39,13 @@ class SubmissionCounts(Base):
         # Index('ix_submission_counts_metric', 'metric'),
     )
 
+    def encode_json(self):
+        return {
+            'submission_id': self.submission_id,
+            'metric': self.metric,
+            'value': self.value
+        }
+
     @classmethod
     def parse_message(cls, event_type: str, message: str, extended: bool = False) -> Optional[dict]:
         full_data = {}
@@ -60,13 +67,15 @@ class SubmissionCounts(Base):
         return full_data
 
     @classmethod
-    def track_event(cls, submission_id, event_type, full_data):
+    def track_event(cls, submission_id, event_type, full_data, when=None):
+        if when is None:
+            when = time.time()
         if event_type == SubmissionLogEvent.BLOCKPY_PASTE:
             cls.safely_increase_batch(submission_id, [(SubmissionMetrics.editing_pastes, 1)])
         elif event_type == "Intervention":
             cls.safely_increase_batch(submission_id, [
                 (SubmissionMetrics.total_interventions, 1),
-                (SubmissionMetrics.total_intervention_time, time.time()),
+                (SubmissionMetrics.total_intervention_time, when),
                 (SubmissionMetrics.feedback_total, 1),
                 (SubmissionMetrics.feedback_syntax_errors, int(bool(full_data.get("syntaxError", False)))),
                 (SubmissionMetrics.feedback_runtime_errors, int(bool(full_data.get("runtimeError", False)))),
@@ -78,7 +87,7 @@ class SubmissionCounts(Base):
         elif event_type in (SubmissionLogEvent.EDIT,SubmissionLogEvent.CREATE,
                             SubmissionLogEvent.BLOCKPY_FILE_EDIT,SubmissionLogEvent.BLOCKPY_FILE_CREATE):
             cls.safely_increase_batch(submission_id, [
-                (SubmissionMetrics.total_edit_time, time.time()),
+                (SubmissionMetrics.total_edit_time, when),
                 (SubmissionMetrics.total_edits, 1)
             ])
 

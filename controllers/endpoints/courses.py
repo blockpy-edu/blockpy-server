@@ -1027,6 +1027,31 @@ def check_similar():
                            groups=groups,
                            existing_reports=existing_reports)
 
+@courses.route("/fake_dashboard", methods=["GET", "POST"])
+@courses.route("/fake_dashboard/", methods=["GET", "POST"])
+@login_required
+def fake_dashboard():
+    course_id = get_course_id()
+    user, user_id = get_user()
+
+    require_course_instructor(user, course_id)
+    course = Course.by_id(course_id)
+
+    counts = course.get_submission_counts()
+
+    found = []
+    for assignment, user_id, counts in counts:
+        by_submission = {}
+        for count in counts:
+            if count.submission_id not in by_submission:
+                by_submission[count.submission_id] = {}
+            by_submission[count.submission_id][count.metric] = count.value
+        found.append([assignment, user_id, by_submission])
+
+    return ajax_success({
+        "counts": found
+    })
+
 @courses.route('/bulk_groups', methods=['GET', 'POST'])
 @courses.route('/bulk_groups/', methods=['GET', 'POST'])
 @login_required
@@ -1161,3 +1186,4 @@ def manage_time():
                             submissions_by_user=submissions_by_user,
                             missing_assignments=missing_assignments
                            )
+

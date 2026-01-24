@@ -55,3 +55,14 @@ def from_canvas_isotime(a_datetime: str) -> datetime:
         parsed = parse_date(a_datetime)
         return parsed # (parsed - parsed.astimezone().utcoffset())
     return None
+
+
+def datetime_to_epoch(a_datetime: datetime):
+    """
+    Convert a datetime to epoch time (seconds since Jan 1, 1970)
+    :param a_datetime: A datetime object
+    :return: The epoch time as an integer
+    """
+    if a_datetime is None:
+        return 0
+    return int(a_datetime.timestamp())
