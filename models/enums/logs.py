@@ -54,3 +54,4 @@ class SubmissionLogEvent(StrEnum):
     BLOCKPY_PASTE = "X-Editor.Paste"
     BLOCKPY_FILE_EDIT = "File.Edit"
     BLOCKPY_FILE_CREATE = "File.Create"
+    BLOCKPY_SESSION_START = "Session.Start"

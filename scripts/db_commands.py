@@ -390,10 +390,41 @@ def clear_old_anonymous_users(days, keep_active, limit):
     click.echo("Done!")
 
 
+class EventLogFixer:
+    def __init__(self):
+        self.started_playing_at = {}
+        self.previous_position = {}
+
+    def fix_if_needed(self, submission_id, event, full_data):
+        if event.event_type == "Resource.View" and event.category == "reading":
+            if event.label == "watch":
+                if "duration" not in full_data:
+                    if full_data["event"] == "playing":
+                        self.started_playing_at[submission_id] = full_data["time"]
+                    elif full_data["event"] == "pause":
+                        if submission_id in self.started_playing_at:
+                            duration = full_data["time"] - self.started_playing_at[submission_id]
+                            full_data["duration"] = duration
+                            del self.started_playing_at[submission_id]
+                        else:
+                            full_data["duration"] = full_data["time"]
+            elif event.label == "read":
+                if "moved" not in full_data:
+                    position = full_data.get("position", None)
+                    if submission_id in self.previous_position:
+                        full_data["moved"] = position != self.previous_position[submission_id]
+                    else:
+                        full_data["moved"] = True
+                    self.previous_position[submission_id] = position
+
+
+
 @cli.command("add_missing_counters")
 @click.option("--limit_users", '-u', "limit_users", default=-1,
               help="Limit the number of users to process. -1 for no limit.")
-def add_missing_counters(limit_users):
+@click.option("--overwrite", '-w', "overwrite", default=False, is_flag=True,
+              help="Whether to overwrite existing metrics.")
+def add_missing_counters(limit_users, overwrite: str):
     """
     Looks through users, courses, submissions, etc. for missing
     tracking information. Populates any missing fields with the appropriate
@@ -403,22 +434,47 @@ def add_missing_counters(limit_users):
     from models.log_tables import SubmissionLog
     from models.submission import Submission
     from models.counters.submission_counts import SubmissionCounts
+    from models.enums.metrics import SubmissionMetrics
 
     submissions = Submission.query.all()
 
+    event_log_fixer = EventLogFixer()
+
     updated = []
+    event_count = 0
+    overwritten = []
+    started_playing_at = {}
     with click.progressbar(submissions) as bar:
         for submission in bar:
             events = submission.get_logs()
             counts = submission.counts
+
+            if overwrite:
+                # Remove existing counts
+                SubmissionCounts.delete_for_submission(submission.id)
+                overwritten.append(submission)
+                counts = []
+
             if not counts:
+                submission_last_updated = (
+                    int(events[0].client_timestamp)/1000 if events[0].client_timestamp else datetime_to_epoch(event.date_created)
+                ) if events else 0
                 for event in events:
                     when = int(event.client_timestamp)/1000 if event.client_timestamp else datetime_to_epoch(event.date_created)
-                    full_data = SubmissionCounts.parse_message(event.event_type, event.message, event.extended)
-                    SubmissionCounts.track_event(submission.id, event.event_type, full_data, when=when)
+                    if submission.id == 214:
+                        print(submission_last_updated - when, event.event_type)
+                    full_data = SubmissionCounts.parse_message(event)
+                    event_log_fixer.fix_if_needed(submission.id, event, full_data)
+                    SubmissionCounts.track_event(submission.id, event.event_type, full_data, when=when,
+                                                 category=event.category, label=event.label,
+                                                 submission_last_updated=submission_last_updated)
+                    event_count += 1
+                    submission_last_updated = when
                 updated.append(submission)
 
+    click.echo(f"Overwrote {len(overwritten)} submissions")
     click.echo(f"Backfilled {len(updated)} submissions")
+    click.echo(f"Processed {event_count} events")
 
     # click.echo("Finding users without tracking")
     # from models.user import User

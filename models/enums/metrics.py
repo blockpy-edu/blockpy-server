@@ -18,6 +18,8 @@ class SubmissionMetrics(StrEnum):
     total_time_spent = "total_time_spent"
     #: Sum of time deltas between read events, representing total time spent reading the assignment
     total_read_time = "total_read_time"
+    #: Sum of time deltas for read events, but only counting if they moved
+    total_active_read_time = "total_active_read_time"
     #: Sum of time durations from watch-related events, representing total watch time
     total_watch_time = "total_watch_time"
     # Editing related events
@@ -25,6 +27,8 @@ class SubmissionMetrics(StrEnum):
     editing_pastes = "pastes"
     #: Max of number of emoji characters across all their edits
     editing_emojis = "emojis"
+    #: Tabbed away from the environment
+    window_visibility_changes = "window_visibility_changes"
     # Feedback related events
     #: Count of number of times a feedback event was generated
     feedback_total = "feedback_total"

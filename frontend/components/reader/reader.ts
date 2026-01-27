@@ -34,6 +34,8 @@ interface ReaderInterfaceJson extends AssignmentInterfaceJson {
 export class Reader extends AssignmentInterface {
     logTimer: NodeJS.Timeout;
     logCount: number;
+    oldPosition: number;
+    startedPlayingAt: number;
     videoLogger: any;
     video: ko.Observable<string>;
     videoOptions: ko.Observable<Record<string, string>>;
@@ -65,6 +67,8 @@ export class Reader extends AssignmentInterface {
         super(params);
         this.subscriptions = {currentAssignmentId: null, windowPositioning: null, videoUrl: null, windowBlur: null, windowFocus: null};
         this.logCount = 0;
+        this.oldPosition = null;
+        this.startedPlayingAt = null;
         this.youtubeOptions = ko.observable<Record<string, string>>({});
         this.youtube = ko.observable<string>("");
         this.videoOptions = ko.observable<Record<string, string>>({});
@@ -257,11 +261,16 @@ export class Reader extends AssignmentInterface {
     logWatching(event: any) {
         if (this.assignment()) {
             if (this.video().length) {
+                const duration = event.type === "pause" ? event.currentTarget.currentTime - (this.startedPlayingAt || 0): 0;
                 this.logEvent("Resource.View", "reading", "watch",
                     JSON.stringify({
                         "event": event.type,
-                        "time": event.currentTarget.currentTime
-                    }), this.assignment().url(), () => {})
+                        "time": event.currentTarget.currentTime,
+                        "duration": duration,
+                    }), this.assignment().url(), () => {});
+                if (event.type === "playing") {
+                    this.startedPlayingAt = event.currentTarget.currentTime;
+                }
             } else if (this.youtube()) {
                 this.logEvent("Resource.View", "reading", "watch",
                     JSON.stringify({
@@ -360,7 +369,7 @@ export class Reader extends AssignmentInterface {
     logReading(positionData: any) {
         this.logCount += 1;
         let delay = this.logCount * LOG_TIME_RATE;
-        let position, height;
+        let position: number, height;
         if (positionData != null && 'offset' in positionData) {
             position = positionData.scrollY;
             height = $(document).height() + positionData.offset.top;
@@ -368,14 +377,16 @@ export class Reader extends AssignmentInterface {
             position = $(document).scrollTop();
             height = $(document).height();
         }
+        const moved = position !== this.oldPosition;
         let progress = 100* position / height;
         if (this.assignment() && this.submission()) {
             this.logEvent("Resource.View", "reading", "read",
                 JSON.stringify({
                     "count": this.logCount,
-                    delay, position, height, progress
+                    delay, position, height, progress, moved
                 }), this.assignment().url(), () => {
                     this.logTimer = setTimeout(this.logReadingStart.bind(this), delay);
+                    this.oldPosition = position;
                 })
         } else {
             console.log("Skipping log event");

@@ -102,6 +102,8 @@ class Submission(EnhancedBase):
     assignment_version: Mapped[int] = mapped_column(Integer(), default=0)
     version: Mapped[int] = mapped_column(Integer(), default=0)
     attempts: Mapped[int] = mapped_column(Integer(), default=0)
+    # Disabling for now due to performance concerns
+    # events: Mapped[int] = mapped_column(Integer(), default=0)
 
     assignment: Mapped["Assignment"] = db.relationship(back_populates="submissions")
     assignment_group: Mapped["AssignmentGroup"] = db.relationship(
@@ -430,7 +432,10 @@ class Submission(EnhancedBase):
             extra_files=build_extra_starting_files(assignment.extra_starting_files),
             assignment_version=assignment.version,
         )
-        models.SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {})
+        models.SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {
+            "file_path": "answer.py",
+            "code": assignment.starting_code
+        }, submission_last_updated=submission.date_modified)
         # TODO: Log extra starting files!
         SubmissionLog.new(
             submission.id,
@@ -807,13 +812,22 @@ class Submission(EnhancedBase):
         offset = time.astimezone().utcoffset()
         return int(round(1000 * (time + offset).timestamp()))
 
-    def track_event(self, event_type, message, extended=False):
-        full_data = models.SubmissionCounts.parse_message(event_type, message, extended)
-        models.SubmissionCounts.track_event(self.id, event_type, full_data)
+    def track_event(self, event_log, submission_last_updated):
+        event_type = event_log.event_type
+        message = event_log.message
+        full_data = models.SubmissionCounts.parse_message(event_log)
+        models.SubmissionCounts.track_event(self.id, event_type, full_data,
+                                            submission_last_updated=submission_last_updated,
+                                            category=event_log.category,
+                                            label=event_log.label)
 
+        # Disabling for now due to performance concerns
+        #self.events += 1
         if event_type == "Intervention":
             self.feedback = message
             db.session.commit()
+
+
 
 
     def estimate_duration(self, inactivity_threshold=5):

@@ -253,15 +253,20 @@ def save_student_file(filename, course_id, user):
                 current_app.config["MAXIMUM_CODE_SIZE"], len(code)
             ))
     # Perform update
+    submission_last_updated = submission.date_modified
     # TODO: What if submission's assignment version conflicts with current assignments' version?
     version_change = submission.assignment.version != submission.assignment_version
     new_code = submission.save_code(filename, code, part_id)
     # TODO: What is a grader is uploading code for a student?
-    SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {})
+    file_path = filename + ("#" + part_id if part_id else "")
+    SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {
+        "code": code,
+        "file_path": file_path,
+    }, submission_last_updated=submission_last_updated)
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
                    course_id, submission.user_id,
                    SubmissionLogEvent.BLOCKPY_FILE_EDIT,
-                   filename + ("#" + part_id if part_id else ""), message=new_code)
+                   file_path, message=new_code)
     return ajax_success({"version_change": version_change})
 
 
@@ -330,11 +335,12 @@ def log_event():
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can log events for a submission.")
     # Make the entry
+    submission_last_updated = submission.date_modified
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                              event_type, file_path, category, label, message)
     # Handle certain events specially
     try:
-        submission.track_event(event_type, message, extended)
+        submission.track_event(new_log, submission_last_updated)
     except Exception as e:
         return ajax_failure("Could not track the event: " + str(e))
     return ajax_success({"log_id": new_log.id})
