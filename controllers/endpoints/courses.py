@@ -565,7 +565,7 @@ def submissions_user(course_id, owner_id):
     owner = User.by_id(maybe_int(owner_id))
     assignments = natsorted(course.get_submitted_assignments(),
                             key=lambda r: r.name)
-    all_subs = Submission.by_student(owner_id, course_id)
+    all_subs = Submission.by_student(maybe_int(owner_id), course_id)
     all_subs = {s[0].assignment_id: s for s in all_subs}
     submissions = [all_subs.get(assignment.id, (None, owner, assignment))
                    for assignment in assignments]
