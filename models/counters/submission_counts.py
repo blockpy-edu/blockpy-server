@@ -108,8 +108,8 @@ class SubmissionCounts(Base):
         return full_data
 
     KEY_METRIC_MAP_ERRORS = [
-        ("syntaxErrors", SubmissionMetrics.feedback_syntax_errors),
-        ("runtimeErrors", SubmissionMetrics.feedback_runtime_errors),
+        ("syntaxError", SubmissionMetrics.feedback_syntax_errors),
+        ("runtimeError", SubmissionMetrics.feedback_runtime_errors),
     ]
     KEY_METRIC_MAP_UNIT_TEST = [
         ("tests", SubmissionMetrics.feedback_assertion_counts),
@@ -202,8 +202,6 @@ class SubmissionCounts(Base):
             "value": 0
         })
         gap = calculate_gap(when, submission_last_updated, 0, cls.GAP_THRESHOLD)
-        if submission_id == 214:
-            print(gap)
         stmt = stmt.on_conflict_do_update(
             index_elements=[cls.submission_id, cls.metric],
             set_={"value": cls.value + gap}

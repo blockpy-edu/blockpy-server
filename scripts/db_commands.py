@@ -420,11 +420,11 @@ class EventLogFixer:
 
 
 @cli.command("add_missing_counters")
-@click.option("--limit_users", '-u', "limit_users", default=-1,
-              help="Limit the number of users to process. -1 for no limit.")
+@click.option("--user", '-u', "user", default=-1,
+              help="Process only this user by their ID, or -1 for all users.")
 @click.option("--overwrite", '-w', "overwrite", default=False, is_flag=True,
               help="Whether to overwrite existing metrics.")
-def add_missing_counters(limit_users, overwrite: str):
+def add_missing_counters(user, overwrite: str):
     """
     Looks through users, courses, submissions, etc. for missing
     tracking information. Populates any missing fields with the appropriate
@@ -436,7 +436,10 @@ def add_missing_counters(limit_users, overwrite: str):
     from models.counters.submission_counts import SubmissionCounts
     from models.enums.metrics import SubmissionMetrics
 
-    submissions = Submission.query.all()
+    if user == -1:
+        submissions = Submission.query.all()
+    else:
+        submissions = Submission.query.filter_by(user_id=user).all()
 
     event_log_fixer = EventLogFixer()
 
@@ -461,8 +464,6 @@ def add_missing_counters(limit_users, overwrite: str):
                 ) if events else 0
                 for event in events:
                     when = int(event.client_timestamp)/1000 if event.client_timestamp else datetime_to_epoch(event.date_created)
-                    if submission.id == 214:
-                        print(submission_last_updated - when, event.event_type)
                     full_data = SubmissionCounts.parse_message(event)
                     event_log_fixer.fix_if_needed(submission.id, event, full_data)
                     SubmissionCounts.track_event(submission.id, event.event_type, full_data, when=when,
