@@ -58,14 +58,12 @@ export class Reader extends AssignmentInterface {
     subscriptions: {
         currentAssignmentId: ko.Subscription,
         windowPositioning: (event: Event) => void,
-        windowBlur: (event: Event) => void,
-        windowFocus: (event: Event) => void,
         videoUrl: ko.Subscription
     }
 
     constructor(params: ReaderInterfaceJson) {
         super(params);
-        this.subscriptions = {currentAssignmentId: null, windowPositioning: null, videoUrl: null, windowBlur: null, windowFocus: null};
+        this.subscriptions = {currentAssignmentId: null, windowPositioning: null, videoUrl: null};
         this.logCount = 0;
         this.oldPosition = null;
         this.startedPlayingAt = null;
@@ -91,7 +89,7 @@ export class Reader extends AssignmentInterface {
 
         this.subscriptions.windowPositioning = this.getWindowPositioning.bind(this)
         window.addEventListener('message', this.subscriptions.windowPositioning);
-        this.trackWindowFocus();
+
         this.subscriptions.videoUrl = this.video.subscribe((newUrl) => {
             $(".reader-video-display").attr("src", newUrl + "#t=1");
             $(".reader-video-display track").attr("src", newUrl.slice(0, -3) + "vtt");
@@ -284,9 +282,9 @@ export class Reader extends AssignmentInterface {
 
 
     dispose() {
+        super.dispose();
         this.subscriptions.currentAssignmentId.dispose();
         window.removeEventListener('message', this.subscriptions.windowPositioning);
-        window.removeEventListener('visibilitychange', this.subscriptions.windowFocus);
         if (this.ytPlayer) {
             //this.ytPlayer.stopVideo();
             this.ytPlayer.destroy();
@@ -295,26 +293,6 @@ export class Reader extends AssignmentInterface {
         if (this.videoLogger) {
             this.videoLogger.off(VIDEO_EVENTS);
         }
-    }
-
-    trackWindowFocus() {
-        /*this.subscriptions.windowFocus = (event) => {
-            console.log(event);
-            this.logEvent("Resource.View", "reading", "focus",
-                "", this.assignment().url(), undefined);
-        };
-        this.subscriptions.windowBlur = (event) => {
-            console.log(event);
-            this.logEvent("Resource.View", "reading", "blur",
-                "", this.assignment().url(), undefined);
-        };
-        window.addEventListener("focus", this.subscriptions.windowFocus);
-        window.addEventListener("blur", this.subscriptions.windowBlur);*/
-        this.subscriptions.windowFocus = (event) => {
-            this.logEvent("Resource.View", "reading", "visibility",
-                document.visibilityState, this.assignment().url(), undefined);
-        };
-        window.addEventListener("visibilitychange", this.subscriptions.windowFocus);
     }
 
     registerWatcher() {

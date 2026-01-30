@@ -1049,6 +1049,7 @@ export class Kettle extends AssignmentInterface {
     }
 
     dispose() {
+        super.dispose();
         this.subscriptions.currentAssignmentId.dispose();
         this.subscriptions.code.dispose();
         this.subscriptions.submission.dispose();

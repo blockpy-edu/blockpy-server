@@ -117,6 +117,16 @@
     <!-- Main BlockPy canvas -->
     <div id="blockpy-div" style='height:100%'></div>
     <div id="extras-div" style="height: 100%">
+        <!-- ko if: assignmentType() == 'blockpy' -->
+        <blockpy params="server: server,
+                        courseId: courseId,
+                        currentAssignmentId: currentBlockPyAssignmentId,
+                        assignmentGroupId: assignmentGroupId,
+                        isInstructor: isInstructor,
+                        markCorrect: markCorrect,
+                        asPreamble: false,
+                        user: user"></blockpy>
+        <!-- /ko -->
         <!-- ko if: assignmentType() == 'textbook' -->
         <textbook params="server: server,
                           courseId: courseId,
@@ -186,6 +196,7 @@
         const JAVAS = {{ javas|tojson }};
         const KETTLES = {{ kettles|tojson }};
         const EXPLAINS = {{ explains|tojson }};
+        const BLOCKPYS = {{ blockpys|tojson }};
         window.$blocklyMediaPath = {{ url_for('static', filename='blockly/media/')|tojson }};
         window.$blockPyUrls = {
             "importDatasets": {{ config['CORGIS_URL']|tojson }},
@@ -239,6 +250,7 @@
                 currentJavaAssignmentId: ko.observable(null),
                 currentKettleAssignmentId: ko.observable(null),
                 currentExplainAssignmentId: ko.observable(null),
+                currentBlockPyAssignmentId: ko.observable(null),
                 assignmentType: ko.observable(null),
                 assignmentGroupId: {{ (assignment_group_id or None)|tojson }},
                 markCorrect: markCorrect
@@ -290,8 +302,8 @@
 
             // System for switching assignments
             function loadAssignmentWrapper(id) {
-                const [isQuiz, isReading, isTextbook, isJava, isKettle, isExplain] = [
-                    QUIZZES, READINGS, TEXTBOOKS, JAVAS, KETTLES, EXPLAINS
+                const [isQuiz, isReading, isTextbook, isJava, isKettle, isExplain, isBlockPy] = [
+                    QUIZZES, READINGS, TEXTBOOKS, JAVAS, KETTLES, EXPLAINS, BLOCKPYS
                 ].map((list) => list.includes(id));
 
                 id = parseInt(id, 10);
@@ -304,11 +316,18 @@
                                     isJava ? 'java' :
                                         isKettle ? 'typescript' :
                                             isExplain ? 'explain' :
-                                                null);
+                                                isBlockPy ? 'blockpy' :
+                                                    null);
                 } else {
                     editor.show();
-                    editor.loadAssignment(id);
-                    mainModel.assignmentType(null);
+                    const whenDone = editor.loadAssignment(id);
+                    if (whenDone) {
+                        whenDone.done(() => {
+                            console.log(editor, isBlockPy, id);
+                            mainModel.assignmentType(isBlockPy ? 'blockpy' : null);
+                            mainModel.currentBlockPyAssignmentId(isBlockPy ? id : null);
+                        })
+                    }
                 }
                 mainModel.currentQuizAssignmentId(isQuiz ? id : null);
                 mainModel.currentReadingAssignmentId(isReading ? id : null);

@@ -592,6 +592,7 @@ export class Explain extends AssignmentInterface {
     }
 
     dispose() {
+        super.dispose();
         this.subscriptions.code.dispose();
         this.subscriptions.submission.dispose();
         this.subscriptions.currentAssignmentId.dispose();

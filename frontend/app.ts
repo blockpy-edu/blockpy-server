@@ -29,6 +29,7 @@ import "./components/reader/reader";
 import './components/kettle/kettle';
 import './components/explanations/explain';
 import "./components/review_interface";
+import "./components/blockpy/blockpy_interface";
 //import "./components/textbook";
 
 import "./styles/test.css";

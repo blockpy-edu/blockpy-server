@@ -104,6 +104,7 @@ export class Textbook extends AssignmentInterface {
     }
 
     dispose() {
+        super.dispose();
         this.subscriptions.currentAssignmentId.dispose();
     }
 

@@ -99,6 +99,7 @@ export class Quizzer extends AssignmentInterface {
     }
 
     dispose() {
+        super.dispose();
         this.subscriptions.currentAssignmentId.dispose();
         this.subscriptions.quiz.dispose();
         this.subscriptions.questions.map((question: ko.Subscription) => question.dispose());

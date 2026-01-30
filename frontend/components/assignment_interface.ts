@@ -58,7 +58,16 @@ export class AssignmentInterface {
 
     timeChecker: NodeJS.Timeout | null;
 
+    assignmentSubscriptions: {
+        windowBlur: (event: Event) => void,
+        windowFocus: (event: Event) => void,
+    }
+
     constructor(params: AssignmentInterfaceJson) {
+        this.assignmentSubscriptions = {
+            windowBlur: null,
+            windowFocus: null
+        }
         this.server = params.server;
         this.courseId = params.courseId;
         this.user = params.user;
@@ -78,7 +87,7 @@ export class AssignmentInterface {
 
         if (window["$TIME_CHECKER_ID"]) {
             clearInterval(window["$TIME_CHECKER_ID"]);
-            console.log("Killing old time checker", window["$TIME_CHECKER_ID"]);
+            console.log("Killing old time checker during load", window["$TIME_CHECKER_ID"]);
         }
         this.timeChecker = setInterval(() => {
             try {
@@ -100,6 +109,52 @@ export class AssignmentInterface {
             }
         }, 5000);
         window["$TIME_CHECKER_ID"] = this.timeChecker;
+        console.log("Started time checker", this.timeChecker);
+
+        this.trackWindowFocus();
+    }
+
+    dispose() {
+        window.removeEventListener('visibilitychange', this.assignmentSubscriptions.windowFocus);
+    }
+
+    trackWindowFocus() {
+        /*this.subscriptions.windowFocus = (event) => {
+            console.log(event);
+            this.logEvent("Resource.View", "reading", "focus",
+                "", this.assignment().url(), undefined);
+        };
+        this.subscriptions.windowBlur = (event) => {
+            console.log(event);
+            this.logEvent("Resource.View", "reading", "blur",
+                "", this.assignment().url(), undefined);
+        };
+        window.addEventListener("focus", this.subscriptions.windowFocus);
+        window.addEventListener("blur", this.subscriptions.windowBlur);*/
+        this.assignmentSubscriptions.windowFocus = (event) => {
+            this.logEvent("Resource.View", "reading", "visibility",
+                document.visibilityState, this.assignment().url(), undefined);
+        };
+        window.addEventListener("visibilitychange", this.assignmentSubscriptions.windowFocus);
+    }
+
+    getSettings() {
+        const rawSettings = this.assignment().settings();
+        let settings;
+        if (!rawSettings || rawSettings.trim() === "") {
+            return;
+        }
+        try {
+            settings = JSON.parse(rawSettings);
+        } catch (e) {
+            console.error(
+                "Failed to parse assignment settings",
+                rawSettings,
+                e
+            );
+            return;
+        }
+        return settings;
     }
 
     handleTimeCheck() {
@@ -124,19 +179,8 @@ export class AssignmentInterface {
         // Otherwise, we might need to check the time
         if (this.assignment() != null && this.submission() != null) {
             let now = new Date();
-            const rawSettings = this.assignment().settings();
-            let settings;
-            if (!rawSettings || rawSettings.trim() === "") {
-                return;
-            }
-            try {
-                settings = JSON.parse(rawSettings);
-            } catch (e) {
-                console.error(
-                    "Failed to parse assignment settings",
-                    rawSettings,
-                    e
-                );
+            const settings = this.getSettings();
+            if (!settings) {
                 return;
             }
             if (!settings.time_limit) {
