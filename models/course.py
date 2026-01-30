@@ -500,7 +500,8 @@ class Course(Base):
 
         counts = []
         for submission in submissions:
-            counts.append((submission.assignment,
+            counts.append((submission,
+                           submission.assignment,
                            submission.user,
                            submission.counts))
 

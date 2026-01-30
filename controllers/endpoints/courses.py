@@ -13,6 +13,7 @@ from flask import Blueprint, send_from_directory
 from flask import Flask, redirect, url_for, session, request, jsonify, g, \
     make_response, Response, render_template, flash, abort, current_app
 
+from common.dates import epoch_to_datetime
 from common.highlighters import strip_tags
 from controllers.auth import get_user
 from controllers.helpers import (get_lti_property, require_request_parameters, login_required,
@@ -1044,13 +1045,25 @@ def fake_dashboard():
     counts = course.get_submission_counts()
 
     found = []
-    for assignment, student, counts in counts:
+    for submission, assignment, student, counts in counts:
         by_submission = {}
         for count in counts:
             if count.submission_id not in by_submission:
                 by_submission[count.submission_id] = {}
             by_submission[count.submission_id][count.metric] = count.value
-        found.append([assignment, student, by_submission])
+            by_submission[count.submission_id]["score"] = submission.score
+            by_submission[count.submission_id]["full_score"] = submission.full_score()
+            by_submission[count.submission_id]["correct"] = int(submission.correct)
+            by_submission[count.submission_id]["date_created"] = submission.date_created
+            by_submission[count.submission_id]["date_modified"] = submission.date_modified
+            by_submission[count.submission_id]["date_started"] = submission.date_started
+            by_submission[count.submission_id]["date_submitted"] = submission.date_submitted
+            by_submission[count.submission_id]["date_graded"] = submission.date_graded
+            by_submission[count.submission_id]["date_due"] = submission.date_due
+            by_submission[count.submission_id]["date_locked"] = submission.date_locked
+            by_submission[count.submission_id]["modifications"] = submission.version
+            by_submission[count.submission_id]["attempts"] = submission.attempts
+        found.append([submission, assignment, student, by_submission])
 
     if mode in ('csv', 'html'):
         output = io.StringIO()
@@ -1061,7 +1074,7 @@ def fake_dashboard():
                          "Submission ID"]
         all_metrics = set([])
         pivoted = {}
-        for assignment, user, by_submission in found:
+        for submission, assignment, user, by_submission in found:
             if user not in pivoted:
                 pivoted[user] = {}
             if assignment not in pivoted[user]:
@@ -1099,7 +1112,7 @@ def fake_dashboard():
 
 
     return ajax_success({
-        "counts": [[a.url, u.id, s] for a, u, s in found]
+        "counts": [[a.url, u.id, s] for sub, a, u, s in found]
     })
 
 SPECIAL_METRICS = ["average_edit_time", "average_intervention_time",
@@ -1108,8 +1121,8 @@ SPECIAL_METRICS = ["average_edit_time", "average_intervention_time",
 def compute_special_metrics(metrics):
     interventions = metrics.get("total_interventions", 1)
     return [
-        metrics.get("total_edit_time", 0) / metrics.get("total_edits", 1) if metrics.get("total_edits", 0) > 0 else 0,
-        metrics.get("total_intervention_time", 0) / interventions if interventions > 0 else 0,
+        epoch_to_datetime(metrics.get("total_edit_time", 0) / metrics.get("total_edits", 1) if metrics.get("total_edits", 0) > 0 else 0),
+        epoch_to_datetime(metrics.get("total_intervention_time", 0) / interventions if interventions > 0 else 0),
         metrics.get("feedback_syntax_errors", 0) / interventions if interventions > 0 else 0,
         metrics.get("feedback_runtime_errors", 0) / interventions if interventions > 0 else 0,
         metrics.get("feedback_assertion_successes", 0) / metrics.get("feedback_assertion_counts", 1) if metrics.get("feedback_assertion_counts", 0) > 0 else 0,

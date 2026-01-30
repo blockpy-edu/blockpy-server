@@ -66,3 +66,15 @@ def datetime_to_epoch(a_datetime: datetime):
     if a_datetime is None:
         return 0
     return int(a_datetime.timestamp())
+
+def epoch_to_datetime(epoch_time: int) -> datetime:
+    """
+    Convert epoch time (seconds since Jan 1, 1970) to a datetime object
+    :param epoch_time: The epoch time as an integer
+    :return: A datetime object
+    """
+    if epoch_time is None:
+        return None
+    if epoch_time == 0:
+        return None
+    return datetime.fromtimestamp(epoch_time, tz=timezone.utc)
