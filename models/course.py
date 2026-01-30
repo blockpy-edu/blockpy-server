@@ -500,8 +500,8 @@ class Course(Base):
 
         counts = []
         for submission in submissions:
-            counts.append((submission.assignment.url,
-                           submission.user_id,
+            counts.append((submission.assignment,
+                           submission.user,
                            submission.counts))
 
         return counts

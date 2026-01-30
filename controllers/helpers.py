@@ -366,11 +366,11 @@ def ajax_success(original_data):
 
 
 def make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
-                   event_type, file_path='', category='', label='', message='', timestamp=None, timezone=None):
+                   event_type, file_path='', category='', label='', message='', timestamp=None, timezone=None, extended=False):
     timestamp = request.values.get('timestamp') if timestamp is None else timestamp
     timezone = request.values.get('timezone') if timezone is None else timezone
     return Log.new(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
-                   event_type, file_path, category, label, message, timestamp, timezone)
+                   event_type, file_path, category, label, message, timestamp, timezone, extended)
 
 
 def get_assignments_in_groups(course):

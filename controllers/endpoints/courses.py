@@ -1,3 +1,5 @@
+import io
+import csv
 from datetime import datetime, timezone
 from pprint import pprint
 from collections import defaultdict
@@ -1034,23 +1036,84 @@ def fake_dashboard():
     course_id = get_course_id()
     user, user_id = get_user()
 
+    mode = request.values.get("mode", "json")
+
     require_course_instructor(user, course_id)
     course = Course.by_id(course_id)
 
     counts = course.get_submission_counts()
 
     found = []
-    for assignment, user_id, counts in counts:
+    for assignment, student, counts in counts:
         by_submission = {}
         for count in counts:
             if count.submission_id not in by_submission:
                 by_submission[count.submission_id] = {}
             by_submission[count.submission_id][count.metric] = count.value
-        found.append([assignment, user_id, by_submission])
+        found.append([assignment, student, by_submission])
+
+    if mode in ('csv', 'html'):
+        output = io.StringIO()
+        # Handle numbers well for excel
+        writer = csv.writer(output)
+        header = ["Assignment ID", "Assignment Name", "Assignment URL",
+                         "User ID", "User Name", "User Email",
+                         "Submission ID"]
+        all_metrics = set([])
+        pivoted = {}
+        for assignment, user, by_submission in found:
+            if user not in pivoted:
+                pivoted[user] = {}
+            if assignment not in pivoted[user]:
+                pivoted[user][assignment] = {}
+            for submission_id, metrics in by_submission.items():
+                if submission_id not in pivoted[user][assignment]:
+                    pivoted[user][assignment][submission_id] = {}
+                for metric, value in metrics.items():
+                    pivoted[user][assignment][submission_id][metric] = value
+                    all_metrics.add(metric)
+        all_metrics = sorted(all_metrics)
+        full_header = header + SPECIAL_METRICS + all_metrics
+        writer.writerow(full_header)
+        for user, assignments in pivoted.items():
+            for assignment, submission in assignments.items():
+                for submission_id, metrics in submission.items():
+                    values = [metrics.get(metric, "") for metric in all_metrics]
+                    special_metrics = compute_special_metrics(metrics)
+                    writer.writerow([user.id, user.name(), user.email,
+                                     assignment.id, assignment.name, assignment.url,
+                                     submission_id, *special_metrics, *values])
+        if mode == 'csv':
+            output.seek(0)
+            return Response(output.read(), mimetype='text/csv',
+                           headers={'Content-Disposition': f'attachment;filename=fake_dashboard_course_{course_id}.csv'})
+        elif mode == 'html':
+            html_table = "<table border='1'><tr>" + "".join(f"<th>{h}</th>" for h in full_header) + "</tr>"
+            output.seek(0)
+            reader = csv.reader(output)
+            next(reader)  # skip header
+            for row in reader:
+                html_table += "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
+            html_table += "</table>"
+            return html_table
+
 
     return ajax_success({
-        "counts": found
+        "counts": [[a.url, u.id, s] for a, u, s in found]
     })
+
+SPECIAL_METRICS = ["average_edit_time", "average_intervention_time",
+                   "syntax_error_rate", "runtime_error_rate",
+                   "assertion_success_rate"]
+def compute_special_metrics(metrics):
+    interventions = metrics.get("total_interventions", 1)
+    return [
+        metrics.get("total_edit_time", 0) / metrics.get("total_edits", 1) if metrics.get("total_edits", 0) > 0 else 0,
+        metrics.get("total_intervention_time", 0) / interventions if interventions > 0 else 0,
+        metrics.get("feedback_syntax_errors", 0) / interventions if interventions > 0 else 0,
+        metrics.get("feedback_runtime_errors", 0) / interventions if interventions > 0 else 0,
+        metrics.get("feedback_assertion_successes", 0) / metrics.get("feedback_assertion_counts", 1) if metrics.get("feedback_assertion_counts", 0) > 0 else 0,
+    ]
 
 @courses.route('/bulk_groups', methods=['GET', 'POST'])
 @courses.route('/bulk_groups/', methods=['GET', 'POST'])

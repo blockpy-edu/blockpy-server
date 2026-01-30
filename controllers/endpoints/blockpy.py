@@ -338,7 +338,7 @@ def log_event():
     # Make the entry
     submission_last_updated = submission.date_modified
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
-                             event_type, file_path, category, label, message)
+                             event_type, file_path, category, label, message, extended=extended)
     # Handle certain events specially
     try:
         submission.track_event(new_log, submission_last_updated)

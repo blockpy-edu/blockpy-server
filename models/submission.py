@@ -451,6 +451,7 @@ class Submission(EnhancedBase):
             assignment.starting_code,
             "",
             "",
+            extended=False,
         )
 
         return submission
@@ -702,6 +703,7 @@ class Submission(EnhancedBase):
             self.user_id,
             body=self.code,
             timestamp=timestamp,
+            extended=False,
         )
 
         directory = os.path.join(

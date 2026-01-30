@@ -85,13 +85,14 @@ class SubmissionLog(Base):
             assignment_id: int, assignment_version: int,
             course_id: int, subject_id: int,
             event_type: str, file_type: str, category: str, label: str, message: str,
-            client_timestamp: str, client_timezone: str):
+            client_timestamp: str, client_timezone: str, extended: bool):
         # Database logging
         log = SubmissionLog(submission_id=submission_id, submission_version=submission_version,
                             assignment_id=assignment_id, assignment_version=assignment_version,
                             course_id=course_id, subject_id=subject_id,
                             event_type=event_type, file_path=file_type, category=category, label=label,
-                            message=sanitize_for_pg_text(str(message)), client_timestamp=client_timestamp, client_timezone=client_timezone)
+                            message=sanitize_for_pg_text(str(message)), client_timestamp=client_timestamp, client_timezone=client_timezone,
+                            extended=extended)
         db.session.add(log)
         try:
             db.session.commit()
