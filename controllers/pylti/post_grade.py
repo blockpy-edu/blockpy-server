@@ -351,7 +351,7 @@ def get_outcomes(submission, assignment_group_id, user_id, course_id, at_time) -
     else:
         group, assignments, submissions = get_groups_submissions(assignment_group_id, user_id, course_id)
         total, possible, explanations = calculate_submissions_score(assignments, submissions, at_time)
-        score = round(total / possible, 2)
+        score = round(total / possible, 2) if possible else 0.0
         url = url_for("assignments.load", _external=True, embed=True,
                       assignment_group_id=assignment_group_id,
                       course_id=course_id, grade_mode="group", graded_user_id=user_id,
