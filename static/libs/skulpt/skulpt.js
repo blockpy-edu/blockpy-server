@@ -43,7 +43,7 @@
       var Sk2 = {};
       Sk2.build = {
         githash: "35b8d84b",
-        date: "2026-01-24T20:31:00.149Z"
+        date: "2026-01-31T18:05:28.612Z"
       };
       Sk2.global = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
       Sk2.exportSymbol = function(name, object) {
@@ -10528,10 +10528,10 @@
       Sk.misceval.swappedOp_ = {
         Eq: "Eq",
         NotEq: "NotEq",
-        Lt: "GtE",
-        LtE: "Gt",
-        Gt: "LtE",
-        GtE: "Lt",
+        Lt: "Gt",
+        LtE: "GtE",
+        Gt: "Lt",
+        GtE: "LtE",
         Is: "IsNot",
         IsNot: "Is",
         In_: "NotIn",
@@ -16491,7 +16491,7 @@
           return new Sk.builtin.float_(0);
         }
         if (w === Infinity) {
-          if (v === Infinity || this.v === -Infinity) {
+          if (v === Infinity || v === -Infinity) {
             return new Sk.builtin.float_(NaN);
           } else if (v > 0) {
             return new Sk.builtin.float_(v);
