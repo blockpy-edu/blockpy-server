@@ -165,12 +165,12 @@
 
     <td>
         <span title="{{ submission[0].date_created }}">
-            {{ submission[0].date_created|date_description }}
+            <local-time utc="{{ submission[0].date_created }}Z"></local-time>
         </span>
     </td>
     <td>
         <span title="{{ submission[0].date_modified }}">
-            {{ submission[0].date_modified|date_description }}
+            <local-time utc="{{ submission[0].date_modified }}Z"></local-time>
         </span>
     </td>
 

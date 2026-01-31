@@ -302,6 +302,9 @@ def load_history():
     page_offset = safe_request.get_maybe_int('page_offset')
     with_submission = safe_request.get_maybe_bool('with_submission', False)
     # Load models
+    if assignment_ids is None:
+        course = Course.by_id(course_id)
+        assignment_ids = [a.id for a in course.get_submitted_assignments()]
     for assignment_id in assignment_ids:
         scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
     history = Log.get_history(course_id, assignment_ids, student_ids,

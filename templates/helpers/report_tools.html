@@ -1,5 +1,7 @@
 {% macro render_submission_details(submission, is_grader, hide=False) %}
 
+{% set DATE_ATTRS = ["date_created", "date_started", "date_modified", "date_submitted", "date_graded", "date_due", "date_locked"] %}
+
 <table class="table table-sm table-bordered table-condensed table-striped table-hover">
 <thead>
     <tr>
@@ -7,11 +9,11 @@
         <th>Grading</th>
         <th>Score Status</th>
         {% if not hide or is_grader %}<th>Final Score</th>{% endif %}
-        <th>Created</th>
-        <th>Edited</th>
-        <th>Submitted</th>
-        <th>Graded</th>
-        {% if submission.date_due %}<th>Due</th>{% endif %}
+        {% for date_attr in DATE_ATTRS %}
+            {% if submission[date_attr] %}
+                <th>{{ date_attr.replace("date_", "").capitalize() }}</th>
+            {% endif %}
+        {% endfor %}
 </tr>
 </thead>
 <tbody>
@@ -23,11 +25,11 @@
     {% if not hide or is_grader %}
     <td title={{ ("The actual score given to this submission, incorporating any late penalties and human reviews. " + final_reasons|join('\n<br>\n'))|tojson }}>{{ final_score }}</td>
     {% endif %}
-    <td title="{{ submission.date_created }}">{{ submission.date_created| date_description }}</td>
-    <td title="{{ submission.date_modified }}">{{ submission.date_modified| date_description }}</td>
-    <td title="{{ submission.date_submitted }}">{{ submission.date_submitted| date_description }}</td>
-    <td title="{{ submission.date_graded }}">{{ submission.date_graded| date_description }}</td>
-    {% if submission.date_due %}<td title="{{ submission.date_due }}">{{ submission.date_due| date_description }}</td>{% endif %}
+    {% for date_attr in DATE_ATTRS %}
+        {% if submission[date_attr] %}
+        <td title="{{ submission[date_attr] }}"><local-time utc="{{ submission[date_attr] }}Z"></local-time></td>
+        {% endif %}
+    {% endfor %}
 </tr>
 </tbody>
 </table>

@@ -6,6 +6,7 @@ export {dateCreatedSorter} from "./models/model";
 export * from "./site/core";
 export { generateUUID } from "./utilities/random";
 export { getParameterByName } from "./utilities/urls";
+export { prettyPrintDateTime, prettyPrintDateTimeString } from "./utilities/dates";
 
 // Data models
 export {AssignmentGroup} from "./models/assignment_group";

@@ -27,6 +27,8 @@ class SafeRequest(Request):
                 except ValueError:
                     self.abort_with_error(f"Invalid integer '{part}' in comma-separated integer list value parameter: {name}")
             return result
+        elif value is None:
+            return None
         self.abort_with_error(f"Invalid comma-separated integer list value for parameter: {name}")
 
     def get_maybe_float(self, name: str, default=None) -> Optional[float]:

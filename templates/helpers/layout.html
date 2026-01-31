@@ -38,6 +38,28 @@
     <script type="text/javascript" src="{{  url_for('static', filename='libs/blockpy_server/frontend.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='libs/blockpy_server/frontend.css') }}">
 
+    <script>
+    class LocalTime extends HTMLElement {
+      connectedCallback() {
+        // const d = new Date(this.getAttribute("utc"));
+        //this.textContent = d.toLocaleString();
+        const utc = this.getAttribute("utc");
+        if (!utc || utc === "Z") {
+          this.textContent = "";
+          return;
+        }
+        try {
+            const d = frontend.prettyPrintDateTime(utc);
+            this.textContent = d;
+        } catch (e) {
+            this.textContent = utc;
+        }
+      }
+    }
+
+    customElements.define("local-time", LocalTime);
+    </script>
+
     <style>
         {% block extracss %}
         {% endblock %}
