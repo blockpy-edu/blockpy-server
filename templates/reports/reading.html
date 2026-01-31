@@ -32,4 +32,17 @@
 
     {% endif %}
 {% endif %}
+{% if is_grader %}
+    <div>
+    {{ report_tools.render_metrics(submission, True, False) }}
+    </div>
+
+    <div><small>
+        Submission: {{ submission.id }},
+        Assignment: {{ submission.assignment_id }} ({{ submission.assignment.name }}),
+        User: {{ submission.user_id }} ({{ submission.user.name() }}),
+        Course: {{ submission.course_id }} ({{ submission.course.name }})
+    </small></div>
+
+{% endif %}
 </div>

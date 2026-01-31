@@ -1,3 +1,26 @@
+{% macro render_metrics(submission, is_grader, hide=False) %}
+
+<details style="margin-top:1em; margin-bottom:1em;">
+    <summary><strong>Metrics</strong></summary>
+    <table class="table table-sm table-bordered table-condensed table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Metric</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for counter in submission.counts %}
+        <tr>
+            <td>{{ counter.metric }}</td>
+            <td>{{ counter.value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+    </details>
+{% endmacro %}
+
 {% macro render_submission_details(submission, is_grader, hide=False) %}
 
 {% set DATE_ATTRS = ["date_created", "date_started", "date_modified", "date_submitted", "date_graded", "date_due", "date_locked"] %}
