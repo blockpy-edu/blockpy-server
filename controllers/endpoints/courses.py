@@ -1069,9 +1069,9 @@ def fake_dashboard():
         output = io.StringIO()
         # Handle numbers well for excel
         writer = csv.writer(output)
-        header = ["Assignment ID", "Assignment Name", "Assignment URL",
-                         "User ID", "User Name", "User Email",
-                         "Submission ID"]
+        header = ["User ID", "User Name", "User Email",
+                  "Assignment ID", "Assignment Name", "Assignment URL",
+                  "Submission ID"]
         all_metrics = set([])
         pivoted = {}
         for submission, assignment, user, by_submission in found:
