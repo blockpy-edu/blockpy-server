@@ -49,6 +49,9 @@ class SubmissionCounts(Base):
         # Index('ix_submission_counts_metric', 'metric'),
     )
 
+    def __repr__(self):
+        return f"<SubmissionCounts(submission_id={self.submission_id}, metric='{self.metric}', value={self.value})>"
+
     def encode_json(self):
         return {
             'submission_id': self.submission_id,

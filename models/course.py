@@ -180,6 +180,15 @@ class Course(Base):
                 .filter(models.Assignment.id.in_(assignments))
                 .distinct())
 
+    def get_users_submitted_assignments(self):
+        return (db.session.query(models.Submission, models.User, models.Assignment)
+                .join(models.Submission,
+                      models.Submission.assignment_id == models.Assignment.id)
+                .join(models.User,
+                      models.Submission.user_id == models.User.id)
+                .filter(models.Submission.course_id==self.id)
+                .all())
+
     def get_users_submitted_assignments_grouped(self, user_id):
         return (db.session.query(models.Submission, models.Assignment, models.AssignmentGroup)
                 .join(models.Submission,
@@ -499,11 +508,7 @@ class Course(Base):
         submission_ids = (db.session.query(models.Submission.id)
                                   .filter(models.Submission.course_id == self.id)
                                   .subquery())
-        stmt = (select(models.Submission, models.Assignment, models.User, models.SubmissionCounts)
-                .join(models.Assignment, models.Submission.assignment_id == models.Assignment.id)
-                .join(models.User, models.Submission.user_id == models.User.id)
-                .join(models.SubmissionCounts, models.SubmissionCounts.submission_id == models.Submission
-                        .id, isouter=True)
-                .filter(models.Submission.id.in_(submission_ids)))
-        sauc = db.session.execute(stmt).all()
-        return sauc
+        stmt = (select(models.SubmissionCounts)
+                .filter(models.SubmissionCounts.submission_id.in_(submission_ids)))
+        counts = db.session.execute(stmt).all()
+        return counts

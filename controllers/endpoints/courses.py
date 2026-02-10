@@ -1042,27 +1042,33 @@ def fake_dashboard():
     require_course_instructor(user, course_id)
     course = Course.by_id(course_id)
 
+    suas = course.get_users_submitted_assignments()
     counts = course.get_submission_counts()
 
+    by_submission = {}
     found = []
-    for submission, assignment, student, count in counts:
-        by_submission = {}
+    for submission, student, assignment in suas:
+        by_submission[submission.id] = {}
+        found.append([submission, assignment, student, by_submission])
+        by_submission[submission.id]["score"] = submission.score
+        by_submission[submission.id]["full_score"] = submission.full_score()
+        by_submission[submission.id]["correct"] = int(submission.correct)
+        by_submission[submission.id]["date_created"] = submission.date_created
+        by_submission[submission.id]["date_modified"] = submission.date_modified
+        by_submission[submission.id]["date_started"] = submission.date_started
+        by_submission[submission.id]["date_submitted"] = submission.date_submitted
+        by_submission[submission.id]["date_graded"] = submission.date_graded
+        by_submission[submission.id]["date_due"] = submission.date_due
+        by_submission[submission.id]["date_locked"] = submission.date_locked
+        by_submission[submission.id]["modifications"] = submission.version
+        by_submission[submission.id]["attempts"] = submission.attempts
+
+    for count, in counts:
         if count.submission_id not in by_submission:
-            by_submission[count.submission_id] = {}
-            found.append([submission, assignment, student, by_submission])
+            # TODO: Mark missing data
+            continue
         by_submission[count.submission_id][count.metric] = count.value
-        by_submission[count.submission_id]["score"] = submission.score
-        by_submission[count.submission_id]["full_score"] = submission.full_score()
-        by_submission[count.submission_id]["correct"] = int(submission.correct)
-        by_submission[count.submission_id]["date_created"] = submission.date_created
-        by_submission[count.submission_id]["date_modified"] = submission.date_modified
-        by_submission[count.submission_id]["date_started"] = submission.date_started
-        by_submission[count.submission_id]["date_submitted"] = submission.date_submitted
-        by_submission[count.submission_id]["date_graded"] = submission.date_graded
-        by_submission[count.submission_id]["date_due"] = submission.date_due
-        by_submission[count.submission_id]["date_locked"] = submission.date_locked
-        by_submission[count.submission_id]["modifications"] = submission.version
-        by_submission[count.submission_id]["attempts"] = submission.attempts
+
 
     if mode in ('csv', 'html', 'summary'):
         all_metrics = set([])
