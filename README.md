@@ -643,3 +643,80 @@ CREATE INDEX authentication_lookup ON authentication (type, value);
 CREATE INDEX CONCURRENTLY log_assignment_index ON "log" (assignment_id);
 CREATE INDEX review_submission_index ON "review" (submission_id);
 ```
+
+
+## How does Adoption Work?
+
+> The following is from a conversation about the Bakery curriculum structure:
+
+Going to clearly differentiate between `Canvas.` and `BlockPy.` entities here:
+
+In BlockPy, a `BlockPy.Course` is an entity that can have a collection of `BlockPy.Assignments`, `BlockPy.AssignmentGroups`, `BlockPy.Roles`, and `BlockPy.Submissions`.
+
+Note also that:
+- a `BlockPy.Role` is essentially a (`BlockPy.User`, `BlockPy.Course`) pair
+- `BlockPy.Submission` is essentially a (`BlockPy.User`, `BlockPy.Course`, `BlockPy.Assignment`) triple.
+
+One model is that you have a single `BlockPy.Course` that has a one-to-one existence with `Canvas.Course`. This is what `GradeScope.Course` is like, so every semester I want to reuse my CISC275 assignments, I have to manually Duplicate each one from my old `GradeScope.Course` into my new `GradeScope.Course`. Hassle.
+
+Instead, what you can do with BlockPy is create a "curriculum" course with all of the assignments that you want to reuse. Then, you create multiple "offering" courses that "adopt" the assignments. We scope those permissions so that "Curriculum Developers" (instructors in the curriculum course) can mess with the assignments, but not "Adopting Teachers" (instructors in the offering course). Mechanically, you have `BlockPy.Assignments` in one course, and `BlockPy.Submissions` in another course. And it all mostly works out.
+
+Okay, so why separate out the "Textbook Curriculum" from the "Exam Curriculum" and the "Practice Curriculum"? A few reasons:
+- These are logical divisions so they help us stay organized
+- The security is different. No one cares if the practice curriculum gets leaked. The textbook curriculum would be less ideal to leak, but not a big deal. The exam is top security.
+- The permissions are different. The pool of people I'd imagine could edit the textbook is much smaller than the pool who might want to add textbook problems.
+- The textbook is very big (many dozens of assignments). The less it takes work it takes to load the assignments list in the editor.
+
+This diagram might make it simpler to see. The dotted lines are LTI connected courses, which are always one-to-one. The solid lines in blockpy indicate courses that are adopting assignments. The solid lines in canvas indicate a course that was duplicated from another.
+
+```plantuml
+@startuml
+' Make circles for everything (usecase style)
+left to right direction
+
+' --- Canvas Courses ---
+package "Canvas" #LightYellow {
+  ( "Canvas Course\n108" ) as CC108
+  ( "Canvas Course\n106" ) as CC106
+  ( "Student Staging Course") as SSC
+}
+
+package "BlockPy" {
+  frame "Has Submissions" #LightBlue {
+    ( "BlockPy Offering\nCourse 108" ) as BPO108
+    ( "BlockPy Offering\nCourse 106" ) as BPO106
+    ( "BlockPy Offering\nStudent Staging Course") as BPSSC
+  }
+  frame "Has Assignments" #LightCoral {
+    ( "Bakery Textbook\nCurriculum" ) as BTC
+    ( "Bakery Practice\nCurriculum" ) as BPC
+    ( "Bakery Exam\nCurriculum" ) as BEC
+  }
+}
+
+
+
+' --- Each Bakery curriculum connects to all BlockPy Offering courses ---
+BTC --> BPO108
+BTC --> BPO106
+BTC --> BPSSC
+
+BPC --> BPO108
+BPC --> BPO106
+BPC --> BPSSC
+
+BEC --> BPO108
+BEC --> BPO106
+BEC --> BPSSC
+
+' --- Canvas -> BlockPy Offering (1:1) ---
+BPO108 ..> CC108
+BPO106 ..> CC106
+
+BPSSC ..> SSC
+CC108 --> SSC
+CC106 --> SSC
+
+@enduml
+```
+
