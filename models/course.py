@@ -2,7 +2,7 @@ import json
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, or_, Boolean, Enum, Index, exists, and_
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, or_, Boolean, Enum, Index, exists, and_, select
 from marshmallow import fields
 from werkzeug.utils import secure_filename
 
@@ -496,13 +496,14 @@ class Course(Base):
         return Course.query.filter_by(url=course_url).filter(Course.id != course_id).first() is None
 
     def get_submission_counts(self):
-        submissions = self.get_submissions()
-
-        counts = []
-        for submission in submissions:
-            counts.append((submission,
-                           submission.assignment,
-                           submission.user,
-                           submission.counts))
-
-        return counts
+        submission_ids = (db.session.query(models.Submission.id)
+                                  .filter(models.Submission.course_id == self.id)
+                                  .subquery())
+        stmt = (select(models.Submission, models.Assignment, models.User, models.SubmissionCounts)
+                .join(models.Assignment, models.Submission.assignment_id == models.Assignment.id)
+                .join(models.User, models.Submission.user_id == models.User.id)
+                .join(models.SubmissionCounts, models.SubmissionCounts.submission_id == models.Submission
+                        .id, isouter=True)
+                .filter(models.Submission.id.in_(submission_ids)))
+        sauc = db.session.execute(stmt).all()
+        return sauc

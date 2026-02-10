@@ -1045,33 +1045,26 @@ def fake_dashboard():
     counts = course.get_submission_counts()
 
     found = []
-    for submission, assignment, student, counts in counts:
+    for submission, assignment, student, count in counts:
         by_submission = {}
-        for count in counts:
-            if count.submission_id not in by_submission:
-                by_submission[count.submission_id] = {}
-            by_submission[count.submission_id][count.metric] = count.value
-            by_submission[count.submission_id]["score"] = submission.score
-            by_submission[count.submission_id]["full_score"] = submission.full_score()
-            by_submission[count.submission_id]["correct"] = int(submission.correct)
-            by_submission[count.submission_id]["date_created"] = submission.date_created
-            by_submission[count.submission_id]["date_modified"] = submission.date_modified
-            by_submission[count.submission_id]["date_started"] = submission.date_started
-            by_submission[count.submission_id]["date_submitted"] = submission.date_submitted
-            by_submission[count.submission_id]["date_graded"] = submission.date_graded
-            by_submission[count.submission_id]["date_due"] = submission.date_due
-            by_submission[count.submission_id]["date_locked"] = submission.date_locked
-            by_submission[count.submission_id]["modifications"] = submission.version
-            by_submission[count.submission_id]["attempts"] = submission.attempts
-        found.append([submission, assignment, student, by_submission])
+        if count.submission_id not in by_submission:
+            by_submission[count.submission_id] = {}
+            found.append([submission, assignment, student, by_submission])
+        by_submission[count.submission_id][count.metric] = count.value
+        by_submission[count.submission_id]["score"] = submission.score
+        by_submission[count.submission_id]["full_score"] = submission.full_score()
+        by_submission[count.submission_id]["correct"] = int(submission.correct)
+        by_submission[count.submission_id]["date_created"] = submission.date_created
+        by_submission[count.submission_id]["date_modified"] = submission.date_modified
+        by_submission[count.submission_id]["date_started"] = submission.date_started
+        by_submission[count.submission_id]["date_submitted"] = submission.date_submitted
+        by_submission[count.submission_id]["date_graded"] = submission.date_graded
+        by_submission[count.submission_id]["date_due"] = submission.date_due
+        by_submission[count.submission_id]["date_locked"] = submission.date_locked
+        by_submission[count.submission_id]["modifications"] = submission.version
+        by_submission[count.submission_id]["attempts"] = submission.attempts
 
-    if mode in ('csv', 'html'):
-        output = io.StringIO()
-        # Handle numbers well for excel
-        writer = csv.writer(output)
-        header = ["User ID", "User Name", "User Email",
-                  "Assignment ID", "Assignment Name", "Assignment URL",
-                  "Submission ID"]
+    if mode in ('csv', 'html', 'summary'):
         all_metrics = set([])
         pivoted = {}
         for submission, assignment, user, by_submission in found:
@@ -1086,6 +1079,12 @@ def fake_dashboard():
                     pivoted[user][assignment][submission_id][metric] = value
                     all_metrics.add(metric)
         all_metrics = sorted(all_metrics)
+        output = io.StringIO()
+        # Handle numbers well for excel
+        writer = csv.writer(output)
+        header = ["User ID", "User Name", "User Email",
+                  "Assignment ID", "Assignment Name", "Assignment URL",
+                  "Submission ID"]
         full_header = header + SPECIAL_METRICS + all_metrics
         writer.writerow(full_header)
         for user, assignments in pivoted.items():
