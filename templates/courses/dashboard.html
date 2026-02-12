@@ -73,6 +73,24 @@ Dashboard
             </div>
         </div>
 
+        <!-- Q&A / Questions -->
+        <div class="col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-question-circle"></i> 
+                        {{ 'All Student Questions' if is_instructor or is_grader else 'My Questions' }}
+                    </h5>
+                    <p class="card-text">
+                        {{ 'View and answer student questions about assignments.' if is_instructor or is_grader else 'View your questions and instructor replies.' }}
+                    </p>
+                    <a href="{{ url_for('courses.list_posts_page', course_id=g.course.id) }}" class="btn btn-primary">
+                        <i class="fas fa-list"></i> View Questions
+                    </a>
+                </div>
+            </div>
+        </div>
+
 
 
     </div>

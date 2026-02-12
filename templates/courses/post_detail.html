@@ -1,0 +1,258 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Question: {{ post.title }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .post-content {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    .comment-card {
+        margin-bottom: 1rem;
+        border-left: 3px solid #dee2e6;
+    }
+    .comment-card.instructor-comment {
+        border-left-color: #28a745;
+        background-color: #f0fff4;
+    }
+    .comment-meta {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    #comment-editor {
+        min-height: 150px;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+function loadPost() {
+    const postId = {{ post.id }};
+    $.get('/courses/posts/' + postId, function(response) {
+        if (response.success) {
+            renderPost(response.post);
+        } else {
+            alert('Failed to load post: ' + response.message);
+        }
+    });
+}
+
+function renderPost(post) {
+    // Render markdown content
+    if (post.content_format === 'markdown') {
+        $('#post-content').html(marked.parse(post.content));
+    } else {
+        $('#post-content').text(post.content);
+    }
+    
+    // Render comments
+    renderComments(post.comments);
+}
+
+function renderComments(comments) {
+    const container = $('#comments-container');
+    container.empty();
+    
+    if (comments.length === 0) {
+        container.html('<div class="alert alert-info">No replies yet.</div>');
+        return;
+    }
+    
+    comments.forEach(comment => {
+        const card = $('<div class="card comment-card">');
+        const cardBody = $('<div class="card-body">');
+        
+        // Render comment content (markdown)
+        const content = $('<div>');
+        if (comment.content_format === 'markdown') {
+            content.html(marked.parse(comment.content));
+        } else {
+            content.text(comment.content);
+        }
+        cardBody.append(content);
+        
+        // Meta info
+        const meta = $('<p class="comment-meta">');
+        meta.append('By: User #' + comment.author_id);
+        meta.append(' | ' + new Date(comment.date_created).toLocaleString());
+        cardBody.append(meta);
+        
+        card.append(cardBody);
+        container.append(card);
+    });
+}
+
+function submitComment() {
+    const postId = {{ post.id }};
+    const content = $('#comment-content').val();
+    
+    if (!content.trim()) {
+        alert('Please enter a comment.');
+        return;
+    }
+    
+    $.post('/courses/posts/' + postId + '/comments', {
+        content: content,
+        content_format: 'markdown'
+    }, function(response) {
+        if (response.success) {
+            $('#comment-content').val('');
+            loadPost(); // Reload to show new comment
+        } else {
+            alert('Failed to submit comment: ' + response.message);
+        }
+    });
+}
+
+{% if is_instructor %}
+function markPublic() {
+    const postId = {{ post.id }};
+    const isPublic = $('#public-checkbox').is(':checked');
+    
+    $.ajax({
+        url: '/courses/posts/' + postId + '/public',
+        type: 'PUT',
+        data: { is_public: isPublic },
+        success: function(response) {
+            if (response.success) {
+                alert('Post visibility updated.');
+            } else {
+                alert('Failed to update visibility: ' + response.message);
+            }
+        }
+    });
+}
+
+function promotePost() {
+    const postId = {{ post.id }};
+    
+    if (!confirm('Promote this post to the assignment level?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '/courses/posts/' + postId + '/promote',
+        type: 'PUT',
+        success: function(response) {
+            if (response.success) {
+                alert('Post promoted to assignment level.');
+                loadPost();
+            } else {
+                alert('Failed to promote post: ' + response.message);
+            }
+        }
+    });
+}
+{% endif %}
+
+$(document).ready(function() {
+    loadPost();
+    
+    $('#submit-comment-btn').click(function() {
+        submitComment();
+    });
+    
+    {% if is_instructor %}
+    $('#public-checkbox').change(function() {
+        markPublic();
+    });
+    
+    $('#promote-btn').click(function() {
+        promotePost();
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}
+
+{% block body %}
+
+<div class="mb-3">
+    <a href="{{ url_for('courses.list_posts_page', course_id=post.course_id) if g.course else url_for('courses.list_posts_page') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Questions
+    </a>
+</div>
+
+<h1>{{ post.title }}</h1>
+
+<div class="post-meta mb-3">
+    <span class="badge {{ 'badge-success' if post.is_answered else 'badge-warning' }}">
+        {{ 'Answered' if post.is_answered else 'Unanswered' }}
+    </span>
+    {% if post.is_public %}
+    <span class="badge badge-info">Public</span>
+    {% endif %}
+    <br/>
+    Posted by: User #{{ post.author_id }} | {{ post.date_created.strftime('%Y-%m-%d %H:%M UTC') }}
+    {% if post.assignment_id %}
+    <br/>Assignment: {{ post.assignment.name if post.assignment else 'N/A' }}
+    {% endif %}
+    {% if post.submission_id %}
+    <br/>Submission: #{{ post.submission_id }}
+    {% endif %}
+</div>
+
+{% if is_instructor %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h6>Instructor Actions</h6>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="public-checkbox" {{ 'checked' if post.is_public else '' }}>
+            <label class="form-check-label" for="public-checkbox">
+                Make this question public to all students
+            </label>
+        </div>
+        {% if post.submission_id and post.assignment_id %}
+        <button id="promote-btn" class="btn btn-sm btn-primary mt-2">
+            <i class="fas fa-arrow-up"></i> Promote to Assignment Level
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="post-content">
+    <h4>Question:</h4>
+    <div id="post-content">
+        {{ post.content }}
+    </div>
+</div>
+
+<h3>Replies ({{ post.comments|length }})</h3>
+
+<div id="comments-container">
+    {% for comment in post.comments %}
+    <div class="card comment-card {{ 'instructor-comment' if comment.author_id != post.author_id else '' }}">
+        <div class="card-body">
+            <div>{{ comment.content }}</div>
+            <p class="comment-meta">
+                By: User #{{ comment.author_id }} | {{ comment.date_created.strftime('%Y-%m-%d %H:%M UTC') }}
+            </p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if can_comment %}
+<div class="card mt-4">
+    <div class="card-body">
+        <h5>Add a Reply</h5>
+        <p class="text-muted">You can use Markdown formatting.</p>
+        <textarea id="comment-content" class="form-control" rows="5" placeholder="Type your reply here..."></textarea>
+        <button id="submit-comment-btn" class="btn btn-primary mt-2">
+            <i class="fas fa-paper-plane"></i> Submit Reply
+        </button>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

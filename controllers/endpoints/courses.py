@@ -1599,3 +1599,57 @@ def check_post_updates(post_id):
         'post': post.encode_json(),
         'new_comments': new_comments
     })
+
+
+@courses.route('/posts/list', methods=['GET'])
+@courses.route('/posts/list/<int:course_id>', methods=['GET'])
+@login_required
+def list_posts_page(course_id=None):
+    """
+    Render the posts list page.
+    """
+    user, user_id = get_user()
+    
+    course = None
+    if course_id:
+        course = Course.by_id(course_id)
+        check_resource_exists(course, "Course", course_id)
+        if not user.in_course(course_id):
+            flash("You are not in this course.")
+            return redirect(url_for('courses.index'))
+        g.course = course
+    
+    is_instructor = course and user.is_instructor(course_id)
+    
+    return render_template('courses/posts.html',
+                          is_instructor=is_instructor,
+                          course=course)
+
+
+@courses.route('/posts/<int:post_id>/view', methods=['GET'])
+@login_required
+def view_post_page(post_id):
+    """
+    Render the post detail page.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions
+    is_instructor = user.is_instructor(post.course_id)
+    is_author = post.author_id == user_id
+    
+    if not (is_instructor or is_author or post.is_public):
+        flash("You do not have permission to view this post.")
+        return redirect(url_for('courses.index'))
+    
+    # Can comment if instructor or author
+    can_comment = is_instructor or is_author
+    
+    return render_template('courses/post_detail.html',
+                          post=post,
+                          is_instructor=is_instructor,
+                          can_comment=can_comment)

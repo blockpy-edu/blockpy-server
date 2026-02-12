@@ -1,0 +1,248 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+{{ 'All Questions' if is_instructor else 'My Questions' }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .post-card {
+        margin-bottom: 1rem;
+        border-left: 3px solid #dee2e6;
+    }
+    .post-card.unanswered {
+        border-left-color: #ffc107;
+    }
+    .post-card.answered {
+        border-left-color: #28a745;
+    }
+    .post-meta {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .badge-unanswered {
+        background-color: #ffc107;
+        color: #000;
+    }
+    .badge-answered {
+        background-color: #28a745;
+    }
+    .badge-public {
+        background-color: #17a2b8;
+    }
+</style>
+
+<script>
+let watchInterval = null;
+let watchDelay = 60000; // Start with 1 minute
+
+function loadPosts() {
+    const url = {{ ("'/courses/posts?course_ids=' + g.course.id" if g.course else "'/courses/posts'") | safe }};
+    const filters = [];
+    
+    {% if not is_instructor %}
+    // Students only see their own posts - API handles this
+    {% endif %}
+    
+    const statusFilter = $('#status-filter').val();
+    if (statusFilter) {
+        filters.push('status=' + statusFilter);
+    }
+    
+    const answeredFilter = $('#answered-filter').val();
+    if (answeredFilter) {
+        filters.push('is_answered=' + answeredFilter);
+    }
+    
+    const publicFilter = $('#public-filter').val();
+    if (publicFilter) {
+        filters.push('is_public=' + publicFilter);
+    }
+    
+    const finalUrl = url + (filters.length ? '&' + filters.join('&') : '');
+    
+    $.get(finalUrl, function(response) {
+        if (response.success) {
+            renderPosts(response.posts);
+        } else {
+            alert('Failed to load posts: ' + response.message);
+        }
+    });
+}
+
+function renderPosts(posts) {
+    const container = $('#posts-container');
+    container.empty();
+    
+    if (posts.length === 0) {
+        container.html('<div class="alert alert-info">No questions found.</div>');
+        return;
+    }
+    
+    posts.forEach(post => {
+        const card = $('<div class="card post-card ' + (post.is_answered ? 'answered' : 'unanswered') + '">');
+        const cardBody = $('<div class="card-body">');
+        
+        // Title and badges
+        const header = $('<h5 class="card-title">').text(post.title);
+        if (!post.is_answered) {
+            header.append(' <span class="badge badge-unanswered">Unanswered</span>');
+        } else {
+            header.append(' <span class="badge badge-answered">Answered</span>');
+        }
+        if (post.is_public) {
+            header.append(' <span class="badge badge-public">Public</span>');
+        }
+        cardBody.append(header);
+        
+        // Content preview
+        const preview = post.content.substring(0, 200) + (post.content.length > 200 ? '...' : '');
+        cardBody.append($('<p class="card-text">').text(preview));
+        
+        // Meta info
+        const meta = $('<p class="post-meta">');
+        meta.append('Posted: ' + new Date(post.date_created).toLocaleString());
+        meta.append(' | Comments: ' + post.comment_count);
+        if (post.assignment_id) {
+            meta.append(' | Assignment: ' + post.assignment_id);
+        }
+        cardBody.append(meta);
+        
+        // View button
+        const viewBtn = $('<a class="btn btn-primary btn-sm">').attr('href', '/courses/posts/' + post.id).text('View & Reply');
+        cardBody.append(viewBtn);
+        
+        card.append(cardBody);
+        container.append(card);
+    });
+}
+
+function startWatching() {
+    if (watchInterval) {
+        return; // Already watching
+    }
+    
+    $('#watch-btn').text('Stop Watching').removeClass('btn-outline-secondary').addClass('btn-warning');
+    
+    function checkForUpdates() {
+        loadPosts();
+        
+        // Increase delay for next poll
+        watchDelay += 60000; // Add 1 minute each time
+        watchInterval = setTimeout(checkForUpdates, watchDelay);
+        
+        const minutes = Math.floor(watchDelay / 60000);
+        $('#watch-status').text('Next check in ' + minutes + ' minute' + (minutes !== 1 ? 's' : ''));
+    }
+    
+    // Start checking
+    checkForUpdates();
+}
+
+function stopWatching() {
+    if (watchInterval) {
+        clearTimeout(watchInterval);
+        watchInterval = null;
+        watchDelay = 60000; // Reset delay
+    }
+    
+    $('#watch-btn').text('Watch for Updates').removeClass('btn-warning').addClass('btn-outline-secondary');
+    $('#watch-status').text('');
+}
+
+$(document).ready(function() {
+    // Load posts on page load
+    loadPosts();
+    
+    // Filter changes
+    $('#status-filter, #answered-filter, #public-filter').change(function() {
+        loadPosts();
+    });
+    
+    // Watch button
+    $('#watch-btn').click(function() {
+        if (watchInterval) {
+            stopWatching();
+        } else {
+            startWatching();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block body %}
+
+<h1>{{ 'All Questions' if is_instructor else 'My Questions' }}</h1>
+
+{% if g.course %}
+<p>Course: <strong>{{ g.course.name }}</strong></p>
+{% endif %}
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="btn-group float-right" role="group">
+            <button id="watch-btn" class="btn btn-outline-secondary">
+                <i class="fas fa-eye"></i> Watch for Updates
+            </button>
+            {% if g.course %}
+            <a href="{{ url_for('assignments.load', course_id=g.course.id) }}" class="btn btn-primary">
+                <i class="fas fa-question-circle"></i> Ask a Question
+            </a>
+            {% endif %}
+        </div>
+        <span id="watch-status" class="text-muted"></span>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h6>Filters</h6>
+                <div class="form-row">
+                    {% if is_instructor %}
+                    <div class="col-md-3">
+                        <label for="answered-filter">Status:</label>
+                        <select id="answered-filter" class="form-control">
+                            <option value="">All</option>
+                            <option value="false">Unanswered</option>
+                            <option value="true">Answered</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="public-filter">Visibility:</label>
+                        <select id="public-filter" class="form-control">
+                            <option value="">All</option>
+                            <option value="true">Public</option>
+                            <option value="false">Private</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-3">
+                        <label for="status-filter">Post Status:</label>
+                        <select id="status-filter" class="form-control">
+                            <option value="">All</option>
+                            <option value="open">Open</option>
+                            <option value="answered">Answered</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="posts-container">
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
