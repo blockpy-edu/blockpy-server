@@ -40,7 +40,7 @@ let watchInterval = null;
 let watchDelay = 60000; // Start with 1 minute
 
 function loadPosts() {
-    const url = {{ ("'/courses/posts?course_ids=' + g.course.id" if g.course else "'/courses/posts'") | safe }};
+    const url = {{ ("'/courses/posts?course_ids=' + String(g.course.id)" if g.course else "'/courses/posts'") | safe }};
     const filters = [];
     
     {% if not is_instructor %}
@@ -130,8 +130,8 @@ function startWatching() {
     function checkForUpdates() {
         loadPosts();
         
-        // Increase delay for next poll
-        watchDelay += 60000; // Add 1 minute each time
+        // Increase delay for next poll, but cap at 10 minutes
+        watchDelay = Math.min(watchDelay + 60000, 600000); // Add 1 minute, max 10 minutes
         watchInterval = setTimeout(checkForUpdates, watchDelay);
         
         const minutes = Math.floor(watchDelay / 60000);
