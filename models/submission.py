@@ -121,6 +121,7 @@ class Submission(EnhancedBase):
     counts: Mapped[list["SubmissionCounts"]] = db.relationship(
         back_populates="submission", uselist=True
     )
+    posts: Mapped[list["Post"]] = db.relationship(back_populates="submission")
 
     __table_args__ = (
         Index("submission_index", "course_id", "assignment_id", "user_id"),

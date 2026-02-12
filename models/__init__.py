@@ -21,6 +21,7 @@ from models.invite import Invite
 from models.report import Report
 from models.grade_history import GradeHistory
 from models.counters import SubmissionCounts
+from models.post import Post, Comment
 
 
 from models.generics.schemas import (UserSchema, RoleSchema, CourseSchema, AssignmentSchema, AssignmentTagSchema,
@@ -56,5 +57,6 @@ ALL_TABLES = (
     User, Role, Authentication,
     Report, GradeHistory,
     AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog,
-    SubmissionCounts
+    SubmissionCounts,
+    Post, Comment
 )

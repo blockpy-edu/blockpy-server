@@ -65,6 +65,8 @@ class User(Base, UserMixin):
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="user", foreign_keys="Invite.user_id")
     approvals: Mapped[list["Invite"]] = db.relationship(back_populates="approver", foreign_keys="Invite.approver_id")
     grade_history: Mapped[list["GradeHistory"]] = db.relationship(back_populates="grader")
+    posts: Mapped[list["Post"]] = db.relationship(back_populates="author")
+    comments: Mapped[list["Comment"]] = db.relationship(back_populates="author")
 
     def encode_json(self, use_owner=True):
         return {

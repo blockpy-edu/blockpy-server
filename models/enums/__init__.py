@@ -3,6 +3,7 @@ from models.enums.authentication import *
 from models.enums.courses import *
 from models.enums.invites import *
 from models.enums.logs import *
+from models.enums.posts import *
 from models.enums.reports import *
 from models.enums.reviews import *
 from models.enums.roles import *
