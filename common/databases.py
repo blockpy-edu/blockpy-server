@@ -3,8 +3,7 @@ Helper functions related to accessing and manipulating data stored in objects.
 """
 import re
 from typing import Union, Any, Callable
-from sqlalchemy import Table
-
+from sqlalchemy import Table, text
 
 def optional_encoded_field(id_value: int, owning_object: Union[bool, Table],
                            query: Callable, attr: str) -> Any:

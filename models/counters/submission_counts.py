@@ -8,11 +8,11 @@ from emoji import emoji_count
 
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum, DateTime, Float, \
-    UniqueConstraint, BigInteger
+    UniqueConstraint, BigInteger, text
 from sqlalchemy import update
 import models
 from models.enums.metrics import SubmissionMetrics
-from models.generics.models import db, ma
+from models.generics.models import db, ma, get_non_durable_session
 from models.generics.base import Base
 from common.dates import datetime_to_string, string_to_datetime
 from models.enums import CourseLogEvent, SubmissionLogEvent
@@ -187,31 +187,37 @@ class SubmissionCounts(Base):
         """
         insert = insert_sqlite if db.engine.dialect.name == 'insert_sqlite' else insert_postgres
 
-        for metric, value in updates:
-            stmt = insert(cls).values({
-                "submission_id": submission_id,
-                "metric": metric,
-                "value": value
-            })
-            stmt = stmt.on_conflict_do_update(
-                index_elements=[cls.submission_id, cls.metric],
-                set_={"value": cls.value + value}
-            )
-            db.session.execute(stmt)
+        s = get_non_durable_session()
+        try:
+            with s.begin():
+                # Only for Postgres; SQLite will just ignore/skip this
+                if db.engine.dialect.name == "postgresql":
+                    s.execute(text("SET LOCAL synchronous_commit = off"))
+                for metric, value in updates:
+                    stmt = insert(cls).values({
+                        "submission_id": submission_id,
+                        "metric": metric,
+                        "value": value
+                    })
+                    stmt = stmt.on_conflict_do_update(
+                        index_elements=[cls.submission_id, cls.metric],
+                        set_={"value": cls.value + value}
+                    )
+                    s.execute(stmt)
 
-        stmt = insert(cls).values({
-            "submission_id": submission_id,
-            "metric": SubmissionMetrics.total_time_spent,
-            "value": 0
-        })
-        gap = calculate_gap(when, submission_last_updated, 0, cls.GAP_THRESHOLD)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[cls.submission_id, cls.metric],
-            set_={"value": cls.value + gap}
-        )
-        db.session.execute(stmt)
-
-        db.session.commit()
+                stmt = insert(cls).values({
+                    "submission_id": submission_id,
+                    "metric": SubmissionMetrics.total_time_spent,
+                    "value": 0
+                })
+                gap = calculate_gap(when, submission_last_updated, 0, cls.GAP_THRESHOLD)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[cls.submission_id, cls.metric],
+                    set_={"value": cls.value + gap}
+                )
+                s.execute(stmt)
+        finally:
+            s.close()
 
     @classmethod
     def safely_increase_single(cls, submission_id: int, metric: str, value: int, default: int = 1):

@@ -3,7 +3,7 @@ The models and database connections
 """
 from flask import Flask
 
-from models.generics.models import db, migrate, ma
+from models.generics.models import db, migrate, ma, init_non_durable_session
 from models.role import Role
 from models.user import User
 from models.course import Course
@@ -44,6 +44,8 @@ def init_database(app: Flask) -> Flask:
     migrate.init_app(app, db)
     ma.init_app(app)
 
+    init_non_durable_session(app)
+
     return app
 
 
@@ -58,3 +60,6 @@ ALL_TABLES = (
     AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog,
     SubmissionCounts
 )
+
+
+
