@@ -12,6 +12,49 @@ Manage Exam Time for Users
 
 <script type='text/javascript'>
 
+function resetDateStarted(studentId, assignmentGroupId, action, value) {
+    if (confirm("Are you sure you want to clear this student's start time for this assignment group? This will require the student to click the 'start exam' button again, and then they will have their full time limit from that point. This is useful if a student started the exam but then had technical difficulties and needs to restart it. If you want to decrease the amount of time that they have, make sure to adjust the time limit.")) {
+        $.post(
+            {{ url_for('blockpy.start_assignment')|tojson }},
+            {
+                student_id: studentId,
+                assignment_group_id: assignmentGroupId,
+                course_id: {{ course_id }},
+                date_started: 'clear'
+            },
+            function(data) {
+                if (data.success) {
+                    $("#reset-date-started-"+studentId+"-"+assignmentGroupId).prop("disabled", true);
+                    $("#undo-date-started-"+studentId+"-"+assignmentGroupId).prop("disabled", false);
+
+                } else {
+                    alert("Error: " + data.message);
+                }
+            },
+        );
+    }
+}
+
+function undoDateStarted(studentId, assignmentGroupId, action, value) {
+    $.post(
+        {{ url_for('blockpy.start_assignment')|tojson }},
+        {
+            student_id: studentId,
+            assignment_group_id: assignmentGroupId,
+            course_id: {{ course_id }},
+            date_started: value,
+        },
+        function(data) {
+            if (data.success) {
+                $("#reset-date-started-"+studentId+"-"+assignmentGroupId).prop("disabled", true);
+                $("#undo-date-started-"+studentId+"-"+assignmentGroupId).prop("disabled", true);
+            } else {
+                alert("Error: " + data.message);
+            }
+        },
+    );
+}
+
 function modifyTimeLimit(studentId, amount, resultTarget) {
     if (amount === null) {
         alert("Please enter a valid time amount.");
@@ -137,7 +180,9 @@ $().ready(function() {
                                 {{ assignment_group.name }} ({{ assignment_group.url }}):
                                     <ul>
                                     {% for assignment in assignment_groups[assignment_group.id] %}
-                                        <li>{{ assignment.name }} ({{ assignment.url }}): {{ assignment.get_setting('time_limit', None) }}</li>
+                                        <li>
+                                            {{ assignment.name }} ({{ assignment.url }}): {{ assignment.get_setting('time_limit', None) }}
+                                        </li>
                                     {% endfor %}
                                     </ul>
                                 </li>
@@ -153,7 +198,8 @@ $().ready(function() {
                 <tr>
                     <th width="20%">User</th>
                     <th>Modified Time Limits</th>
-                    <th>Actions</th>
+                    <th>Length Actions</th>
+                    <th>Start Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -165,11 +211,21 @@ $().ready(function() {
                     <code>{{ role.name }}</code>
                 </td>
                 <td id="time-limit-report-{{ user.id }}">
-                    {% for submission in submissions_by_user[user.id] %}
+                    {% if submissions_by_user[user.id] %}
+                    {% for submission in submissions_by_user[user.id]|sort(attribute='id') %}
                         {% if submission.time_limit %}
-                            {{ all_timed_assignments[submission.assignment_id].name }}: {{ submission.time_limit }}<br>
+                            {% if submission.date_started %}
+                                <details>
+                                    <summary>{{ all_timed_assignments[submission.assignment_id].name }}: {{ submission.time_limit }}</summary>
+                                    Started ({{ submission.date_started|date_description }})<br>
+                                </details>
+                            {% else %}
+                                {{ all_timed_assignments[submission.assignment_id].name }}: {{ submission.time_limit }}<br>
+                            {% endif %}
+
                         {% endif %}
                     {% endfor %}
+                    {% endif %}
                 </td>
                 <td>
                     {% for amount in ["1.5x", "2x", "3x"] %}
@@ -191,6 +247,27 @@ $().ready(function() {
                         >Set custom number of minutes</button>
                     </span>
 
+                </td>
+                <td>
+                    {% for assignment_group_id in submissions_by_user[user.id]|selectattr("date_started")|map(attribute="assignment_group_id")|unique|list %}
+                        {% if assignment_group_id %}
+                            {% set group = all_timed_groups[assignment_group_id] %}
+                            {{ group.name }} ({{ group.id }}) started -
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    id="reset-date-started-{{ user.id }}-{{ group.id }}"
+                                    onclick="resetDateStarted({{ user.id }}, {{ group.id }}, 'reset', '')"
+                                    title='If a student has already started the exam, you can use this button to clear the existing start time. This will require the student to click the "start exam" button again, and then they will have their full time limit from that point. This is useful if a student started the exam but then had technical difficulties and needs to restart it. If you want to decrease the amount of time that they have, make sure to adjust the time limit.'
+                            >Clear start time</button>
+                            <!--<button class="btn btn-sm btn-outline-secondary"
+                                    id="undo-date-started-{{ user.id }}-{{ group.id }}"
+                                    onclick="undoDateStarted({{ user.id }}, {{ group.id }}, 'set', "submission.date_started|tojson")"
+                                    disabled
+                                    title="If you accidentally cleared a student's start time, you can use this button to restore the start time to what it was before you cleared it. This will only work if you don't reload the page!"
+                            >Undo clear</button>-->
+                            <br>
+                            <span id="status-date-started-{{ user.id }}-{{ group.id }}"></span>
+                        {% endif %}
+                    {% endfor %}
                 </td>
                 </tr>
             {% endfor %}

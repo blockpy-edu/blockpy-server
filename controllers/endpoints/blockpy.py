@@ -571,13 +571,17 @@ def start_assignment():
     # Get parameters
     user, user_id = get_user()
     course_id = get_course_id()
+    student_id = maybe_int(request.values.get('student_id')) or user_id
     assignment_id = maybe_int(request.values.get('assignment_id'))
     assignment_group_id = maybe_int(request.values.get('assignment_group_id'))
     date_started = request.values.get('date_started', None)
     if date_started is None:
         return ajax_failure("No date started provided.")
-    date_started = iso_to_datetime(date_started)
-    # TODO: Only send image if the assignment settings starts as Block or Split
+    action = 'setting'
+    if date_started == "clear":
+        action = 'clearing'
+    else:
+        date_started = iso_to_datetime(date_started)
     if assignment_group_id is None:
         assignment = Assignment.by_id(assignment_id)
         check_resource_exists(assignment, "Assignment", assignment_id)
@@ -589,16 +593,27 @@ def start_assignment():
     # Verify permissions
     dates = []
     for assignment in assignments:
-        submission = assignment.load(user_id, course_id)
+        submission = assignment.load(student_id, course_id)
         if submission is None:
             return ajax_failure(f"No submission for assignment {assignment.id} in group {assignment_group_id}.")
-        submission.edit({'date_started': date_started})
-        dates.append(datetime_to_string(submission.date_started))
-        make_log_entry(submission.id, submission.version,
-                       assignment.id, assignment.version,
-                       course_id, user_id,
-                       SubmissionLogEvent.START_TIMER,
-                       message=date_started)
+        # Check permissions
+        if submission.user_id != user_id:
+            require_course_grader(user, submission.course_id)
+        if action == 'setting':
+            submission.edit({'date_started': date_started})
+            dates.append(datetime_to_string(submission.date_started))
+            make_log_entry(submission.id, submission.version,
+                           assignment.id, assignment.version,
+                           course_id, student_id,
+                           SubmissionLogEvent.START_TIMER,
+                           message=date_started)
+        elif action == 'clearing':
+            dates.append(submission.date_started)
+            submission.edit({'date_started': None})
+            make_log_entry(submission.id, submission.version,
+                           assignment.id, assignment.version,
+                           course_id, student_id,
+                           SubmissionLogEvent.CLEAR_TIMER)
 
     return ajax_success({"dates": dates})
 

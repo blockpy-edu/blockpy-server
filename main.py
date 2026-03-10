@@ -8,6 +8,8 @@ from flask import Flask
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 
 def create_app(test_config=None, instance_config="configuration.py") -> Flask:
     """
@@ -56,6 +58,9 @@ def create_app(test_config=None, instance_config="configuration.py") -> Flask:
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, stream=None,
                                           profile_dir=app.config['TIMING_LOG_DIR'],
                                           filename_format='{method}.{path}.{elapsed:.0f}ms.{time:.0f}.pstat')
+
+    if app.config['USE_PROXY_FIX']:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # Ensure the instance folder exists
     try:

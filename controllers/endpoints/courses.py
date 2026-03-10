@@ -1180,7 +1180,8 @@ def modify_time():
         assignment_group = AssignmentGroup.by_id(assignment_group_id)
         assignments = assignment_group.get_assignments()
         for assignment in assignments:
-            submission = assignment.load_or_new_submission(student_id, course_id)
+            submission = assignment.load_or_new_submission(student_id, course_id,
+                                                           assignment_group_id=assignment_group_id)
             submission.edit(dict(time_limit=amount))
             make_log_entry(submission.id, submission.version, assignment.id, assignment.version,
                            course_id, student_id, SubmissionLogEvent.EXTEND_TIME,

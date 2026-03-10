@@ -113,6 +113,8 @@ class DefaultConfig:
     # Force https URLs
     PREFERRED_URL_SCHEME = 'https'
 
+    USE_PROXY_FIX = True
+
 
 class ProductionConfig(DefaultConfig):
     """
