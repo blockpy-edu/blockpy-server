@@ -1243,11 +1243,11 @@ def manage_time():
 
     # Get the submissions for the chosen assignments, grouped by user
     submissions_by_user = {
-        user.id: [
+        user.id: [sub for sub in [
             Submission.get_submission(assignment.id, user.id, course_id)
             for gid in chosen_assignment_group_ids
             for assignment in assignment_groups.get(gid, [])
-        ]
+        ] if sub is not None]
         for role, user in all_users
     }
 
