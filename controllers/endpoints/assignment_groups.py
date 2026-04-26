@@ -460,7 +460,7 @@ def assign_variation():
     except (ValueError, TypeError):
         return jsonify(success=False, message="assignment_ids must be a JSON array of integers")
     if not isinstance(assignment_ids, list):
-        return jsonify(success=False, message="assignment_ids must be a JSON array of integers")
+        return jsonify(success=False, message="assignment_ids must be a list of integers")
 
     # Validate all IDs belong to this group
     valid_ids = {a.id for a in assignment_group.get_assignments()}

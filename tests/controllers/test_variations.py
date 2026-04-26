@@ -223,7 +223,7 @@ class TestGetVariationsEndpoint:
     def test_get_variations_student_blocked_other_user(self, client, test_data, act_as):
         """Students cannot view another student's variation assignments."""
         act_as(test_data.user("lulu@blockpy.com"))
-        # user_id 10 is Ada (instructor) – requesting someone else's data
+        # user_id 10 is Ada – requesting another user's data as a student should be blocked
         response = client.get('/assignment_group/get_variations',
                                query_string={'assignment_group_id': 1, 'user_id': 10})
         assert response.json['success'] is False
