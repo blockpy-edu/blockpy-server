@@ -207,7 +207,7 @@ def parse_assignment_load(assignment_id_or_url=None):
         else:
             assignments = []
     else:
-        assignments = assignment_group.get_assignments()
+        assignments = assignment_group.get_assignments(user_id=user_id)
     # No existing assignment, let's get the default
     if not assignments:
         # And no known course? Better get the default course!

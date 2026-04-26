@@ -88,6 +88,7 @@ class Assignment(EnhancedBase):
     assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="assignment")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment")
+    group_variations: Mapped[list["AssignmentGroupVariation"]] = db.relationship(back_populates="assignment")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="assignment")
 
     __table_args__ = (Index("assignment_url_index", "url"),
