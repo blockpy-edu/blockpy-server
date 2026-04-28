@@ -129,7 +129,7 @@ class ValidUserPermissionLayer(PermissionLayer):
         pass
 
     def load_submission_by_course_user_assignment(self, course_id, user_id, assignment_id) -> tuple[PermissionScope, Submission]:
-        submission = Submission.get_submission(assignment_id, course_id, user_id)
+        submission = Submission.get_submission(assignment_id, user_id, course_id)
         submission = self.check_resource_exists(submission, "Submission", (assignment_id, course_id, user_id))
         return self._submission_checks(submission)
 

@@ -391,7 +391,8 @@ def share_url(target=None):
         return view_submissions(course_id, user_id, assignment_group_id,
                                 assignment_id_focus=assignment_id)
     elif verb == "submission":
-        return ajax_failure("Individual submission is not implemented yet.")
+        return lookup_submission(course_id, user_id, assignment_id)
+        #return ajax_failure("Individual submission is not implemented yet.")
     else:
         return ajax_failure("Invalid verb in target: {verb}")
 
@@ -500,6 +501,32 @@ def view_submission():
                            user_id=submission.user_id, course_id=submission.course_id,
                            viewer=viewer)
 
+
+@blueprint_blockpy.route('/lookup_submission/<int:course_id>/<int:student_id>/<int:assignment_id>/', methods=['GET', 'POST'])
+@blueprint_blockpy.route('/lookup_submission/<int:course_id>/<int:student_id>/<int:assignment_id>', methods=['GET', 'POST'])
+def lookup_submission(course_id, student_id, assignment_id):
+    viewer, viewer_id = get_user()
+    embed = maybe_bool(request.values.get('embed'))
+
+    # Check exists
+    scope, submission = g.safely.load_submission_by_course_user_assignment(course_id, student_id, assignment_id)
+
+    is_grader = viewer.is_instructor(submission.course_id) if submission.assignment.hidden else viewer.is_grader(
+        submission.course_id)
+    tags = []
+    if scope.can_grade:
+        tags = [tag.encode_json() for tag in AssignmentTag.get_all()]
+    # Do action
+    make_log_entry(submission.id, submission.version, submission.assignment.id, submission.assignment_version,
+                   submission.course_id, submission.user_id, "X-View.Submission", "answer.py",
+                   category="single",
+                   message=json.dumps({"viewer": viewer_id}))
+    has_reviews = bool(submission.get_reviews_db())
+    return render_template("reports/alone.html", embed=embed,
+                           submission=submission, assignment=submission.assignment,
+                           is_grader=is_grader, tags=tags, has_reviews=has_reviews,
+                           user_id=submission.user_id, course_id=submission.course_id,
+                           viewer=viewer)
 
 @blueprint_blockpy.route('/update_submission/', methods=['GET', 'POST'])
 @blueprint_blockpy.route('/update_submission', methods=['GET', 'POST'])
