@@ -1039,10 +1039,15 @@ def fake_dashboard():
 
     mode = request.values.get("mode", "json")
 
+    for_student_ids = request.values.get("student_ids", "").split(",")
+    for_student_ids = [maybe_int(i) for i in for_student_ids if maybe_int(i) is not None]
+    if not for_student_ids:
+        for_student_ids = None
+
     require_course_instructor(user, course_id)
     course = Course.by_id(course_id)
 
-    suas = course.get_users_submitted_assignments()
+    suas = course.get_users_submitted_assignments(user_ids=for_student_ids)
     counts = course.get_submission_counts()
 
     by_submission = {}

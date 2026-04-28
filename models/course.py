@@ -180,14 +180,16 @@ class Course(Base):
                 .filter(models.Assignment.id.in_(assignments))
                 .distinct())
 
-    def get_users_submitted_assignments(self):
-        return (db.session.query(models.Submission, models.User, models.Assignment)
+    def get_users_submitted_assignments(self, user_ids=None):
+        query = (db.session.query(models.Submission, models.User, models.Assignment)
                 .join(models.Submission,
                       models.Submission.assignment_id == models.Assignment.id)
                 .join(models.User,
                       models.Submission.user_id == models.User.id)
-                .filter(models.Submission.course_id==self.id)
-                .all())
+                .filter(models.Submission.course_id==self.id))
+        if user_ids is not None:
+            query = query.filter(models.User.id.in_(user_ids))
+        return query.all()
 
     def get_users_submitted_assignments_grouped(self, user_id):
         return (db.session.query(models.Submission, models.Assignment, models.AssignmentGroup)
