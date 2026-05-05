@@ -7,6 +7,7 @@ import {Quiz, QuizMode} from './quiz';
 import {Question, subscribeToStudent} from './questions';
 import "./quizzer_question_status";
 import {QUIZZER_HTML} from './quiz_ui';
+import {QuizEditorState} from './quiz_editor_state';
 
 // Maybe TODO: Add bookmarking
     // Add a question mark button that let's them flag this to return to later
@@ -49,10 +50,14 @@ export class Quizzer extends AssignmentInterface {
 
     errorMessage: ko.Observable<string>;
 
+    /** Visual quiz editor state; populated when editorMode switches to QUIZ_EDITOR. */
+    quizEditor: ko.Observable<QuizEditorState>;
+
     subscriptions: {
         quiz: ko.Subscription
         currentAssignmentId: ko.Subscription
         questions: ko.Subscription[]
+        editorMode: ko.Subscription
     }
 
     visibleQuestions: ko.PureComputed<Question[]>;
@@ -60,9 +65,10 @@ export class Quizzer extends AssignmentInterface {
 
     constructor(params: AssignmentInterfaceJson) {
         super(params);
-        this.subscriptions = {quiz: null, currentAssignmentId: null, questions: null};
+        this.subscriptions = {quiz: null, currentAssignmentId: null, questions: null, editorMode: null};
 
         this.quiz = ko.observable(null);
+        this.quizEditor = ko.observable(null);
 
         // UI state
         this.isDirty = ko.observable(false);
@@ -77,7 +83,7 @@ export class Quizzer extends AssignmentInterface {
 
         this.subscriptions.questions = [] as ko.Subscription[];
         this.subscriptions.quiz = this.quiz.subscribe((quiz) => {
-            this.quiz().questions().map((question: Question) => {
+            quiz.questions().map((question: Question) => {
                 subscribeToStudent(question).map((subscribable) => {
                     let subscription = subscribable.subscribe((value: any) => {
                         this.onChange();
@@ -85,7 +91,17 @@ export class Quizzer extends AssignmentInterface {
                     this.subscriptions.questions.push(subscription);
                 })
             });
-            this.quiz().hidePools();
+            quiz.hidePools();
+        });
+
+        // Rebuild the quiz editor state whenever the editor mode switches to QUIZ_EDITOR
+        this.subscriptions.editorMode = this.editorMode.subscribe((mode) => {
+            if (mode === 'QUIZ_EDITOR' && this.assignment()) {
+                this.quizEditor(new QuizEditorState(
+                    this.assignment().instructions(),
+                    this.assignment().onRun()
+                ));
+            }
         });
 
         // this.visibleQuestions = ko.pureComputed<Question[]>( () => {
@@ -94,7 +110,7 @@ export class Quizzer extends AssignmentInterface {
         // }, this);
 
         this.isReadOnly = ko.pureComputed<boolean>(() => {
-            return !this.quiz().attempting();
+            return this.quiz() ? !this.quiz().attempting() : true;
         }, this);
     }
 
@@ -103,6 +119,9 @@ export class Quizzer extends AssignmentInterface {
         this.subscriptions.currentAssignmentId.dispose();
         this.subscriptions.quiz.dispose();
         this.subscriptions.questions.map((question: ko.Subscription) => question.dispose());
+        if (this.subscriptions.editorMode) {
+            this.subscriptions.editorMode.dispose();
+        }
     }
 
     lookupReading(readingUrl: string): Promise<number> {
@@ -202,6 +221,19 @@ export class Quizzer extends AssignmentInterface {
             url: this.assignment().url(),
             name: this.assignment().name()
         });
+    }
+
+    /**
+     * Called by the "Save Quiz" button in the visual Quiz Editor.
+     * Serialises the editor state back to the instructions and on_run JSON
+     * and persists them via saveAssignment().
+     */
+    saveQuizEditor() {
+        if (!this.quizEditor()) { return; }
+        const editor = this.quizEditor();
+        this.assignment().instructions(editor.toInstructionsJson());
+        this.assignment().onRun(editor.toChecksJson());
+        this.saveAssignment();
     }
 
     submit() {
