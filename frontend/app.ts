@@ -21,6 +21,9 @@ export {Server} from "./services/server";
 export {Watcher} from "./components/watcher/watcher";
 export {launchEditor} from "./services/editor";
 
+// React layer – registers all React components and exposes the mount helper
+export { mountReactComponent } from "./react/index";
+
 // These interfaces are just new tags
 import "./components/course_list";
 import "./components/assignment_manager";

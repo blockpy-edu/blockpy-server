@@ -20,12 +20,14 @@
         "paths": {
             "*": ["custom_types/*"]
         },
-        "types": ["node", "jquery", "bootstrap", "knockout", "jasmine", "CodeMirror", "select2"],
-      "allowSyntheticDefaultImports": true
+        "types": ["node", "jquery", "bootstrap", "knockout", "jasmine", "codemirror", "select2"],
+        "allowSyntheticDefaultImports": true,
+        "jsx": "react"
     },
     "include": [
         "components",
-        "custom_types"
+        "custom_types",
+        "react"
     ],
     "exclude": [
         "node_modules"
