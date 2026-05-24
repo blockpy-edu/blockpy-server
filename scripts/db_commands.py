@@ -540,7 +540,7 @@ def make_fake_dashboard(course_id, output, format):
     found = []
     for submission, student, assignment in suas:
         by_submission[submission.id] = {}
-        found.append([submission, assignment, student, by_submission])
+        found.append([submission.id, assignment, student])
         by_submission[submission.id]["score"] = submission.score
         by_submission[submission.id]["full_score"] = submission.full_score()
         by_submission[submission.id]["correct"] = int(submission.correct)
@@ -573,17 +573,10 @@ def make_fake_dashboard(course_id, output, format):
         click.echo("Pivoting")
         all_metrics = set([])
         pivoted = {}
-        for submission, assignment, user, by_submission in found:
-            if user not in pivoted:
-                pivoted[user] = {}
-            if assignment not in pivoted[user]:
-                pivoted[user][assignment] = {}
-            for submission_id, metrics in by_submission.items():
-                if submission_id not in pivoted[user][assignment]:
-                    pivoted[user][assignment][submission_id] = {}
-                for metric, value in metrics.items():
-                    pivoted[user][assignment][submission_id][metric] = value
-                    all_metrics.add(metric)
+        for submission_id, assignment, user in found:
+            metrics = by_submission[submission_id]
+            all_metrics.update(metrics.keys())
+            pivoted.setdefault(user, {}).setdefault(assignment, {})[submission_id] = metrics
         all_metrics = sorted(all_metrics)
         # Handle numbers well for excel
         result = []
