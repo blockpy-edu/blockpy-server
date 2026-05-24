@@ -3281,7 +3281,7 @@ const getValue = (question) => {
 /***/ ((module) => {
 
 "use strict";
-module.exports = "<div data-bind=\"foreach: quiz()?.questions\">\r\n    <div class=\"card m-4\" data-bind=\"visible: visible() || !$component.asStudent(),\">\r\n        <div class=\"quizzer-question card-body\">\r\n            <quizzer-question-status params=\"indexId: 1+$index(), status: student, question: $data, isAnchor: true,\r\n                                             quiz: $component.quiz(), asStudent: $component.asStudent()\" class=\"float-right\"></quizzer-question-status>\r\n            <h5 class=\"card-title\">Question <span data-bind=\"text: 1+$index()\"></span></h5>\r\n            <div data-bind=\"if: !$component.asStudent()\" style=\"float: right\">\r\n                <button class=\"btn btn-sm mr-2\"\r\n                    data-bind=\"click: ()=>$component.changeEditing($data, true),\r\n                               visible: $data.editing()\">Save</button>\r\n               <button class=\"btn btn-sm mr-2\"\r\n                    data-bind=\"click: ()=>$component.changeEditing($data, false),\r\n                               text: $data.editing() ? 'Cancel' : 'Edit'\"></button>\r\n            </div>\r\n            <h6 class=\"card-subtitle mb-2 text-muted\">\r\n                <!-- ko if: feedback() && (!$component.asStudent() || $component.quiz().feedbackType() === 'IMMEDIATE') -->\r\n                <span data-bind=\"text: Math.round(((feedback().score * points) + Number.EPSILON) * 100) / 100 + ' /'\"></span>\r\n                <!-- /ko -->\r\n                <span data-bind=\"text: points\"></span> points\r\n                <span data-bind=\"text: ' ('+id+')', visible: !$component.asStudent()\"></span>\r\n            </h6>\r\n            <div data-bind=\"if: pool() && !$component.asStudent()\">\r\n                Pool: <span data-bind=\"text: pool().name\"></span>\r\n            </div>\r\n            <div data-bind=\"visible: !$component.asStudent() || $parent.quiz().attemptCount() > 0\">\r\n                <!-- ko if: $data.editing() -->\r\n                <textarea data-bind=\"markdowneditor: {value: $data.rawBody}\" style=\"width: 100%; height: 200px\"></textarea>\r\n                <!-- /ko -->\r\n                <div data-bind=\"visible: !$data.editing(),\r\n                                markdowned: {value: $parent.quiz().makeBody($data, $index())}\"></div>\r\n                <!-- Actual Question Code -->\r\n                <div data-bind=\"switch: type\">\r\n                    <!-- True/False Question -->\r\n                    <div data-bind=\"case: 'true_false_question'\">\r\n                        <div class=\"form-check\">\r\n                            <label class=\"form-check-label\" data-bind=\"attr: {for: 'question-tf-'+$index()+'-t'}\">\r\n                              <input data-bind=\"checked: student,\r\n                                            disable: $component.isReadOnly(),\r\n                                            attr: {name: 'question-tf-'+$index()+'-t',\r\n                                                   id: 'question-tf-'+$index()+'-t'}\"\r\n                                class=\"form-check-input\" type=\"radio\" value=\"true\">\r\n                                True\r\n                          </label>\r\n                        </div>\r\n                        <div class=\"form-check\">\r\n                          <label class=\"form-check-label\" data-bind=\"attr: {for: 'question-tf-'+$index()+'-f'}\">\r\n                            <input data-bind=\"checked: student,\r\n                                        disable: $component.isReadOnly(),\r\n                                        attr: {name: 'question-tf-'+$index()+'-f',\r\n                                               id: 'question-tf-'+$index()+'-f'}\"\r\n                            class=\"form-check-input\" type=\"radio\" value=\"false\">\r\n                            False\r\n                          </label>\r\n                        </div>\r\n                    </div>\r\n                    <!-- Multiple Choice -->\r\n                    <div data-bind=\"case: 'multiple_choice_question'\">\r\n                        <!-- ko foreach: answers -->\r\n                        <div class=\"form-check\">\r\n                          <label data-bind=\"attr: {for: 'question-mcq-'+$parentContext.$index()+'-'+$index()}\" class=\"form-check-label\">\r\n                              <input data-bind=\"checked: $parent.student,\r\n                                                value: $data,\r\n                                                disable: $component.isReadOnly(),\r\n                                                attr: {name: 'question-mcq-'+$parentContext.$index()+'-'+$index(),\r\n                                                       id: 'question-mcq-'+$parentContext.$index()+'-'+$index()}\"\r\n                                class=\"form-check-input\" type=\"radio\">\r\n<!--                                    <span data-bind=\"html: $data\"></span>-->\r\n                                    <span data-bind=\"markdowned: {value: $data}\"></span>\r\n                          </label>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Multiple Answers Question -->\r\n                    <div data-bind=\"case: 'multiple_answers_question'\">\r\n                        <!-- ko foreach: answers -->\r\n                        <div class=\"form-check\">\r\n                          <label data-bind=\"attr: {for: 'question-maq-'+$parentContext.$index()+'-'+$index()}\" class=\"form-check-label\">\r\n                          <input data-bind=\"checked: $parent.student,\r\n                                            checkedValue: $data,\r\n                                            disable: $component.isReadOnly(),\r\n                                            attr: {id: 'question-maq-'+$parentContext.$index()+'-'+$index(),\r\n                                                   name: 'question-maq-'+$parentContext.$index()+'-'+$index()}\"\r\n                            class=\"form-check-input\" type=\"checkbox\">\r\n                            <span data-bind=\"html: $data\"></span>\r\n                          </label>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Text Only Question -->\r\n                    <div data-bind=\"case: 'text_only_question'\"></div>\r\n                    <!-- Matching Question -->\r\n                    <div data-bind=\"case: 'matching_question'\" class=\"container\">\r\n                        <!-- ko foreach: statements -->\r\n                        <div class=\"row justify-content-between mb-3\">\r\n<!--                                <div class=\"col\" data-bind=\"html: $data\"></div>-->\r\n                            <div class=\"col\" data-bind=\"markdowned: {value: $data}\"></div>\r\n                            <div class=\"col\">\r\n                                <select class=\"custom-select\"\r\n                                    data-bind=\"options: $parent.retainOrder ? $parent.answers : $parent.answers.sort(() => Math.random() - 0.5),\r\n                                               disable: $component.isReadOnly(),\r\n                                               optionsCaption: '',\r\n                                               value: $parent.student[$index()],\r\n                                               attr: {id: 'question-mat-'+$parentContext.$index()+'-'+$index()}\"></select>\r\n                            </div>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Multiple Dropdown Question -->\r\n                    <div data-bind=\"case: 'multiple_dropdowns_question'\">\r\n                    </div>\r\n                    <!-- Short Answer -->\r\n                    <div data-bind=\"case: 'short_answer_question'\">\r\n                        <div class=\"form-group\">\r\n                            <input type=\"text\" class=\"form-control\"\r\n                                   autocomplete=\"off\"\r\n                                data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-sa-'+$index()}\">\r\n                        </div>\r\n                    </div>\r\n                    <div data-bind=\"case: 'essay_question'\">\r\n                    <textarea data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-es-'+$index()}\" style=\"width: 100%; height: 300px\"\r\n                                   autocomplete=\"off\"></textarea><br>\r\n                    </div>\r\n                    <!-- Numerical Input -->\r\n                    <div data-bind=\"case: 'numerical_question'\">\r\n                        <div class=\"form-group\">\r\n                            <input type=\"number\" class=\"form-control\"\r\n                                   autocomplete=\"off\"\r\n                                data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-num-'+$index()}\">\r\n                        </div>\r\n                    </div>\r\n                    <!-- Multiple Fill in the Blank Question -->\r\n                    <div data-bind=\"case: 'fill_in_multiple_blanks_question'\">\r\n                    </div>\r\n                    <!-- Else -->\r\n                    <div data-bind=\"case: $default\">\r\n                        I have no idea what this is!\r\n                    </div>\r\n                </div>\r\n            </div>\r\n            <!-- ko if: feedback() && (!$component.asStudent() || $component.quiz().feedbackType() === 'IMMEDIATE') -->\r\n            <div class=\"border rounded m-2 p-2\" data-bind=\"class: feedback().status == 'error' ? 'bg-dark' :\r\n                                                                  feedback().correct ? 'bg-success' : 'bg-danger'\">\r\n                <span data-bind=\"html: feedback().message\" class=\"text-white\"></span>\r\n            </div>\r\n            <!-- /ko -->\r\n        </div>\r\n    </div>\r\n</div>\r\n";
+module.exports = "<div data-bind=\"foreach: quiz()?.questions\">\r\n    <div class=\"card m-4\" data-bind=\"visible: visible() || !$component.asStudent(),\">\r\n        <div class=\"quizzer-question card-body\">\r\n            <quizzer-question-status params=\"indexId: 1+$index(), status: student, question: $data, isAnchor: true,\r\n                                             quiz: $component.quiz(), asStudent: $component.asStudent()\" class=\"float-right\"></quizzer-question-status>\r\n            <h5 class=\"card-title\">Question <span data-bind=\"text: 1+$index()\"></span></h5>\r\n            <div data-bind=\"if: !$component.asStudent()\" style=\"float: right\">\r\n                <button class=\"btn btn-sm mr-2\"\r\n                    data-bind=\"click: ()=>$component.changeEditing($data, true),\r\n                               visible: $data.editing()\">Save</button>\r\n               <button class=\"btn btn-sm mr-2\"\r\n                    data-bind=\"click: ()=>$component.changeEditing($data, false),\r\n                               text: $data.editing() ? 'Cancel' : 'Edit'\"></button>\r\n            </div>\r\n            <h6 class=\"card-subtitle mb-2 text-muted\">\r\n                <!-- ko if: feedback() && (!$component.asStudent() || $component.quiz().feedbackType() === 'IMMEDIATE') -->\r\n                <span data-bind=\"text: Math.round(((feedback().score * points) + Number.EPSILON) * 100) / 100 + ' /'\"></span>\r\n                <!-- /ko -->\r\n                <span data-bind=\"text: points\"></span> points\r\n                <span data-bind=\"text: ' ('+id+')', visible: !$component.asStudent()\"></span>\r\n            </h6>\r\n            <div data-bind=\"if: pool() && !$component.asStudent()\">\r\n                Pool: <span data-bind=\"text: pool().name\"></span>\r\n            </div>\r\n            <div data-bind=\"visible: !$component.asStudent() || $parent.quiz().attemptCount() > 0\">\r\n                <!-- ko if: $data.editing() -->\r\n                <textarea data-bind=\"markdowneditor: {value: $data.rawBody}\" style=\"width: 100%; height: 200px\"></textarea>\r\n                <!-- /ko -->\r\n                <div data-bind=\"visible: !$data.editing(),\r\n                                markdowned: {value: $parent.quiz().makeBody($data, $index())}\"></div>\r\n                <!-- Actual Question Code -->\r\n                <div data-bind=\"switch: type\">\r\n                    <!-- True/False Question -->\r\n                    <div data-bind=\"case: 'true_false_question'\">\r\n                        <div class=\"form-check\">\r\n                            <label class=\"form-check-label\" data-bind=\"attr: {for: 'question-tf-'+$index()+'-t'}\">\r\n                              <input data-bind=\"checked: student,\r\n                                            disable: $component.isReadOnly(),\r\n                                            attr: {name: 'question-tf-'+$index()+'-t',\r\n                                                   id: 'question-tf-'+$index()+'-t'}\"\r\n                                class=\"form-check-input\" type=\"radio\" value=\"true\">\r\n                                True\r\n                          </label>\r\n                        </div>\r\n                        <div class=\"form-check\">\r\n                          <label class=\"form-check-label\" data-bind=\"attr: {for: 'question-tf-'+$index()+'-f'}\">\r\n                            <input data-bind=\"checked: student,\r\n                                        disable: $component.isReadOnly(),\r\n                                        attr: {name: 'question-tf-'+$index()+'-f',\r\n                                               id: 'question-tf-'+$index()+'-f'}\"\r\n                            class=\"form-check-input\" type=\"radio\" value=\"false\">\r\n                            False\r\n                          </label>\r\n                        </div>\r\n                    </div>\r\n                    <!-- Multiple Choice -->\r\n                    <div data-bind=\"case: 'multiple_choice_question'\">\r\n                        <!-- ko foreach: answers -->\r\n                        <div class=\"form-check\">\r\n                          <label data-bind=\"attr: {for: 'question-mcq-'+$parentContext.$index()+'-'+$index()}\" class=\"form-check-label\">\r\n                              <input data-bind=\"checked: $parent.student,\r\n                                                value: $data,\r\n                                                disable: $component.isReadOnly(),\r\n                                                attr: {name: 'question-mcq-'+$parentContext.$index()+'-'+$index(),\r\n                                                       id: 'question-mcq-'+$parentContext.$index()+'-'+$index()}\"\r\n                                class=\"form-check-input\" type=\"radio\">\r\n<!--                                    <span data-bind=\"html: $data\"></span>-->\r\n                                    <span data-bind=\"markdowned: {value: $data}\"></span>\r\n                          </label>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Multiple Answers Question -->\r\n                    <div data-bind=\"case: 'multiple_answers_question'\">\r\n                        <!-- ko foreach: answers -->\r\n                        <div class=\"form-check\">\r\n                          <label data-bind=\"attr: {for: 'question-maq-'+$parentContext.$index()+'-'+$index()}\" class=\"form-check-label\">\r\n                          <input data-bind=\"checked: $parent.student,\r\n                                            checkedValue: $data,\r\n                                            disable: $component.isReadOnly(),\r\n                                            attr: {id: 'question-maq-'+$parentContext.$index()+'-'+$index(),\r\n                                                   name: 'question-maq-'+$parentContext.$index()+'-'+$index()}\"\r\n                            class=\"form-check-input\" type=\"checkbox\">\r\n                            <span data-bind=\"html: $data\"></span>\r\n                          </label>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Text Only Question -->\r\n                    <div data-bind=\"case: 'text_only_question'\"></div>\r\n                    <!-- Matching Question -->\r\n                    <div data-bind=\"case: 'matching_question'\" class=\"container\">\r\n                        <!-- ko foreach: statements -->\r\n                        <div class=\"row justify-content-between mb-3\">\r\n<!--                                <div class=\"col\" data-bind=\"html: $data\"></div>-->\r\n                            <div class=\"col\" data-bind=\"markdowned: {value: $data}\"></div>\r\n                            <div class=\"col\">\r\n                                <select class=\"custom-select\"\r\n                                    data-bind=\"options: $parent.retainOrder ? $parent.answers : [...$parent.answers].sort(() => Math.random() - 0.5),\r\n                                               disable: $component.isReadOnly(),\r\n                                               optionsCaption: '',\r\n                                               value: $parent.student[$index()],\r\n                                               attr: {id: 'question-mat-'+$parentContext.$index()+'-'+$index()}\"></select>\r\n                            </div>\r\n                        </div>\r\n                        <!-- /ko -->\r\n                    </div>\r\n                    <!-- Multiple Dropdown Question -->\r\n                    <div data-bind=\"case: 'multiple_dropdowns_question'\">\r\n                    </div>\r\n                    <!-- Short Answer -->\r\n                    <div data-bind=\"case: 'short_answer_question'\">\r\n                        <div class=\"form-group\">\r\n                            <input type=\"text\" class=\"form-control\"\r\n                                   autocomplete=\"off\"\r\n                                data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-sa-'+$index()}\">\r\n                        </div>\r\n                    </div>\r\n                    <div data-bind=\"case: 'essay_question'\">\r\n                    <textarea data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-es-'+$index()}\" style=\"width: 100%; height: 300px\"\r\n                                   autocomplete=\"off\"></textarea><br>\r\n                    </div>\r\n                    <!-- Numerical Input -->\r\n                    <div data-bind=\"case: 'numerical_question'\">\r\n                        <div class=\"form-group\">\r\n                            <input type=\"number\" class=\"form-control\"\r\n                                   autocomplete=\"off\"\r\n                                data-bind=\"textInput: student,\r\n                                           disable: $component.isReadOnly(),\r\n                                           attr: {id: 'question-num-'+$index()}\">\r\n                        </div>\r\n                    </div>\r\n                    <!-- Multiple Fill in the Blank Question -->\r\n                    <div data-bind=\"case: 'fill_in_multiple_blanks_question'\">\r\n                    </div>\r\n                    <!-- Else -->\r\n                    <div data-bind=\"case: $default\">\r\n                        I have no idea what this is!\r\n                    </div>\r\n                </div>\r\n            </div>\r\n            <!-- ko if: feedback() && (!$component.asStudent() || $component.quiz().feedbackType() === 'IMMEDIATE') -->\r\n            <div class=\"border rounded m-2 p-2\" data-bind=\"class: feedback().status == 'error' ? 'bg-dark' :\r\n                                                                  feedback().correct ? 'bg-success' : 'bg-danger'\">\r\n                <span data-bind=\"html: feedback().message\" class=\"text-white\"></span>\r\n            </div>\r\n            <!-- /ko -->\r\n        </div>\r\n    </div>\r\n</div>\r\n";
 
 /***/ }),
 
@@ -3578,6 +3578,504 @@ class Quiz {
 
 /***/ }),
 
+/***/ "./components/quizzes/quiz_editor_state.ts":
+/*!*************************************************!*\
+  !*** ./components/quizzes/quiz_editor_state.ts ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   AnswerOption: () => (/* binding */ AnswerOption),
+/* harmony export */   BlankEntry: () => (/* binding */ BlankEntry),
+/* harmony export */   FeedbackEntry: () => (/* binding */ FeedbackEntry),
+/* harmony export */   KeyValuePair: () => (/* binding */ KeyValuePair),
+/* harmony export */   QUESTION_TYPE_LABELS: () => (/* binding */ QUESTION_TYPE_LABELS),
+/* harmony export */   QuizEditorPool: () => (/* binding */ QuizEditorPool),
+/* harmony export */   QuizEditorQuestion: () => (/* binding */ QuizEditorQuestion),
+/* harmony export */   QuizEditorSettings: () => (/* binding */ QuizEditorSettings),
+/* harmony export */   QuizEditorState: () => (/* binding */ QuizEditorState),
+/* harmony export */   extractBracketed: () => (/* binding */ extractBracketed)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _quiz__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./quiz */ "./components/quizzes/quiz.ts");
+/* harmony import */ var _questions__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./questions */ "./components/quizzes/questions.ts");
+/**
+ * Quiz Editor State
+ *
+ * Observable ViewModels for the visual quiz editor. Instructors interact with
+ * these classes instead of editing raw JSON.
+ *
+ * The quiz data lives in two separate JSON blobs:
+ *   - instructions  (assignment.instructions) — what students see
+ *   - checks        (assignment.onRun)        — answer keys / feedback logic
+ *
+ * Both are parsed into observable state here, and can be serialised back via
+ * toInstructionsJson() / toChecksJson().
+ */
+
+
+
+// ---------------------------------------------------------------------------
+// Small helper types
+// ---------------------------------------------------------------------------
+/** A key→value pair used when editing dictionaries as arrays in the UI. */
+class KeyValuePair {
+    constructor(key, value) {
+        this.key = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(key);
+        this.value = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(value);
+    }
+}
+/** A single answer option used by MCQ / MAQ / Matching. */
+class AnswerOption {
+    constructor(text) {
+        this.text = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(text);
+    }
+}
+/** A blank used by multiple_dropdowns / fill_in_multiple_blanks. */
+class BlankEntry {
+    constructor(key, options = [], correctAnswer = '', correctList = []) {
+        this.key = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(key);
+        this.options = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(options.map(o => new AnswerOption(o)));
+        this.correctAnswer = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(correctAnswer);
+        this.correctList = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(correctList.join('\n'));
+    }
+    addOption() { this.options.push(new AnswerOption('')); }
+    removeOption(opt) { this.options.remove(opt); }
+}
+/** A single feedback entry: answer → message. */
+class FeedbackEntry {
+    constructor(answer, message) {
+        this.answer = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(answer);
+        this.message = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(message);
+    }
+}
+// ---------------------------------------------------------------------------
+// Quiz Settings
+// ---------------------------------------------------------------------------
+class QuizEditorSettings {
+    constructor(settings) {
+        var _a, _b;
+        this.feedbackType = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(settings.feedbackType || _quiz__WEBPACK_IMPORTED_MODULE_1__.QuizFeedbackType.IMMEDIATE);
+        this.attemptLimit = knockout__WEBPACK_IMPORTED_MODULE_0__.observable((_a = settings.attemptLimit) !== null && _a !== void 0 ? _a : -1);
+        this.coolDown = knockout__WEBPACK_IMPORTED_MODULE_0__.observable((_b = settings.coolDown) !== null && _b !== void 0 ? _b : -1);
+        this.poolRandomness = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(settings.poolRandomness || _quiz__WEBPACK_IMPORTED_MODULE_1__.QuizPoolRandomness.SEED);
+        // readingId can be a number or a URL string; keep as string for the input
+        this.readingId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(settings.readingId != null ? String(settings.readingId) : '');
+    }
+    toJson() {
+        const rid = this.readingId().trim();
+        let readingId = null;
+        if (rid !== '') {
+            const n = Number(rid);
+            readingId = isNaN(n) ? rid : n;
+        }
+        return {
+            feedbackType: this.feedbackType(),
+            attemptLimit: Number(this.attemptLimit()),
+            coolDown: Number(this.coolDown()),
+            poolRandomness: this.poolRandomness(),
+            readingId: +readingId || null,
+        };
+    }
+}
+// ---------------------------------------------------------------------------
+// Question Pool
+// ---------------------------------------------------------------------------
+class QuizEditorPool {
+    constructor(pool) {
+        var _a;
+        this.name = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(pool.name || '');
+        this.amount = knockout__WEBPACK_IMPORTED_MODULE_0__.observable((_a = pool.amount) !== null && _a !== void 0 ? _a : 1);
+        this.questions = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(pool.questions.map(q => knockout__WEBPACK_IMPORTED_MODULE_0__.observable(q)));
+    }
+    addQuestion() { this.questions.push(knockout__WEBPACK_IMPORTED_MODULE_0__.observable('')); }
+    removeQuestion(q) { this.questions.remove(q); }
+    toJson() {
+        return {
+            name: this.name(),
+            amount: Number(this.amount()),
+            questions: this.questions().map(q => q()),
+        };
+    }
+}
+// ---------------------------------------------------------------------------
+// Quiz Editor Question (instructions + checks combined)
+// ---------------------------------------------------------------------------
+const QUESTION_TYPE_LABELS = {
+    true_false_question: 'True / False',
+    multiple_choice_question: 'Multiple Choice',
+    multiple_answers_question: 'Multiple Answers (checkboxes)',
+    matching_question: 'Matching',
+    multiple_dropdowns_question: 'Multiple Dropdowns',
+    fill_in_multiple_blanks_question: 'Fill In Multiple Blanks',
+    short_answer_question: 'Short Answer',
+    numerical_question: 'Numerical',
+    essay_question: 'Essay',
+    text_only_question: 'Text Only',
+};
+class QuizEditorQuestion {
+    constructor(id, question, check) {
+        var _a, _b;
+        check = check || {};
+        // ── Instructions ────────────────────────────────────────────────
+        this.id = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(id);
+        this.type = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(question.type || _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.true_false_question);
+        this.body = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(question.body || '');
+        this.points = knockout__WEBPACK_IMPORTED_MODULE_0__.observable((_a = question.points) !== null && _a !== void 0 ? _a : 1);
+        this.retainOrder = knockout__WEBPACK_IMPORTED_MODULE_0__.observable((_b = question.retainOrder) !== null && _b !== void 0 ? _b : false);
+        // answers / statements
+        const rawAnswers = Array.isArray(question.answers) ? question.answers : [];
+        this.answers = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(rawAnswers.map(a => new AnswerOption(a)));
+        const rawStatements = Array.isArray(question.statements) ? question.statements : [];
+        this.statements = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(rawStatements.map(s => new AnswerOption(s)));
+        // multiple_dropdowns blanks
+        const rawMdAnswers = (!Array.isArray(question.answers) && typeof question.answers === 'object')
+            ? question.answers || {}
+            : {};
+        const mdCorrect = check.correct || {};
+        this.mdBlanks = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(Object.entries(rawMdAnswers).map(([k, opts]) => new BlankEntry(k, opts, mdCorrect[k] || '')));
+        // fill_in blanks — extract blanks from the body on construction
+        const rawFimbCorrect = check.correct || check.correct_exact || {};
+        const rawFimbRegex = check.correct_regex || {};
+        const fimbCheckType = check.correct_regex ? 'regex' : 'exact';
+        const bodyBlanks = extractBracketed(question.body || '');
+        this.fimbBlanks = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(bodyBlanks.map(key => {
+            const correctVal = rawFimbCorrect[key];
+            const correctList = Array.isArray(correctVal)
+                ? correctVal
+                : (correctVal ? [correctVal] : []);
+            const regexList = rawFimbRegex[key] || [];
+            const combined = fimbCheckType === 'regex' ? regexList : correctList;
+            return new BlankEntry(key, [], '', combined);
+        }));
+        this.fimb_check_type = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(fimbCheckType);
+        this.fimb_wrong_any = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong_any || '');
+        // ── Checks ──────────────────────────────────────────────────────
+        // true_false
+        const rawTfCorrect = check.correct;
+        this.tf_correct = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(rawTfCorrect === true || rawTfCorrect === 'true' ? 'true' : 'false');
+        this.tf_wrong = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong || '');
+        // multiple_choice
+        const rawMcCorrect = check.correct;
+        this.mc_correct = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(Array.isArray(rawMcCorrect) ? rawMcCorrect[0] || '' : (rawMcCorrect || ''));
+        this.mc_wrong_any = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong_any || '');
+        const rawMcFeedback = check.feedback || {};
+        this.mc_feedback = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(Object.entries(rawMcFeedback).map(([a, m]) => new FeedbackEntry(a, m)));
+        // multiple_answers
+        const rawMaCorrect = Array.isArray(check.correct) ? check.correct : [];
+        this.ma_correct = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(rawAnswers.map(a => rawMaCorrect.includes(a)));
+        this.ma_wrong_any = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong_any || '');
+        // matching
+        const rawMatCorrect = Array.isArray(check.correct) ? check.correct : [];
+        this.mat_correct = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(rawStatements.map((_, i) => {
+            const c = rawMatCorrect[i];
+            return knockout__WEBPACK_IMPORTED_MODULE_0__.observable(Array.isArray(c) ? c.join('\n') : (c || ''));
+        }));
+        // multiple_dropdowns: stored in mdBlanks.correctAnswer already
+        this.md_wrong_any = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong_any || '');
+        // short_answer / numerical
+        const saCheckType = check.correct_regex ? 'regex' : 'exact';
+        this.sa_check_type = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(saCheckType);
+        const saExact = check.correct || check.correct_exact;
+        this.sa_correct_exact = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(Array.isArray(saExact) ? saExact.join('\n') : (saExact || ''));
+        const saRegex = check.correct_regex || [];
+        this.sa_correct_regex = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(saRegex.join('\n'));
+        this.sa_wrong_any = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(check.wrong_any || '');
+        const rawSaFeedback = check.feedback || {};
+        this.sa_feedback = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(Object.entries(rawSaFeedback).map(([a, m]) => new FeedbackEntry(a, m)));
+        // UI
+        this.expanded = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        // Derived: when answers list changes, keep ma_correct in sync
+        this.answers.subscribe((newAnswers) => {
+            const currentCorrect = this.getMultipleAnswersCorrectSet();
+            this.ma_correct(newAnswers.map(a => currentCorrect.has(a.text())));
+        });
+        // Derived: when statements list changes, keep mat_correct in sync
+        this.statements.subscribe((newStatements) => {
+            const current = this.mat_correct();
+            const padded = newStatements.map((_, i) => current[i] || knockout__WEBPACK_IMPORTED_MODULE_0__.observable(''));
+            this.mat_correct(padded);
+        });
+    }
+    // ── Helpers ────────────────────────────────────────────────────────────
+    toggleExpanded() { this.expanded(!this.expanded()); }
+    // --- Answers management -------------------------------------------------
+    addAnswer() { this.answers.push(new AnswerOption('')); }
+    removeAnswer(a) {
+        const idx = this.answers.indexOf(a);
+        this.answers.remove(a);
+        if (idx >= 0) {
+            this.ma_correct.splice(idx, 1);
+        }
+    }
+    // --- Statements management ----------------------------------------------
+    addStatement() {
+        this.statements.push(new AnswerOption(''));
+        this.mat_correct.push(knockout__WEBPACK_IMPORTED_MODULE_0__.observable(''));
+    }
+    removeStatement(s) {
+        const idx = this.statements.indexOf(s);
+        this.statements.remove(s);
+        if (idx >= 0) {
+            this.mat_correct.splice(idx, 1);
+        }
+    }
+    // --- Multiple dropdowns blank management --------------------------------
+    addMdBlank() { this.mdBlanks.push(new BlankEntry('', [], '')); }
+    removeMdBlank(b) { this.mdBlanks.remove(b); }
+    // --- Fill-in blanks management ------------------------------------------
+    rebuildFimbBlanks() {
+        const existing = {};
+        this.fimbBlanks().forEach(b => { existing[b.key()] = b; });
+        const keys = extractBracketed(this.body());
+        this.fimbBlanks(keys.map(k => existing[k] || new BlankEntry(k, [], '')));
+    }
+    // --- Multiple choice feedback -------------------------------------------
+    addMcFeedback() { this.mc_feedback.push(new FeedbackEntry('', '')); }
+    removeMcFeedback(f) { this.mc_feedback.remove(f); }
+    // --- Short answer feedback -----------------------------------------------
+    addSaFeedback() { this.sa_feedback.push(new FeedbackEntry('', '')); }
+    removeSaFeedback(f) { this.sa_feedback.remove(f); }
+    // ── Serialisation ──────────────────────────────────────────────────────
+    getMultipleAnswersCorrectSet() {
+        const s = new Set();
+        this.answers().forEach((a, i) => {
+            if (this.ma_correct()[i]) {
+                s.add(a.text());
+            }
+        });
+        return s;
+    }
+    toInstructionsJson() {
+        const type = this.type();
+        const base = {
+            type,
+            body: this.body(),
+            points: Number(this.points()),
+        };
+        if (type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.matching_question
+            || type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_dropdowns_question) {
+            base.retainOrder = this.retainOrder();
+        }
+        if (type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.matching_question) {
+            base.answers = this.answers().map(a => a.text());
+            base.statements = this.statements().map(s => s.text());
+        }
+        else if (type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_choice_question
+            || type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_answers_question) {
+            base.answers = this.answers().map(a => a.text());
+        }
+        else if (type === _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_dropdowns_question) {
+            const ans = {};
+            this.mdBlanks().forEach(b => {
+                ans[b.key()] = b.options().map(o => o.text());
+            });
+            base.answers = ans;
+        }
+        // fill_in, short_answer, numerical, essay, text_only, true_false:
+        // no 'answers' field in instructions
+        return base;
+    }
+    toChecksJson() {
+        const type = this.type();
+        const check = {};
+        switch (type) {
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.true_false_question:
+                check.correct = this.tf_correct() === 'true';
+                if (this.tf_wrong().trim()) {
+                    check.wrong = this.tf_wrong().trim();
+                }
+                break;
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_choice_question: {
+                check.correct = this.mc_correct();
+                if (this.mc_wrong_any().trim()) {
+                    check.wrong_any = this.mc_wrong_any().trim();
+                }
+                const fb = {};
+                this.mc_feedback().forEach(f => {
+                    if (f.answer().trim()) {
+                        fb[f.answer().trim()] = f.message();
+                    }
+                });
+                if (Object.keys(fb).length) {
+                    check.feedback = fb;
+                }
+                break;
+            }
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_answers_question: {
+                const correctAnswers = this.answers()
+                    .filter((_, i) => this.ma_correct()[i])
+                    .map(a => a.text());
+                check.correct = correctAnswers;
+                if (this.ma_wrong_any().trim()) {
+                    check.wrong_any = this.ma_wrong_any().trim();
+                }
+                break;
+            }
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.matching_question: {
+                check.correct = this.mat_correct().map(c => {
+                    const v = c();
+                    // If there are multiple lines treat as a list of acceptable answers
+                    const lines = v.split('\n').map(l => l.trim()).filter(Boolean);
+                    return lines.length === 1 ? lines[0] : lines;
+                });
+                break;
+            }
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.multiple_dropdowns_question: {
+                const correct = {};
+                this.mdBlanks().forEach(b => { correct[b.key()] = b.correctAnswer(); });
+                check.correct = correct;
+                if (this.md_wrong_any().trim()) {
+                    check.wrong_any = this.md_wrong_any().trim();
+                }
+                break;
+            }
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.short_answer_question:
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.numerical_question: {
+                if (this.sa_check_type() === 'regex') {
+                    check.correct_regex = this.sa_correct_regex()
+                        .split('\n').map(s => s.trim()).filter(Boolean);
+                }
+                else {
+                    const lines = this.sa_correct_exact()
+                        .split('\n').map(s => s.trim()).filter(Boolean);
+                    check.correct_exact = lines.length === 1 ? lines[0] : lines;
+                }
+                if (this.sa_wrong_any().trim()) {
+                    check.wrong_any = this.sa_wrong_any().trim();
+                }
+                const fb = {};
+                this.sa_feedback().forEach(f => {
+                    if (f.answer().trim()) {
+                        fb[f.answer().trim()] = f.message();
+                    }
+                });
+                if (Object.keys(fb).length) {
+                    check.feedback = fb;
+                }
+                break;
+            }
+            case _questions__WEBPACK_IMPORTED_MODULE_2__.QuizQuestionTypes.fill_in_multiple_blanks_question: {
+                if (this.fimb_check_type() === 'regex') {
+                    const correct = {};
+                    this.fimbBlanks().forEach(b => {
+                        correct[b.key()] = b.correctList().split('\n').map(s => s.trim()).filter(Boolean);
+                    });
+                    check.correct_regex = correct;
+                }
+                else {
+                    const correct = {};
+                    this.fimbBlanks().forEach(b => {
+                        const lines = b.correctList().split('\n').map(s => s.trim()).filter(Boolean);
+                        correct[b.key()] = lines.length === 1 ? lines[0] : lines;
+                    });
+                    check.correct_exact = correct;
+                }
+                if (this.fimb_wrong_any().trim()) {
+                    check.wrong_any = this.fimb_wrong_any().trim();
+                }
+                break;
+            }
+            // essay and text_only have no check fields
+            default:
+                break;
+        }
+        return check;
+    }
+}
+// ---------------------------------------------------------------------------
+// Main QuizEditorState
+// ---------------------------------------------------------------------------
+class QuizEditorState {
+    constructor(instructionsJson, checksJson) {
+        let instructions;
+        try {
+            instructions = JSON.parse(instructionsJson || '{}');
+        }
+        catch (e) {
+            instructions = {};
+        }
+        (0,_quiz__WEBPACK_IMPORTED_MODULE_1__.fillInMissingQuizInstructionFields)(instructions);
+        let checks;
+        try {
+            checks = JSON.parse(checksJson || '{}');
+        }
+        catch (e) {
+            checks = {};
+        }
+        const checkQuestions = checks.questions || {};
+        this.settings = new QuizEditorSettings(instructions.settings);
+        this.pools = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray((instructions.pools || []).map(p => new QuizEditorPool(p)));
+        this.questions = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(Object.entries(instructions.questions || {}).map(([id, q]) => new QuizEditorQuestion(id, q, checkQuestions[id] || {})));
+    }
+    addQuestion() {
+        const id = `question_${Date.now()}`;
+        this.questions.push(new QuizEditorQuestion(id, { type: 'multiple_choice_question', body: '', points: 1 }, {}));
+    }
+    removeQuestion(q) { this.questions.remove(q); }
+    addPool() {
+        this.pools.push(new QuizEditorPool({ name: '', amount: 1, questions: [] }));
+    }
+    removePool(p) { this.pools.remove(p); }
+    toInstructionsJson() {
+        const out = {
+            settings: this.settings.toJson(),
+            pools: this.pools().map(p => p.toJson()),
+            questions: {},
+        };
+        this.questions().forEach(q => {
+            // @ts-ignore
+            out.questions[q.id()] = q.toInstructionsJson();
+        });
+        return JSON.stringify(out, null, 2);
+    }
+    toChecksJson() {
+        const out = { questions: {} };
+        this.questions().forEach(q => {
+            const checkData = q.toChecksJson();
+            // Only include non-empty check objects
+            if (Object.keys(checkData).length > 0) {
+                out.questions[q.id()] = checkData;
+            }
+        });
+        return JSON.stringify(out, null, 2);
+    }
+}
+// ---------------------------------------------------------------------------
+// Utility
+// ---------------------------------------------------------------------------
+/** Extract [identifier] keys from a body string (like getBracketed in questions.ts). */
+function extractBracketed(body) {
+    const SQUARE_BRACKETS = /(?<!\\)(\[.*?\]\]?)(?!\()/g;
+    const result = [];
+    const parts = body.split(SQUARE_BRACKETS);
+    parts.forEach(part => {
+        if (part.startsWith('[[') && part.endsWith(']]'))
+            return;
+        if (part.startsWith('[') && part.endsWith(']')) {
+            result.push(part.slice(1, -1));
+        }
+    });
+    return result;
+}
+
+
+/***/ }),
+
+/***/ "./components/quizzes/quiz_editor_ui.html":
+/*!************************************************!*\
+  !*** ./components/quizzes/quiz_editor_ui.html ***!
+  \************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<!-- Quiz Editor — rendered when editorMode() === 'QUIZ_EDITOR' -->\r\n<div class=\"quiz-editor mt-2\">\r\n\r\n    <!-- ================================================================ -->\r\n    <!-- Quiz Settings                                                     -->\r\n    <!-- ================================================================ -->\r\n    <div class=\"card mb-3\">\r\n        <div class=\"card-header d-flex align-items-center\">\r\n            <strong>Quiz Settings</strong>\r\n        </div>\r\n        <div class=\"card-body\">\r\n            <!-- ko if: quizEditor() -->\r\n            <div class=\"form-row\">\r\n                <div class=\"form-group col-md-4\">\r\n                    <label>Feedback Type</label>\r\n                    <select class=\"form-control\"\r\n                        data-bind=\"value: quizEditor().settings.feedbackType\">\r\n                        <option value=\"IMMEDIATE\">Immediate</option>\r\n                        <option value=\"SUMMARY\">Summary</option>\r\n                        <option value=\"NONE\">None</option>\r\n                    </select>\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Attempt Limit <small class=\"text-muted\">(-1 = infinite)</small></label>\r\n                    <input type=\"number\" class=\"form-control\"\r\n                        data-bind=\"value: quizEditor().settings.attemptLimit\">\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Cool Down (min) <small class=\"text-muted\">(-1 = none)</small></label>\r\n                    <input type=\"number\" class=\"form-control\"\r\n                        data-bind=\"value: quizEditor().settings.coolDown\">\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Pool Randomness</label>\r\n                    <select class=\"form-control\"\r\n                        data-bind=\"value: quizEditor().settings.poolRandomness\">\r\n                        <option value=\"SEED\">Seed (consistent per student)</option>\r\n                        <option value=\"ATTEMPT\">Attempt (new each attempt)</option>\r\n                        <option value=\"NONE\">None (same for everyone)</option>\r\n                    </select>\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Reading ID / URL <small class=\"text-muted\">(optional)</small></label>\r\n                    <input type=\"text\" class=\"form-control\"\r\n                        data-bind=\"value: quizEditor().settings.readingId\"\r\n                        placeholder=\"e.g. 42 or my_reading\">\r\n                </div>\r\n            </div>\r\n            <!-- /ko -->\r\n        </div>\r\n    </div>\r\n\r\n    <!-- ================================================================ -->\r\n    <!-- Question Pools                                                    -->\r\n    <!-- ================================================================ -->\r\n    <div class=\"card mb-3\">\r\n        <div class=\"card-header d-flex align-items-center justify-content-between\">\r\n            <strong>Question Pools</strong>\r\n            <button class=\"btn btn-sm btn-outline-secondary\"\r\n                    data-bind=\"click: ()=>quizEditor().addPool()\">+ Add Pool</button>\r\n        </div>\r\n        <!-- ko if: quizEditor() -->\r\n        <!-- ko foreach: quizEditor().pools -->\r\n        <div class=\"card-body border-bottom pb-2 mb-2\">\r\n            <div class=\"form-row align-items-end\">\r\n                <div class=\"form-group col-md-4\">\r\n                    <label>Pool Name</label>\r\n                    <input type=\"text\" class=\"form-control\"\r\n                        data-bind=\"value: name\" placeholder=\"e.g. ConceptA\">\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Questions to Show</label>\r\n                    <input type=\"number\" min=\"1\" class=\"form-control\"\r\n                        data-bind=\"value: amount\">\r\n                </div>\r\n                <div class=\"form-group col-md-5\">\r\n                    <label>Question IDs (one per line)</label>\r\n                    <textarea class=\"form-control\" rows=\"3\"\r\n                        data-bind=\"value: ko.computed({\r\n                            read: ()=> questions().map(q=>q()).join('\\n'),\r\n                            write: (v)=> {\r\n                                questions(v.split('\\n').map(l=>l.trim()).filter(Boolean).map(l=>ko.observable(l)));\r\n                            }\r\n                        })\"></textarea>\r\n                </div>\r\n                <div class=\"form-group col-md-1 d-flex align-items-end pb-1\">\r\n                    <button class=\"btn btn-sm btn-danger\"\r\n                        data-bind=\"click: ()=>$component.quizEditor().removePool($data)\">✕</button>\r\n                </div>\r\n            </div>\r\n        </div>\r\n        <!-- /ko -->\r\n        <!-- /ko -->\r\n    </div>\r\n\r\n    <!-- ================================================================ -->\r\n    <!-- Questions                                                         -->\r\n    <!-- ================================================================ -->\r\n    <div class=\"d-flex justify-content-between align-items-center mb-2\">\r\n        <h5 class=\"mb-0\">Questions\r\n            <!-- ko if: quizEditor() -->\r\n            <small class=\"text-muted\" data-bind=\"text: '('+quizEditor().questions().length+')'\"></small>\r\n            <!-- /ko -->\r\n        </h5>\r\n        <button class=\"btn btn-success btn-sm\"\r\n                data-bind=\"click: ()=>quizEditor().addQuestion()\">+ Add Question</button>\r\n    </div>\r\n\r\n    <!-- ko if: quizEditor() -->\r\n    <!-- ko foreach: quizEditor().questions -->\r\n    <div class=\"card mb-3 quiz-editor-question\">\r\n        <!-- Question Header (click to expand/collapse) -->\r\n        <div class=\"card-header d-flex justify-content-between align-items-center\"\r\n             style=\"cursor:pointer\" data-bind=\"click: toggleExpanded\">\r\n            <span>\r\n                <strong data-bind=\"text: '#' + ($index()+1) + ' — '\"></strong>\r\n                <span data-bind=\"text: id()\"></span>\r\n                <span class=\"badge badge-secondary ml-2\" data-bind=\"text: type()\"></span>\r\n                <span class=\"ml-2 text-muted small\" data-bind=\"text: points() + ' pt' + (points()===1?'':'s')\"></span>\r\n            </span>\r\n            <div class=\"d-flex align-items-center\">\r\n                <button class=\"btn btn-sm btn-danger mr-2\"\r\n                    data-bind=\"click: (d,e)=>{ $component.quizEditor().removeQuestion($data); e.stopPropagation(); }\">Remove</button>\r\n                <span data-bind=\"text: expanded() ? '▲' : '▼'\"></span>\r\n            </div>\r\n        </div>\r\n\r\n        <div class=\"card-body\" data-bind=\"visible: expanded()\">\r\n\r\n            <!-- ── Core fields ───────────────────────────────────────────── -->\r\n            <div class=\"form-row\">\r\n                <div class=\"form-group col-md-4\">\r\n                    <label>Question ID</label>\r\n                    <input type=\"text\" class=\"form-control\" data-bind=\"value: id\"\r\n                           placeholder=\"e.g. MyQuestion_1\">\r\n                </div>\r\n                <div class=\"form-group col-md-4\">\r\n                    <label>Type</label>\r\n                    <select class=\"form-control\" data-bind=\"value: type\">\r\n                        <option value=\"true_false_question\">True / False</option>\r\n                        <option value=\"multiple_choice_question\">Multiple Choice</option>\r\n                        <option value=\"multiple_answers_question\">Multiple Answers</option>\r\n                        <option value=\"matching_question\">Matching</option>\r\n                        <option value=\"multiple_dropdowns_question\">Multiple Dropdowns</option>\r\n                        <option value=\"fill_in_multiple_blanks_question\">Fill In Multiple Blanks</option>\r\n                        <option value=\"short_answer_question\">Short Answer</option>\r\n                        <option value=\"numerical_question\">Numerical</option>\r\n                        <option value=\"essay_question\">Essay</option>\r\n                        <option value=\"text_only_question\">Text Only</option>\r\n                    </select>\r\n                </div>\r\n                <div class=\"form-group col-md-2\">\r\n                    <label>Points</label>\r\n                    <input type=\"number\" min=\"0\" step=\"0.5\" class=\"form-control\"\r\n                        data-bind=\"value: points\">\r\n                </div>\r\n                <!-- retainOrder only for matching / dropdowns -->\r\n                <div class=\"form-group col-md-2 d-flex align-items-end\" data-bind=\"visible:\r\n                    type()==='matching_question' || type()==='multiple_dropdowns_question'\">\r\n                    <div class=\"form-check\">\r\n                        <input type=\"checkbox\" class=\"form-check-input\" id=\"retain-order\"\r\n                            data-bind=\"checked: retainOrder\">\r\n                        <label class=\"form-check-label\" for=\"retain-order\">Retain Order</label>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n\r\n            <!-- ── Body ──────────────────────────────────────────────────── -->\r\n            <div class=\"form-group\">\r\n                <label>Question Body (Markdown)\r\n                    <!-- ko if: type()==='multiple_dropdowns_question' || type()==='fill_in_multiple_blanks_question' -->\r\n                    <small class=\"text-muted\">— use <code>[identifier]</code> to place dropdowns/inputs;\r\n                        use <code>[[</code> and <code>]]</code> for literal brackets.</small>\r\n                    <!-- /ko -->\r\n                </label>\r\n                <textarea class=\"form-control\" rows=\"5\" data-bind=\"value: body,\r\n                    event: { change: ()=>{ if(type()==='fill_in_multiple_blanks_question') rebuildFimbBlanks(); } }\"></textarea>\r\n            </div>\r\n\r\n            <!-- ================================================================ -->\r\n            <!-- Type-specific answer fields                                       -->\r\n            <!-- ================================================================ -->\r\n            <div data-bind=\"switch: type()\">\r\n\r\n                <!-- ── True / False ─────────────────────────────────────── -->\r\n                <div data-bind=\"case: 'true_false_question'\">\r\n                    <div class=\"form-row\">\r\n                        <div class=\"form-group col-md-4\">\r\n                            <label>Correct Answer</label>\r\n                            <select class=\"form-control\" data-bind=\"value: tf_correct\">\r\n                                <option value=\"true\">True</option>\r\n                                <option value=\"false\">False</option>\r\n                            </select>\r\n                        </div>\r\n                        <div class=\"form-group col-md-8\">\r\n                            <label>Wrong-Answer Feedback</label>\r\n                            <input type=\"text\" class=\"form-control\"\r\n                                data-bind=\"value: tf_wrong\"\r\n                                placeholder=\"Message shown when student is wrong\">\r\n                        </div>\r\n                    </div>\r\n                </div>\r\n\r\n                <!-- ── Multiple Choice ──────────────────────────────────── -->\r\n                <div data-bind=\"case: 'multiple_choice_question'\">\r\n                    <label>Answer Options\r\n                        <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                            data-bind=\"click: addAnswer\">+ Add Answer</button>\r\n                    </label>\r\n                    <!-- ko foreach: answers -->\r\n                    <div class=\"input-group mb-1\">\r\n                        <div class=\"input-group-prepend\">\r\n                            <div class=\"input-group-text\">\r\n                                <input type=\"radio\"\r\n                                    data-bind=\"checked: $parent.mc_correct,\r\n                                               checkedValue: text(),\r\n                                               attr: {name: 'mc-correct-'+$parentContext.$index()}\">\r\n                            </div>\r\n                        </div>\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Answer text\"\r\n                            data-bind=\"value: text\">\r\n                        <div class=\"input-group-append\">\r\n                            <button class=\"btn btn-outline-danger\"\r\n                                data-bind=\"click: ()=>$parent.removeAnswer($data)\">✕</button>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <div class=\"form-group mt-2\">\r\n                        <label>Wrong-Answer Fallback Feedback</label>\r\n                        <input type=\"text\" class=\"form-control\"\r\n                            data-bind=\"value: mc_wrong_any\"\r\n                            placeholder=\"Shown when no specific feedback matches\">\r\n                    </div>\r\n                    <label>Per-Answer Feedback\r\n                        <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                            data-bind=\"click: addMcFeedback\">+ Add</button>\r\n                    </label>\r\n                    <!-- ko foreach: mc_feedback -->\r\n                    <div class=\"input-group mb-1\">\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Answer text (exact)\"\r\n                            data-bind=\"value: answer\">\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Feedback message\"\r\n                            data-bind=\"value: message\">\r\n                        <div class=\"input-group-append\">\r\n                            <button class=\"btn btn-outline-danger\"\r\n                                data-bind=\"click: ()=>$parent.removeMcFeedback($data)\">✕</button>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </div>\r\n\r\n                <!-- ── Multiple Answers ─────────────────────────────────── -->\r\n                <div data-bind=\"case: 'multiple_answers_question'\">\r\n                    <label>Answer Options (check = correct)\r\n                        <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                            data-bind=\"click: addAnswer\">+ Add Answer</button>\r\n                    </label>\r\n                    <!-- ko foreach: answers -->\r\n                    <div class=\"input-group mb-1\">\r\n                        <div class=\"input-group-prepend\">\r\n                            <div class=\"input-group-text\">\r\n                                <input type=\"checkbox\"\r\n                                    data-bind=\"checked: $parent.ma_correct()[$index()],\r\n                                               event: { change: (d,e)=>{\r\n                                                   let c = $parent.ma_correct().slice();\r\n                                                   c[$index()] = e.target.checked;\r\n                                                   $parent.ma_correct(c);\r\n                                               } }\">\r\n                            </div>\r\n                        </div>\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Answer text\"\r\n                            data-bind=\"value: text\">\r\n                        <div class=\"input-group-append\">\r\n                            <button class=\"btn btn-outline-danger\"\r\n                                data-bind=\"click: ()=>$parent.removeAnswer($data)\">✕</button>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <div class=\"form-group mt-2\">\r\n                        <label>Wrong-Answer Fallback Feedback</label>\r\n                        <input type=\"text\" class=\"form-control\"\r\n                            data-bind=\"value: ma_wrong_any\">\r\n                    </div>\r\n                </div>\r\n\r\n                <!-- ── Matching ─────────────────────────────────────────── -->\r\n                <div data-bind=\"case: 'matching_question'\">\r\n                    <div class=\"row\">\r\n                        <div class=\"col-md-6\">\r\n                            <label>Statements (left side)\r\n                                <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                                    data-bind=\"click: addStatement\">+ Add</button>\r\n                            </label>\r\n                            <!-- ko foreach: statements -->\r\n                            <div class=\"input-group mb-1\">\r\n                                <input type=\"text\" class=\"form-control\"\r\n                                    placeholder=\"Statement text\"\r\n                                    data-bind=\"value: text\">\r\n                                <div class=\"input-group-append\">\r\n                                    <button class=\"btn btn-outline-danger\"\r\n                                        data-bind=\"click: ()=>$parent.removeStatement($data)\">✕</button>\r\n                                </div>\r\n                            </div>\r\n                            <!-- /ko -->\r\n                        </div>\r\n                        <div class=\"col-md-6\">\r\n                            <label>Answer Options (right side)\r\n                                <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                                    data-bind=\"click: addAnswer\">+ Add</button>\r\n                            </label>\r\n                            <!-- ko foreach: answers -->\r\n                            <div class=\"input-group mb-1\">\r\n                                <input type=\"text\" class=\"form-control\"\r\n                                    placeholder=\"Answer text\"\r\n                                    data-bind=\"value: text\">\r\n                                <div class=\"input-group-append\">\r\n                                    <button class=\"btn btn-outline-danger\"\r\n                                        data-bind=\"click: ()=>$parent.removeAnswer($data)\">✕</button>\r\n                                </div>\r\n                            </div>\r\n                            <!-- /ko -->\r\n                        </div>\r\n                    </div>\r\n                    <hr>\r\n                    <label>Correct Answer per Statement\r\n                        <small class=\"text-muted\">(enter multiple lines for multiple acceptable answers)</small>\r\n                    </label>\r\n                    <!-- ko foreach: statements -->\r\n                    <div class=\"input-group mb-1\">\r\n                        <div class=\"input-group-prepend\">\r\n                            <span class=\"input-group-text\"\r\n                                  data-bind=\"text: text() || ('Statement '+($index()+1))\"></span>\r\n                        </div>\r\n                        <textarea class=\"form-control\" rows=\"1\"\r\n                            data-bind=\"value: $parent.mat_correct()[$index()]\"\r\n                            placeholder=\"Correct answer (one per line if multiple accepted)\"></textarea>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </div>\r\n\r\n                <!-- ── Multiple Dropdowns ───────────────────────────────── -->\r\n                <div data-bind=\"case: 'multiple_dropdowns_question'\">\r\n                    <p class=\"text-muted small\">Add a <code>[identifier]</code> in the body above for each dropdown, then define its options and correct answer below.</p>\r\n                    <label>Blanks\r\n                        <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                            data-bind=\"click: addMdBlank\">+ Add Blank</button>\r\n                    </label>\r\n                    <!-- ko foreach: mdBlanks -->\r\n                    <div class=\"card mb-2 p-2\">\r\n                        <div class=\"form-row align-items-end\">\r\n                            <div class=\"form-group col-md-3\">\r\n                                <label>Identifier (no brackets)</label>\r\n                                <input type=\"text\" class=\"form-control\"\r\n                                    data-bind=\"value: key\" placeholder=\"e.g. color\">\r\n                            </div>\r\n                            <div class=\"form-group col-md-3\">\r\n                                <label>Correct Answer</label>\r\n                                <input type=\"text\" class=\"form-control\"\r\n                                    data-bind=\"value: correctAnswer\">\r\n                            </div>\r\n                            <div class=\"form-group col-md-5\">\r\n                                <label>Options (one per line)</label>\r\n                                <textarea class=\"form-control\" rows=\"3\"\r\n                                    data-bind=\"value: ko.computed({\r\n                                        read: ()=>options().map(o=>o.text()).join('\\n'),\r\n                                        write: v=>options(v.split('\\n').map(l=>l.trim()).filter(Boolean).map(l=>({text:ko.observable(l)})))\r\n                                    })\"></textarea>\r\n                            </div>\r\n                            <div class=\"form-group col-md-1 d-flex align-items-end pb-1\">\r\n                                <button class=\"btn btn-sm btn-danger\"\r\n                                    data-bind=\"click: ()=>$parent.removeMdBlank($data)\">✕</button>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <div class=\"form-group\">\r\n                        <label>Wrong-Answer Fallback Feedback</label>\r\n                        <input type=\"text\" class=\"form-control\" data-bind=\"value: md_wrong_any\">\r\n                    </div>\r\n                </div>\r\n\r\n                <!-- ── Short Answer / Numerical ─────────────────────────── -->\r\n                <div data-bind=\"case: 'short_answer_question'\">\r\n                    <!-- Shared with numerical below, see next case -->\r\n                </div>\r\n                <div data-bind=\"case: 'numerical_question'\">\r\n                </div>\r\n                <!-- ko if: type()==='short_answer_question' || type()==='numerical_question' -->\r\n                <div class=\"mt-2\">\r\n                    <div class=\"form-group\">\r\n                        <label>Check Type</label>\r\n                        <select class=\"form-control\" data-bind=\"value: sa_check_type\">\r\n                            <option value=\"exact\">Exact Match (whitespace-trimmed)</option>\r\n                            <option value=\"regex\">Regular Expression</option>\r\n                        </select>\r\n                    </div>\r\n                    <!-- ko if: sa_check_type()==='exact' -->\r\n                    <div class=\"form-group\">\r\n                        <label>Correct Answers <small class=\"text-muted\">(one per line)</small></label>\r\n                        <textarea class=\"form-control\" rows=\"3\"\r\n                            data-bind=\"value: sa_correct_exact\"\r\n                            placeholder=\"hello&#10;Hello&#10;HELLO\"></textarea>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <!-- ko if: sa_check_type()==='regex' -->\r\n                    <div class=\"form-group\">\r\n                        <label>Regex Patterns <small class=\"text-muted\">(one per line; any match = correct)</small></label>\r\n                        <textarea class=\"form-control\" rows=\"3\"\r\n                            data-bind=\"value: sa_correct_regex\"\r\n                            placeholder=\"^\\d+$\"></textarea>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <div class=\"form-group\">\r\n                        <label>Wrong-Answer Fallback Feedback</label>\r\n                        <input type=\"text\" class=\"form-control\" data-bind=\"value: sa_wrong_any\">\r\n                    </div>\r\n                    <label>Per-Answer Feedback\r\n                        <button class=\"btn btn-sm btn-outline-secondary ml-2\"\r\n                            data-bind=\"click: addSaFeedback\">+ Add</button>\r\n                    </label>\r\n                    <!-- ko foreach: sa_feedback -->\r\n                    <div class=\"input-group mb-1\">\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Answer / regex\"\r\n                            data-bind=\"value: answer\">\r\n                        <input type=\"text\" class=\"form-control\" placeholder=\"Feedback message\"\r\n                            data-bind=\"value: message\">\r\n                        <div class=\"input-group-append\">\r\n                            <button class=\"btn btn-outline-danger\"\r\n                                data-bind=\"click: ()=>$parent.removeSaFeedback($data)\">✕</button>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </div>\r\n                <!-- /ko -->\r\n\r\n                <!-- ── Fill In Multiple Blanks ───────────────────────────── -->\r\n                <div data-bind=\"case: 'fill_in_multiple_blanks_question'\">\r\n                    <p class=\"text-muted small\">Blanks are detected automatically from <code>[identifier]</code> markers in the body. Click outside the body field to refresh the list below.</p>\r\n                    <div class=\"form-group\">\r\n                        <label>Check Type</label>\r\n                        <select class=\"form-control\" data-bind=\"value: fimb_check_type\">\r\n                            <option value=\"exact\">Exact Match</option>\r\n                            <option value=\"regex\">Regular Expression</option>\r\n                        </select>\r\n                    </div>\r\n                    <!-- ko foreach: fimbBlanks -->\r\n                    <div class=\"card mb-2 p-2\">\r\n                        <div class=\"form-row\">\r\n                            <div class=\"form-group col-md-3\">\r\n                                <label>Blank ID</label>\r\n                                <input type=\"text\" class=\"form-control\" readonly\r\n                                    data-bind=\"value: key\">\r\n                            </div>\r\n                            <div class=\"form-group col-md-9\">\r\n                                <label data-bind=\"text: $parent.fimb_check_type()==='regex' ? 'Accepted Regex Patterns (one per line)' : 'Correct Answers (one per line)'\"></label>\r\n                                <textarea class=\"form-control\" rows=\"2\"\r\n                                    data-bind=\"value: correctList\"></textarea>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                    <div class=\"form-group\">\r\n                        <label>Wrong-Answer Fallback Feedback</label>\r\n                        <input type=\"text\" class=\"form-control\" data-bind=\"value: fimb_wrong_any\">\r\n                    </div>\r\n                </div>\r\n\r\n                <!-- ── Essay / Text Only — no extra fields ──────────────── -->\r\n                <div data-bind=\"case: 'essay_question'\">\r\n                    <p class=\"text-muted small\">Essay questions are always marked correct. No answer key needed.</p>\r\n                </div>\r\n                <div data-bind=\"case: 'text_only_question'\">\r\n                    <p class=\"text-muted small\">Text-only questions display content only. No answer key needed.</p>\r\n                </div>\r\n\r\n            </div><!-- /switch -->\r\n\r\n        </div><!-- /card-body -->\r\n    </div><!-- /card -->\r\n    <!-- /ko -->\r\n    <!-- /ko -->\r\n\r\n    <!-- Save button -->\r\n    <div class=\"text-right mb-4\">\r\n        <button class=\"btn btn-primary\" data-bind=\"click: saveQuizEditor\">\r\n            Save Quiz\r\n        </button>\r\n    </div>\r\n\r\n</div><!-- /quiz-editor -->\r\n";
+
+/***/ }),
+
 /***/ "./components/quizzes/quiz_ui.ts":
 /*!***************************************!*\
   !*** ./components/quizzes/quiz_ui.ts ***!
@@ -3592,6 +4090,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   QUIZ_PREVIEW: () => (/* binding */ QUIZ_PREVIEW)
 /* harmony export */ });
 /* harmony import */ var _questions_ui_html__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./questions_ui.html */ "./components/quizzes/questions_ui.html");
+/* harmony import */ var _quiz_editor_ui_html__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./quiz_editor_ui.html */ "./components/quizzes/quiz_editor_ui.html");
+
 
 const QUIZ_PREVIEW = `
 <div data-bind="switch: quiz()?.attemptStatus()">
@@ -3832,7 +4332,7 @@ const QUIZZER_HTML = `
     <!-- /ko -->
     
     <!-- ko if: editorMode() === 'QUIZ_EDITOR' -->
-    Quiz Editor is not yet ready.
+    ${_quiz_editor_ui_html__WEBPACK_IMPORTED_MODULE_1__}
     <!-- /ko -->
     
     ${INSTRUCTIONS_BAR_HTML('above')}
@@ -3866,6 +4366,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _questions__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./questions */ "./components/quizzes/questions.ts");
 /* harmony import */ var _quizzer_question_status__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./quizzer_question_status */ "./components/quizzes/quizzer_question_status.ts");
 /* harmony import */ var _quiz_ui__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./quiz_ui */ "./components/quizzes/quiz_ui.ts");
+/* harmony import */ var _quiz_editor_state__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./quiz_editor_state */ "./components/quizzes/quiz_editor_state.ts");
+
 
 
 
@@ -3875,8 +4377,9 @@ __webpack_require__.r(__webpack_exports__);
 class Quizzer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.AssignmentInterface {
     constructor(params) {
         super(params);
-        this.subscriptions = { quiz: null, currentAssignmentId: null, questions: null };
+        this.subscriptions = { quiz: null, currentAssignmentId: null, questions: null, editorMode: null };
         this.quiz = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.quizEditor = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
         // UI state
         this.isDirty = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
         this.asStudent = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(!this.isInstructor());
@@ -3888,7 +4391,7 @@ class Quizzer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.Assignm
         this.loadQuiz(this.currentAssignmentId());
         this.subscriptions.questions = [];
         this.subscriptions.quiz = this.quiz.subscribe((quiz) => {
-            this.quiz().questions().map((question) => {
+            quiz.questions().map((question) => {
                 (0,_questions__WEBPACK_IMPORTED_MODULE_3__.subscribeToStudent)(question).map((subscribable) => {
                     let subscription = subscribable.subscribe((value) => {
                         this.onChange();
@@ -3896,14 +4399,20 @@ class Quizzer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.Assignm
                     this.subscriptions.questions.push(subscription);
                 });
             });
-            this.quiz().hidePools();
+            quiz.hidePools();
+        });
+        // Rebuild the quiz editor state whenever the editor mode switches to QUIZ_EDITOR
+        this.subscriptions.editorMode = this.editorMode.subscribe((mode) => {
+            if (mode === 'QUIZ_EDITOR' && this.assignment()) {
+                this.quizEditor(new _quiz_editor_state__WEBPACK_IMPORTED_MODULE_6__.QuizEditorState(this.assignment().instructions(), this.assignment().onRun()));
+            }
         });
         // this.visibleQuestions = ko.pureComputed<Question[]>( () => {
         //     const isNotStudent = !this.asStudent();
         //     return this.quiz()?.questions().filter(q => isNotStudent || q.visible());
         // }, this);
         this.isReadOnly = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
-            return !this.quiz().attempting();
+            return this.quiz() ? !this.quiz().attempting() : true;
         }, this);
     }
     dispose() {
@@ -3911,6 +4420,9 @@ class Quizzer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.Assignm
         this.subscriptions.currentAssignmentId.dispose();
         this.subscriptions.quiz.dispose();
         this.subscriptions.questions.map((question) => question.dispose());
+        if (this.subscriptions.editorMode) {
+            this.subscriptions.editorMode.dispose();
+        }
     }
     lookupReading(readingUrl) {
         return this.server.assignmentStore.getIdByUrl(readingUrl);
@@ -3999,6 +4511,20 @@ class Quizzer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.Assignm
             url: this.assignment().url(),
             name: this.assignment().name()
         });
+    }
+    /**
+     * Called by the "Save Quiz" button in the visual Quiz Editor.
+     * Serialises the editor state back to the instructions and on_run JSON
+     * and persists them via saveAssignment().
+     */
+    saveQuizEditor() {
+        if (!this.quizEditor()) {
+            return;
+        }
+        const editor = this.quizEditor();
+        this.assignment().instructions(editor.toInstructionsJson());
+        this.assignment().onRun(editor.toChecksJson());
+        this.saveAssignment();
     }
     submit() {
         let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
@@ -4104,7 +4630,8 @@ class QuizzerQuestionStatus {
             const graded = this.question && this.question.feedback();
             const errored = graded && this.question.feedback().status === "error";
             const correct = graded && this.question.feedback().correct;
-            if (graded && (!this.asStudent() || this.quiz().feedbackType() === _quiz__WEBPACK_IMPORTED_MODULE_2__.QuizFeedbackType.IMMEDIATE)) {
+            console.log(this.quiz);
+            if (graded && (!this.asStudent() || this.quiz.feedbackType() === _quiz__WEBPACK_IMPORTED_MODULE_2__.QuizFeedbackType.IMMEDIATE)) {
                 if (errored) {
                     return 'error';
                 }

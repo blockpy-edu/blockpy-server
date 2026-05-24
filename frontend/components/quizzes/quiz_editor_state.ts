@@ -112,7 +112,7 @@ export class QuizEditorSettings {
             attemptLimit: Number(this.attemptLimit()),
             coolDown: Number(this.coolDown()),
             poolRandomness: this.poolRandomness() as QuizPoolRandomness,
-            readingId,
+            readingId: +readingId || null,
         };
     }
 }
@@ -574,6 +574,7 @@ export class QuizEditorState {
             questions: {},
         };
         this.questions().forEach(q => {
+            // @ts-ignore
             out.questions[q.id()] = q.toInstructionsJson();
         });
         return JSON.stringify(out, null, 2);
