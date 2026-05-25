@@ -513,8 +513,8 @@ def _added_chars(a: str, b: str) -> int:
     if len(b) + len(a) > 1024*100:
         return max(0, len(b) - len(a))
     # Use alt path for longer strings
-    if len(a) + len(b) > 1024:
-        return find_common_span(a, b)
+    # if len(a) + len(b) > 1024:
+    return find_common_span(a, b)
 
     # Count only inserted text; deletions don't reduce the count.
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
