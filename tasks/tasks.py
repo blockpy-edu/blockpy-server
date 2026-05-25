@@ -503,6 +503,15 @@ def duration_until_success(history, filename, short_threshold=10):
     #return (end_time - start_time).total_seconds()
 
 def _added_chars(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    # Pure append or prepend
+    if b.startswith(a) or a.startswith(b):
+        return max(0, len(b) - len(a))
+    # Skip very large strings
+    if len(b) + len(a) > 1024*100:
+        return max(0, len(b) - len(a))
+
     # Count only inserted text; deletions don't reduce the count.
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
     add = 0
