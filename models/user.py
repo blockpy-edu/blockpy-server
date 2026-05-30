@@ -290,7 +290,7 @@ class User(Base, UserMixin):
 
     @staticmethod
     def is_lti_instructor(given_roles):
-        return any(role.lower() for role in User.STAFF_ROLES if role in given_roles)
+        return any(role.lower() for role in RolePermissions.STAFF_ROLES if role in given_roles)
 
     @staticmethod
     def new_lti_user(service, lti_user_id, lti_email, lti_first_name, lti_last_name):
