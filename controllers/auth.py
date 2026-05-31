@@ -14,7 +14,7 @@ import traceback
 import json
 from functools import wraps
 
-from flask import current_app, g, jsonify, make_response, request, abort
+from flask import current_app, g, jsonify, make_response, request, abort, redirect
 from werkzeug.datastructures import ImmutableMultiDict
 from werkzeug.wrappers import Request
 from flask_jwt_extended import create_access_token, get_jwt_identity, verify_jwt_in_request, \
@@ -28,6 +28,12 @@ from flask import session, g, request, flash, render_template
 from flask_security.core import current_user
 import flask_security
 from controllers.pylti.flask import LTI_SESSION_KEY, LTI, LTIException
+from controllers.pylti.lti13 import (
+    build_login_redirect_url,
+    find_platform,
+    is_lti13_launch,
+    is_lti13_login_initiation,
+)
 from flask_jwt_extended import create_access_token
 
 from controllers.services import ValidUserPermissionLayer, InvalidUserPermissionLayer
@@ -130,6 +136,8 @@ def login_user_if_able():
             # During the login process, we will let the user be anonymous
             return make_user_anonymous(request.remote_addr)
     # If LTI parameters are available, let's try setting that up
+    if is_lti13_login_request(request):
+        return try_lti13_login_initiation()
     if is_lti_launch_request(request):
         return try_lti_login_initial()
     # If a stored LTI session was provided, we can try that instead
@@ -164,6 +172,12 @@ def get_consumer_secrets(app=None):
     }
 
 
+def get_lti13_platforms(app=None):
+    if app is None:
+        app = current_app
+    return app.config.get('LTI13_PLATFORMS', [])
+
+
 def load_logged_in_user():
     """
     If a current_user is available, then logs them in as the current user.
@@ -173,7 +187,7 @@ def load_logged_in_user():
     g.user = current_user
     g.safely = ValidUserPermissionLayer(g.user)
     if session.get(LTI_SESSION_KEY, False):
-        g.lti = LTI(get_consumer_secrets())
+        g.lti = LTI(get_consumer_secrets(), lti13_platforms=get_lti13_platforms())
     if 'lti_course_id' in session and g.user:
         g.course = Course.by_id(session['lti_course_id'])
         g.roles = g.user.get_course_roles(g.course.id)
@@ -192,7 +206,7 @@ def get_user() -> (User, int):
 
 
 def try_lti_login_initial():
-    g.lti = LTI(get_consumer_secrets())
+    g.lti = LTI(get_consumer_secrets(), lti13_platforms=get_lti13_platforms())
     g.lti.verify_request()
     # TODO: Provide any other LTI information that we need
     load_lti_user()
@@ -208,17 +222,18 @@ def load_lti_user():
     Those fields will not be updated if they are found in the session.
     :return:
     """
+    lti_service = session.get('lti_service', "canvas")
     # 1) check whether the user needs to be updated
     old_user = g.user if 'user' in g else None
-    g.user = User.from_lti("canvas",
+    g.user = User.from_lti(lti_service,
                            session["pylti_user_id"],
                            session.get("lis_person_contact_email_primary", ""),
                            session.get("lis_person_name_given", "Canvas"),
                            session.get("lis_person_name_family", "User"))
     g.safely = ValidUserPermissionLayer(g.user)
     # 2) Check the course
-    new_outcome_url = request.form.get('lis_outcome_service_url', "")
-    g.course = Course.from_lti("canvas",
+    new_outcome_url = request.form.get('lis_outcome_service_url', session.get('lis_outcome_service_url', ""))
+    g.course = Course.from_lti(lti_service,
                                session["context_id"],
                                session.get("context_title", ""),
                                g.user.id,
@@ -232,7 +247,9 @@ def load_lti_user():
     # 4) Generally update the LTI status
     session['is_lti_active'] = True
     # Keep track of the chosen oauth_consumer_key
-    g.oauth_consumer_key = request.form.get('oauth_consumer_key', "")
+    g.oauth_consumer_key = request.form.get('oauth_consumer_key',
+                                            session.get('oauth_consumer_key',
+                                                        session.get('lti_client_id', "")))
     # 5) If the user changed, then log them in again
     handle_login_change(old_user)
 
@@ -284,7 +301,27 @@ def is_lti_launch_request(request) -> bool:
     Determines if the request is an LTI launch request. Does NOT check that the request
     is a *valid* LTI launch request, just that it has the potential to be one.
     """
-    return request.method == 'POST' and request.form.get('lti_message_type') == 'basic-lti-launch-request'
+    return request.method == 'POST' and (
+        request.form.get('lti_message_type') == 'basic-lti-launch-request'
+        or is_lti13_launch(request.form)
+    )
+
+
+def is_lti13_login_request(request) -> bool:
+    return request.method in ('GET', 'POST') and is_lti13_login_initiation(request.values)
+
+
+def try_lti13_login_initiation():
+    platform = find_platform(get_lti13_platforms(), request.values.get('iss'),
+                             request.values.get('client_id'),
+                             request.values.get('lti_deployment_id'))
+    if platform is None:
+        raise LTIException("Unknown LTI 1.3 login initiation platform")
+    session['lti13_state'] = uuid.uuid4().hex
+    session['lti13_nonce'] = uuid.uuid4().hex
+    return redirect(build_login_redirect_url(platform, request.values,
+                                             session['lti13_state'],
+                                             session['lti13_nonce']))
 
 
 def is_stored_lti_launch_request(request) -> bool:
@@ -318,7 +355,8 @@ def try_lti_login_stored():
     try:
         verify_jwt_in_request()
         user_id = get_jwt_identity()
-        g.lti = LTI(get_consumer_secrets(), use_request=get_jwt())
+        g.lti = LTI(get_consumer_secrets(), use_request=get_jwt(),
+                    lti13_platforms=get_lti13_platforms())
         load_jwt_user(user_id, get_jwt())
         g.access_token = create_user_token()
         return True

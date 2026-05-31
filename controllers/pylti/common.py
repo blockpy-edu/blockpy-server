@@ -212,10 +212,9 @@ def _post_patched_request(consumers, lti_key, body,
     http._normalize_headers = monkey_patch_function
     
     log.debug("key %s", lti_key)
-    log.debug("secret %s", secret)
     log.debug("url %s", url)
     log.debug("response %s", response)
-    log.debug("content %s", format(content))
+    log.debug("content length %s", len(content) if content is not None else 0)
 
     return response, content
 
@@ -285,11 +284,10 @@ def verify_request_common(consumers, url, method, headers, params):
     :return: is request valid
     """
 
-    log.debug("consumers %s", consumers)
     log.debug("url %s", url)
     log.debug("method %s", method)
-    log.debug("headers %s", headers)
-    log.debug("params %s", params)
+    log.debug("header keys %s", list(headers.keys()) if hasattr(headers, 'keys') else [])
+    log.debug("param keys %s", list(params.keys()) if hasattr(params, 'keys') else [])
 
     oauth_server = LTIOAuthServer(consumers)
     

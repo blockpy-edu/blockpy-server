@@ -8,6 +8,7 @@ import json
 
 from flask import session as flask_session, current_app, Flask, g
 from flask import request as flask_request
+from models.enums import clean_role
 
 from .common import (
     LTI_SESSION_KEY,
@@ -22,9 +23,16 @@ from .common import (
     LTINotInSessionException,
     LTIPostMessageException, parse_read_result
 )
+from .lti13 import (
+    parse_lti13_endpoint,
+    post_ags_score,
+    read_ags_result,
+    verify_lti13_launch,
+)
 
 
 log = logging.getLogger('pylti.flask')  # pylint: disable=invalid-name
+LTI_SESSION_PROPERTY_LIST_KEY = 'lti_session_property_list'
 
 
 class LTI:
@@ -36,8 +44,10 @@ class LTI:
     created requests (taken from an access token).
     """
 
-    def __init__(self, consumer_data, use_session=False, use_request=False):
+    def __init__(self, consumer_data=None, use_session=False, use_request=False,
+                 lti13_platforms=None):
         self.consumer_data = consumer_data
+        self.lti13_platforms = lti13_platforms or []
 
         self.use_session = bool(use_session)
         self._internal_session = use_session
@@ -105,6 +115,41 @@ class LTI:
         """
         return self.consumer_data
 
+    def _platforms(self):
+        return self.lti13_platforms
+
+    def _stored_lti_properties(self):
+        return self.session.get(LTI_SESSION_PROPERTY_LIST_KEY, [])
+
+    def _store_lti_properties(self, values):
+        stored_keys = []
+        for key, value in values.items():
+            if value is None:
+                continue
+            self.session[key] = value
+            stored_keys.append(key)
+        self.session[LTI_SESSION_PROPERTY_LIST_KEY] = stored_keys
+
+    def _clear_lti_properties(self):
+        for prop in self._stored_lti_properties():
+            if prop in self.session:
+                del self.session[prop]
+        for prop in LTI_PROPERTY_LIST:
+            if prop in self.session:
+                del self.session[prop]
+        if self.session.get('pylti_user_id', None):
+            del self.session['pylti_user_id']
+        self.session.pop(LTI_SESSION_PROPERTY_LIST_KEY, None)
+
+    def _is_lti13_endpoint(self, endpoint=None):
+        if parse_lti13_endpoint(endpoint):
+            return True
+        if endpoint is None and parse_lti13_endpoint(self.session.get('lis_outcome_service_url')):
+            return True
+        if endpoint is None and parse_lti13_endpoint(self.session.get('lis_result_sourcedid')):
+            return True
+        return False
+
     @property
     def key(self):  # pylint: disable=no-self-use
         """
@@ -151,9 +196,14 @@ class LTI:
         log.debug("is_role %s", role)
         roles = self.session['roles'].split(',')
         if role in LTI_ROLES:
-            role_list = LTI_ROLES[role]
+            role_list = {value.lower() for value in LTI_ROLES[role]}
+            cleaned_roles = set()
+            for raw_role in roles:
+                cleaned_role, _ = clean_role(raw_role.strip())
+                cleaned_roles.add(cleaned_role.lower())
+                cleaned_roles.add(raw_role.strip().lower())
             # find the intersection of the roles
-            roles = set(role_list) & set(roles)
+            roles = role_list & cleaned_roles
             is_user_role_there = len(roles) >= 1
             log.debug(
                 "is_role roles_list=%s role=%s in list=%s", role_list,
@@ -199,32 +249,33 @@ class LTI:
         log.debug('verify_request?')
         #print(self._consumers(), url, method, headers, params)
         try:
-            verify_request_common(self._consumers(), url, method, headers, params)
+            if params.get('id_token', None):
+                launch_data = verify_lti13_launch(self._platforms(), params, self.session)
+            else:
+                verify_request_common(self._consumers(), url, method, headers, params)
+                launch_data = {prop: params[prop] for prop in LTI_PROPERTY_LIST
+                               if params.get(prop, None) is not None}
+                if params.get('user_id', None):
+                    launch_data['pylti_user_id'] = params['user_id']
             log.debug('verify_request success')
 
             # All good to go, store all of the LTI params into a
             # session dict for use in views
-            for prop in LTI_PROPERTY_LIST:
-                if params.get(prop, None) is not None:
-                    log.debug("params %s=%s", prop, params.get(prop, None))
-                    self.session[prop] = params[prop]
-            if params.get('user_id', None):
-                self.session['pylti_user_id'] = params['user_id']
-            
+            self._store_lti_properties(launch_data)
             # Set logged in session key
             self.session[LTI_SESSION_KEY] = True
             return True
         except LTIException as e:
-            for prop in LTI_PROPERTY_LIST:
-                if self.session.get(prop, None):
-                    del self.session[prop]
-            if self.session.get('pylti_user_id', None):
-                del self.session['pylti_user_id']
-            
+            self._clear_lti_properties()
             self.session[LTI_SESSION_KEY] = False
             raise
 
     def get_grade(self, endpoint=None):
+        if self._is_lti13_endpoint(endpoint):
+            course_endpoint = parse_lti13_endpoint(self.response_url)
+            submission_endpoint = parse_lti13_endpoint(endpoint or self.lis_result_sourcedid)
+            if course_endpoint and submission_endpoint:
+                return read_ags_result(self._platforms(), course_endpoint, submission_endpoint)
         message_identifier_id = self.message_identifier_id()
         operation = 'readResult'
         if endpoint is None:
@@ -248,14 +299,24 @@ class LTI:
         :return: True if post successful and grade valid
         :exception: LTIPostMessageException if call failed
         """
+        score = float(grade) if grade is not None else None
+        if self._is_lti13_endpoint(endpoint):
+            course_endpoint = parse_lti13_endpoint(self.response_url)
+            submission_endpoint = parse_lti13_endpoint(endpoint or self.lis_result_sourcedid)
+            if score is None or not (0 <= score <= 1.0):
+                return False
+            if not course_endpoint or not submission_endpoint:
+                raise LTIPostMessageException("Invalid LTI 1.3 AGS configuration")
+            post_ags_score(self._platforms(), course_endpoint, submission_endpoint, score,
+                           comment=message, needs_review=needs_review,
+                           when_submitted_at=when_submitted_at)
+            return True
         message_identifier_id = self.message_identifier_id()
         operation = 'replaceResult'
         if endpoint is None:
             lis_result_sourcedid = self.lis_result_sourcedid
         else:
             lis_result_sourcedid = endpoint
-        # # edX devbox fix
-        score = float(grade) if grade is not None else None
         if score is None or 0 <= score <= 1.0:
             xml = generate_request_xml(
                 message_identifier_id, operation, lis_result_sourcedid,
@@ -308,18 +369,18 @@ class LTI:
         """
         Invalidates session
         """
-        for prop in LTI_PROPERTY_LIST:
-            if self.session.get(prop, None):
-                del self.session[prop]
-        if self.session.get('pylti_user_id', None):
-            del self.session['pylti_user_id']
+        self._clear_lti_properties()
         self.session[LTI_SESSION_KEY] = False
 
     def to_json(self):
         frozen_session = {}
-        for prop in LTI_PROPERTY_LIST:
+        for prop in self._stored_lti_properties():
             if self.session.get(prop, None) is not None:
                 frozen_session[prop] = self.session[prop]
-        if self.session.get('pylti_user_id', None):
-            frozen_session['user_id'] = self.session['pylti_user_id']
+        if not frozen_session:
+            for prop in LTI_PROPERTY_LIST:
+                if self.session.get(prop, None) is not None:
+                    frozen_session[prop] = self.session[prop]
+            if self.session.get('pylti_user_id', None):
+                frozen_session['user_id'] = self.session['pylti_user_id']
         return frozen_session

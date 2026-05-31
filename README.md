@@ -316,6 +316,25 @@ just want to use the general CORGIS Github instance. No further work is required
 Your `CONSUMER_KEY` uniquely identifies you to Canvas, `CONSUMER_SECRET` is to be shared with instructors using your
 BlockPy instance. The goal is to keep it relatively secretive. You can choose anything you want for your Key and Secret.
 
+For LTI 1.3 launches and LTI Advantage AGS grade passback, configure one or more platforms with `LTI13_PLATFORMS` in
+your instance configuration. Each entry should provide an `issuer`, `client_id`, `auth_login_url`, `auth_token_url`,
+`jwks_url`, and either `client_secret` or a `private_key` / `private_key_file` (plus optional `kid`). You can also set
+`deployment_ids` and `service` when you need to scope a platform more narrowly or keep Canvas-specific behavior.
+
+```python
+LTI13_PLATFORMS = [{
+    "issuer": "https://canvas.instructure.com",
+    "client_id": "YOUR_DEVELOPER_KEY_ID",
+    "deployment_ids": ["YOUR_DEPLOYMENT_ID"],
+    "auth_login_url": "https://canvas.instructure.com/api/lti/authorize_redirect",
+    "auth_token_url": "https://canvas.instructure.com/login/oauth2/token",
+    "jwks_url": "https://canvas.instructure.com/api/lti/security/jwks",
+    "private_key_file": "/full/path/lti13_private_key.pem",
+    "kid": "OPTIONAL_JWK_KEY_ID",
+    "service": "canvas"
+}]
+```
+
 ## Database setup
 
 You're going to need to create a new Postgres database and prepopulate some schemas. Our database is named `blockpydb`.
@@ -719,4 +738,3 @@ CC106 --> SSC
 
 @enduml
 ```
-
