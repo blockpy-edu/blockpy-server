@@ -241,6 +241,12 @@ def to_progsnap_event(log, order_id, code_states, latest_code_states, scores, su
     )
 
 
+  
+def clean_utf8(value):
+    if isinstance(value, str):
+        return value.encode("utf-8", "surrogatepass").decode("utf-8", "ignore")
+    return value
+
 def format_progsnap_event_row(log_id, order_id, subject_id, assignment_id, course_id, submission_id, event_type,
                               code_state_id, parent_event_id, client_timestamp, client_timezone,
                               score, edit_type, compile_message_type, compile_message_data,
@@ -252,10 +258,10 @@ def format_progsnap_event_row(log_id, order_id, subject_id, assignment_id, cours
         log_id, order_id, subject_id, assignment_id, course_id, submission_id,
         event_type, code_state_id, parent_event_id,
         client_timestamp, client_timezone,
-        score, edit_type, compile_message_type, compile_message_data,
+        score, edit_type, compile_message_type, clean_utf8(compile_message_data),
         code_state_section,
-        execution_result, program_input, program_output, program_error_output,
-        intervention_category, intervention_type, intervention_message,
+        clean_utf8(execution_result), clean_utf8(program_input), clean_utf8(program_output), clean_utf8(program_error_output),
+        intervention_category, intervention_type, clean_utf8(intervention_message),
         server_timestamp, server_timezone, tool_instances
     ]
 

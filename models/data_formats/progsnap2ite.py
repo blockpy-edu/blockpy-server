@@ -173,7 +173,6 @@ def get_submission_lookup(course_id):
         submission_lookup[submission_identification] = sub.id
     return submission_lookup
 
-
 @profile
 def generate_maintable(cursor, connection, course_id, assignment_group_ids, user_ids, exclude):
     submission_lookup = get_submission_lookup(course_id)
