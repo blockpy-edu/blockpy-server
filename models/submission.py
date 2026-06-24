@@ -812,12 +812,13 @@ class Submission(EnhancedBase):
         offset = time.astimezone().utcoffset()
         return int(round(1000 * (time + offset).timestamp()))
 
-    def track_event(self, event_log, submission_last_updated):
+    def track_event(self, event_log):
         event_type = event_log.event_type
         message = event_log.message
 
-        # Submission counts are now updated asynchronously by the background
-        # process_submission_count_events task; nothing to do here for counts.
+        # Submission counts are updated asynchronously by the background
+        # process_submission_count_events task. Only non-count state updates
+        # (such as storing the latest intervention feedback text) remain here.
 
         # Disabling for now due to performance concerns
         #self.events += 1

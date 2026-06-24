@@ -334,12 +334,11 @@ def log_event():
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can log events for a submission.")
     # Make the entry
-    submission_last_updated = submission.date_modified
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                              event_type, file_path, category, label, message, extended=extended)
     # Handle certain events specially
     try:
-        submission.track_event(new_log, submission_last_updated)
+        submission.track_event(new_log)
     except Exception as e:
         return ajax_failure("Could not track the event: " + str(e))
     return ajax_success({"log_id": new_log.id})
