@@ -1,0 +1,19 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}Instructor Dashboard{% endblock %}
+
+{% block extrahead %}
+<script type="text/javascript">
+    // Inject server-side variables consumed by the React app's API client
+    window.$URL_ROOT = {{ request.url_root|tojson|safe }};
+    window.accessToken = {{ (g.access_token or "")|tojson }};
+    window.currentUserId = {{ (g.user.id if g.user else 0)|tojson }};
+</script>
+{% endblock %}
+
+{% block body %}
+{# The React app mounts into #root which is provided by this div. #}
+<div id="root" style="min-height:80vh;"></div>
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/blockpy_react/assets/index.css') }}">
+<script type="module" src="{{ url_for('static', filename='libs/blockpy_react/assets/index.js') }}"></script>
+{% endblock %}
