@@ -668,4 +668,119 @@ def quiz_report(user_id, assignment_id, course_id,
         out.write(render_template("reports/quiz_summary.html", stats=processed))
     report.finish(result="index.html",
                   message=f"Task finished. Processed {len(submissions)} quiz submissions.")
-    return processed
+
+
+# ---------------------------------------------------------------------------
+# Asynchronous submission-counts daemon
+# ---------------------------------------------------------------------------
+
+SUBMISSION_COUNTS_BATCH_SIZE = 500
+
+from huey import crontab
+from common.dates import datetime_to_epoch
+from models.log_tables import SubmissionLog
+from models.counters.submission_counts import SubmissionCounts
+from models.counters.submission_counts_checkpoint import SubmissionCountsCheckpoint
+
+
+class _EventLogFixer:
+    """
+    Stateful helper that fills in derived fields for certain SubmissionLog
+    event types before they are fed into SubmissionCounts.track_event.
+
+    Mirrors the EventLogFixer used by the add_missing_counters script command.
+    """
+    def __init__(self):
+        self.started_playing_at = {}
+        self.previous_position = {}
+
+    def fix_if_needed(self, submission_id, event, full_data):
+        if event.event_type == "Resource.View" and event.category == "reading":
+            if event.label == "watch":
+                if "duration" not in full_data:
+                    if full_data.get("event") == "playing":
+                        self.started_playing_at[submission_id] = full_data.get("time")
+                    elif full_data.get("event") == "pause":
+                        if submission_id in self.started_playing_at:
+                            duration = full_data.get("time", 0) - self.started_playing_at[submission_id]
+                            full_data["duration"] = duration
+                            del self.started_playing_at[submission_id]
+                        else:
+                            full_data["duration"] = full_data.get("time", 0)
+            elif event.label == "read":
+                if "moved" not in full_data:
+                    position = full_data.get("position")
+                    if submission_id in self.previous_position:
+                        full_data["moved"] = position != self.previous_position[submission_id]
+                    else:
+                        full_data["moved"] = True
+                    self.previous_position[submission_id] = position
+
+
+@current_app.huey.context_task(ctx, context=True)
+def process_submission_count_events(task=None):
+    """
+    Background task: process a batch of new SubmissionLog entries into the
+    submission_counts table, then re-enqueue itself if more remain.
+
+    The last-processed log id is persisted in submission_counts_checkpoint so
+    that the task can always resume where it left off after a restart.
+    """
+    checkpoint = SubmissionCountsCheckpoint.get_or_create('default')
+    last_id = checkpoint.last_log_id
+
+    events = (
+        SubmissionLog.query
+        .filter(SubmissionLog.id > last_id)
+        .order_by(SubmissionLog.id.asc())
+        .limit(SUBMISSION_COUNTS_BATCH_SIZE)
+        .all()
+    )
+
+    if not events:
+        return
+
+    fixer = _EventLogFixer()
+    # Track the most recent processed timestamp per submission within this
+    # batch so the gap calculation in track_event is correct.
+    submission_last_when: dict[int, float] = {}
+
+    for event in events:
+        submission_id = event.submission_id
+        when = (
+            int(event.client_timestamp) / 1000
+            if event.client_timestamp
+            else datetime_to_epoch(event.date_created)
+        )
+        full_data = SubmissionCounts.parse_message(event) or {}
+        fixer.fix_if_needed(submission_id, event, full_data)
+
+        submission_last_updated = submission_last_when.get(submission_id, when)
+        SubmissionCounts.track_event(
+            submission_id,
+            event.event_type,
+            full_data,
+            when=when,
+            category=event.category,
+            label=event.label,
+            submission_last_updated=submission_last_updated,
+        )
+        submission_last_when[submission_id] = when
+
+    SubmissionCountsCheckpoint.advance('default', events[-1].id)
+
+    # If a full batch was returned there are likely more events waiting;
+    # re-enqueue immediately so processing continues without waiting for the
+    # next scheduled run.
+    if len(events) == SUBMISSION_COUNTS_BATCH_SIZE:
+        process_submission_count_events()
+
+
+@current_app.huey.periodic_task(crontab(minute='*'))
+def schedule_submission_count_processing():
+    """
+    Periodic entry-point: enqueue the submission-counts processing task once
+    per minute.  The task itself re-enqueues immediately when a full batch is
+    returned, so high-volume deployments keep up without waiting a full minute.
+    """
+    process_submission_count_events()

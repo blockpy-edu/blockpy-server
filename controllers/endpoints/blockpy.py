@@ -20,7 +20,6 @@ from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
 from controllers.pylti.post_grade import get_groups_submissions, calculate_submissions_score,  grade_submission
 from models.assignment_tag import AssignmentTag
-from models.counters import SubmissionCounts
 from models.course import Course
 
 from models import db
@@ -254,16 +253,12 @@ def save_student_file(filename, course_id, user):
                 current_app.config["MAXIMUM_CODE_SIZE"], len(code)
             ))
     # Perform update
-    submission_last_updated = submission.date_modified
     # TODO: What if submission's assignment version conflicts with current assignments' version?
     version_change = submission.assignment.version != submission.assignment_version
     new_code = submission.save_code(filename, code, part_id)
     # TODO: What is a grader is uploading code for a student?
     file_path = filename + ("#" + part_id if part_id else "")
-    SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {
-        "code": code,
-        "file_path": file_path,
-    }, submission_last_updated=submission_last_updated)
+    # Submission counts are updated asynchronously by process_submission_count_events.
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
                    course_id, submission.user_id,
                    SubmissionLogEvent.BLOCKPY_FILE_EDIT,

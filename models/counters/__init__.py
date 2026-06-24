@@ -35,3 +35,4 @@ Assignment group counts
 
 """
 from models.counters.submission_counts import SubmissionCounts
+from models.counters.submission_counts_checkpoint import SubmissionCountsCheckpoint

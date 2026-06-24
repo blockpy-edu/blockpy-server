@@ -432,10 +432,8 @@ class Submission(EnhancedBase):
             extra_files=build_extra_starting_files(assignment.extra_starting_files),
             assignment_version=assignment.version,
         )
-        models.SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {
-            "file_path": "answer.py",
-            "code": assignment.starting_code
-        }, submission_last_updated=submission.date_modified)
+        # Submission counts for this initial event are handled asynchronously
+        # by the process_submission_count_events background task.
         # TODO: Log extra starting files!
         SubmissionLog.new(
             submission.id,
@@ -817,11 +815,9 @@ class Submission(EnhancedBase):
     def track_event(self, event_log, submission_last_updated):
         event_type = event_log.event_type
         message = event_log.message
-        full_data = models.SubmissionCounts.parse_message(event_log)
-        models.SubmissionCounts.track_event(self.id, event_type, full_data,
-                                            submission_last_updated=submission_last_updated,
-                                            category=event_log.category,
-                                            label=event_log.label)
+
+        # Submission counts are now updated asynchronously by the background
+        # process_submission_count_events task; nothing to do here for counts.
 
         # Disabling for now due to performance concerns
         #self.events += 1
