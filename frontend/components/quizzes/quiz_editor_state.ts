@@ -160,6 +160,7 @@ export const QUESTION_TYPE_LABELS: {[k: string]: string} = {
     numerical_question: 'Numerical',
     essay_question: 'Essay',
     text_only_question: 'Text Only',
+    likert_question: 'Likert (Survey Matrix)',
 };
 
 export class QuizEditorQuestion {
@@ -213,6 +214,13 @@ export class QuizEditorQuestion {
     fimbBlanks: ko.ObservableArray<BlankEntry>;
     fimb_check_type: ko.Observable<string>; // 'exact' | 'regex'
     fimb_wrong_any: ko.Observable<string>;
+
+    // likert
+    /** Scale options shared by all statements (column headers) */
+    likert_options: ko.ObservableArray<AnswerOption>;
+    /** Correct option per statement by index (empty = survey mode, no grading) */
+    likert_correct: ko.ObservableArray<ko.Observable<string>>;
+    likert_wrong_any: ko.Observable<string>;
 
     // ── UI state ──────────────────────────────────────────────────────────
     expanded: ko.Observable<boolean>;
@@ -319,6 +327,16 @@ export class QuizEditorQuestion {
             Object.entries(rawSaFeedback).map(([a, m]) => new FeedbackEntry(a, m))
         );
 
+        // likert
+        const rawLikertOptions: string[] = Array.isArray(question.options) ? question.options : [];
+        this.likert_options = ko.observableArray(rawLikertOptions.map(o => new AnswerOption(o)));
+        const rawLikertCorrect: {[k: string]: string} =
+            (typeof check.correct === 'object' && !Array.isArray(check.correct)) ? check.correct : {};
+        this.likert_correct = ko.observableArray(
+            rawStatements.map((_, i) => ko.observable(rawLikertCorrect[String(i)] || ''))
+        );
+        this.likert_wrong_any = ko.observable(check.wrong_any || '');
+
         // UI
         this.expanded = ko.observable(false);
 
@@ -328,13 +346,16 @@ export class QuizEditorQuestion {
             this.ma_correct(newAnswers.map(a => currentCorrect.has(a.text())));
         });
 
-        // Derived: when statements list changes, keep mat_correct in sync
+        // Derived: when statements list changes, keep mat_correct and likert_correct in sync
         this.statements.subscribe((newStatements: AnswerOption[]) => {
-            const current = this.mat_correct();
-            const padded = newStatements.map((_, i) =>
-                current[i] || ko.observable('')
-            );
-            this.mat_correct(padded);
+            const currentMat = this.mat_correct();
+            this.mat_correct(newStatements.map((_, i) =>
+                currentMat[i] || ko.observable('')
+            ));
+            const currentLikert = this.likert_correct();
+            this.likert_correct(newStatements.map((_, i) =>
+                currentLikert[i] || ko.observable('')
+            ));
         });
     }
 
@@ -354,12 +375,20 @@ export class QuizEditorQuestion {
     addStatement() {
         this.statements.push(new AnswerOption(''));
         this.mat_correct.push(ko.observable(''));
+        this.likert_correct.push(ko.observable(''));
     }
     removeStatement(s: AnswerOption) {
         const idx = this.statements.indexOf(s);
         this.statements.remove(s);
-        if (idx >= 0) { this.mat_correct.splice(idx, 1); }
+        if (idx >= 0) {
+            this.mat_correct.splice(idx, 1);
+            this.likert_correct.splice(idx, 1);
+        }
     }
+
+    // --- Likert options management ------------------------------------------
+    addLikertOption() { this.likert_options.push(new AnswerOption('')); }
+    removeLikertOption(o: AnswerOption) { this.likert_options.remove(o); }
 
     // --- Multiple dropdowns blank management --------------------------------
     addMdBlank() { this.mdBlanks.push(new BlankEntry('', [], '')); }
@@ -416,6 +445,9 @@ export class QuizEditorQuestion {
                 ans[b.key()] = b.options().map(o => o.text());
             });
             base.answers = ans;
+        } else if (type === QuizQuestionTypes.likert_question) {
+            base.statements = this.statements().map(s => s.text());
+            base.options = this.likert_options().map(o => o.text());
         }
         // fill_in, short_answer, numerical, essay, text_only, true_false:
         // no 'answers' field in instructions
@@ -510,6 +542,23 @@ export class QuizEditorQuestion {
             }
 
             // essay and text_only have no check fields
+
+            case QuizQuestionTypes.likert_question: {
+                // Only include `correct` if at least one answer is specified (non-survey mode)
+                const correctMap: {[k: string]: string} = {};
+                this.likert_correct().forEach((obs, i) => {
+                    const v = obs().trim();
+                    if (v) { correctMap[String(i)] = v; }
+                });
+                if (Object.keys(correctMap).length) {
+                    check.correct = correctMap;
+                    if (this.likert_wrong_any().trim()) {
+                        check.wrong_any = this.likert_wrong_any().trim();
+                    }
+                }
+                break;
+            }
+
             default:
                 break;
         }

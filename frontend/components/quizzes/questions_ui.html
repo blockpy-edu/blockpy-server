@@ -137,6 +137,37 @@
                     <!-- Multiple Fill in the Blank Question -->
                     <div data-bind="case: 'fill_in_multiple_blanks_question'">
                     </div>
+                    <!-- Likert Question -->
+                    <div data-bind="case: 'likert_question'">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm text-center">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left" style="min-width:200px"></th>
+                                        <!-- ko foreach: options -->
+                                        <th data-bind="text: $data"></th>
+                                        <!-- /ko -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- ko foreach: statements -->
+                                    <tr>
+                                        <td class="text-left" data-bind="markdowned: {value: $data}"></td>
+                                        <!-- ko foreach: $parent.options -->
+                                        <td>
+                                            <input type="radio"
+                                                data-bind="checked: $parents[1].student[String($parentContext.$index())],
+                                                           value: $data,
+                                                           disable: $component.isReadOnly(),
+                                                           attr: {name: 'question-likert-'+$parentContext.$parentContext.$index()+'-'+$parentContext.$index()}">
+                                        </td>
+                                        <!-- /ko -->
+                                    </tr>
+                                    <!-- /ko -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                     <!-- Else -->
                     <div data-bind="case: $default">
                         I have no idea what this is!

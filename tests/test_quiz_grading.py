@@ -566,3 +566,77 @@ class TestCheckQuizQuestion:
         result = check_quiz_question(question, check, "true")
         assert isinstance(result, tuple)
         assert len(result) == 3
+
+
+# ---------------------------------------------------------------------------
+# likert_question
+# ---------------------------------------------------------------------------
+
+class TestLikertQuestion:
+    Q = {
+        "q1": {
+            "type": "likert_question",
+            "points": 3,
+            "statements": ["I enjoy Python.", "Tests are useful.", "KO is fun."],
+            "options": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        }
+    }
+    C = {
+        "q1": {
+            "correct": {"0": "Agree", "1": "Strongly Agree", "2": "Neutral"},
+        }
+    }
+
+    def test_all_correct(self):
+        student = {"0": "Agree", "1": "Strongly Agree", "2": "Neutral"}
+        result = grade(self.Q, self.C, {"q1": student})
+        assert result.feedbacks["q1"]["correct"] is True
+        assert result.score == pytest.approx(1.0)
+
+    def test_all_wrong(self):
+        student = {"0": "Disagree", "1": "Disagree", "2": "Disagree"}
+        result = grade(self.Q, self.C, {"q1": student})
+        assert result.feedbacks["q1"]["correct"] is False
+        assert result.feedbacks["q1"]["score"] == pytest.approx(0.0)
+
+    def test_partial_credit(self):
+        student = {"0": "Agree", "1": "Disagree", "2": "Neutral"}
+        result = grade(self.Q, self.C, {"q1": student})
+        # statements 0 and 2 correct, 1 wrong → 2/3
+        assert result.feedbacks["q1"]["score"] == pytest.approx(2 / 3)
+        assert result.feedbacks["q1"]["correct"] is False
+
+    def test_wrong_any_feedback(self):
+        c = {"q1": {
+            "correct": {"0": "Agree", "1": "Strongly Agree", "2": "Neutral"},
+            "wrong_any": "Some answers were incorrect.",
+        }}
+        student = {"0": "Disagree", "1": "Strongly Agree", "2": "Neutral"}
+        result = grade(self.Q, c, {"q1": student})
+        assert result.feedbacks["q1"]["message"] == "Some answers were incorrect."
+
+    def test_survey_mode_no_correct_key(self):
+        c = {"q1": {}}
+        student = {"0": "Disagree", "1": "Neutral", "2": "Agree"}
+        result = grade(self.Q, c, {"q1": student})
+        assert result.feedbacks["q1"]["correct"] is True
+        assert result.feedbacks["q1"]["score"] == pytest.approx(1.0)
+
+    def test_survey_mode_empty_student(self):
+        c = {"q1": {}}
+        result = grade(self.Q, c, {"q1": {}})
+        assert result.feedbacks["q1"]["correct"] is True
+
+    def test_no_statements_returns_correct(self):
+        q = {"q1": {"type": "likert_question", "points": 1, "statements": [], "options": []}}
+        c = {"q1": {"correct": {}}}
+        result = grade(q, c, {"q1": {}})
+        assert result.feedbacks["q1"]["correct"] is True
+
+    def test_partial_student_answers(self):
+        """Unanswered statements are treated as wrong when correct key exists."""
+        student = {"0": "Agree"}  # statements 1 and 2 not answered
+        result = grade(self.Q, self.C, {"q1": student})
+        # only statement 0 correct → 1/3
+        assert result.feedbacks["q1"]["score"] == pytest.approx(1 / 3)
+        assert result.feedbacks["q1"]["correct"] is False

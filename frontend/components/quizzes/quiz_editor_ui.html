@@ -147,6 +147,7 @@
                         <option value="numerical_question">Numerical</option>
                         <option value="essay_question">Essay</option>
                         <option value="text_only_question">Text Only</option>
+                        <option value="likert_question">Likert (Survey Matrix)</option>
                     </select>
                 </div>
                 <div class="form-group col-md-2">
@@ -471,6 +472,67 @@
                 </div>
                 <div data-bind="case: 'text_only_question'">
                     <p class="text-muted small">Text-only questions display content only. No answer key needed.</p>
+                </div>
+
+                <!-- ── Likert (Survey Matrix) ────────────────────────────── -->
+                <div data-bind="case: 'likert_question'">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Statements (rows)
+                                <button class="btn btn-sm btn-outline-secondary ml-2"
+                                    data-bind="click: addStatement">+ Add</button>
+                            </label>
+                            <!-- ko foreach: statements -->
+                            <div class="input-group mb-1">
+                                <input type="text" class="form-control"
+                                    placeholder="Statement text"
+                                    data-bind="value: text">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-danger"
+                                        data-bind="click: ()=>$parent.removeStatement($data)">✕</button>
+                                </div>
+                            </div>
+                            <!-- /ko -->
+                        </div>
+                        <div class="col-md-6">
+                            <label>Scale Options (columns)
+                                <button class="btn btn-sm btn-outline-secondary ml-2"
+                                    data-bind="click: addLikertOption">+ Add</button>
+                            </label>
+                            <!-- ko foreach: likert_options -->
+                            <div class="input-group mb-1">
+                                <input type="text" class="form-control"
+                                    placeholder="e.g. Strongly Agree"
+                                    data-bind="value: text">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-danger"
+                                        data-bind="click: ()=>$parent.removeLikertOption($data)">✕</button>
+                                </div>
+                            </div>
+                            <!-- /ko -->
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="text-muted small">
+                        Correct Answers are optional. Leave all blank for survey mode (always full credit).
+                    </p>
+                    <label>Correct Answer per Statement</label>
+                    <!-- ko foreach: statements -->
+                    <div class="input-group mb-1">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"
+                                  data-bind="text: text() || ('Statement '+($index()+1))"></span>
+                        </div>
+                        <select class="form-control"
+                            data-bind="value: $parent.likert_correct()[$index()],
+                                       optionsCaption: '— no correct answer —',
+                                       options: $parent.likert_options().map(o=>o.text())"></select>
+                    </div>
+                    <!-- /ko -->
+                    <div class="form-group mt-2">
+                        <label>Wrong-Answer Fallback Feedback <small class="text-muted">(only used when correct answers are set)</small></label>
+                        <input type="text" class="form-control" data-bind="value: likert_wrong_any">
+                    </div>
                 </div>
 
             </div><!-- /switch -->
