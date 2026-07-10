@@ -42,8 +42,8 @@
     "src/util.js"() {
       var Sk2 = {};
       Sk2.build = {
-        githash: "35b8d84b",
-        date: "2026-01-31T18:05:28.612Z"
+        githash: "04c38538",
+        date: "2026-07-10T15:28:28.100Z"
       };
       Sk2.global = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
       Sk2.exportSymbol = function(name, object) {
