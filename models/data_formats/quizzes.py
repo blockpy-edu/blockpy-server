@@ -225,6 +225,23 @@ def check_quiz_question(question, check, student) -> (float, bool, list):
         return sum(corrects) / len(corrects) if corrects else 0, all(corrects), message
     elif question.get('type') in ('text_only_question', 'essay_question'):
         return 1, True, "Correct"
+    elif question.get('type') == 'likert_question':
+        statements = question.get('statements', [])
+        if not statements:
+            return 1, True, "Correct"
+        if 'correct' not in check:
+            # Survey mode: no answer key, always full credit
+            return 1, True, "Correct"
+        correct_map = check.get('correct', {})
+        corrects = [
+            student.get(str(i)) == correct_map.get(str(i))
+            for i in range(len(statements))
+        ]
+        all_correct = all(corrects)
+        wrong_any = check.get('wrong_any', 'Incorrect')
+        message = 'Correct' if all_correct else wrong_any
+        score = sum(corrects) / len(corrects) if corrects else 0
+        return score, all_correct, message
     return None
 
 

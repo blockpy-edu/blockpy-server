@@ -18,7 +18,8 @@ export enum QuizQuestionTypes {
     essay_question="essay_question",
     file_upload_question="file_upload_question",
 
-    numerical_question="numerical_question"
+    numerical_question="numerical_question",
+    likert_question="likert_question"
 }
 
 export const clearValue = (question: Question) => {
@@ -29,6 +30,7 @@ export const clearValue = (question: Question) => {
             return question.student.map((v: any) => v(undefined));
         case QuizQuestionTypes.multiple_dropdowns_question:
         case QuizQuestionTypes.fill_in_multiple_blanks_question:
+        case QuizQuestionTypes.likert_question:
             for (const key in question.student) {
                 question.student[key]('');
             }
@@ -59,6 +61,13 @@ export const getDefaultValue = (question: Question, answer: any): any => {
                     .extend({ rateLimit: { method: "notifyWhenChangesStop", timeout: 400 } });
             });
             return fimbResult;
+        case QuizQuestionTypes.likert_question:
+            let likertResult: {[key: string]: ko.Observable} = {};
+            (question.statements || []).forEach((_: any, i: number) => {
+                const key = String(i);
+                likertResult[key] = ko.observable(answer ? answer[key] || '' : '');
+            });
+            return likertResult;
         case QuizQuestionTypes.numerical_question:
         case QuizQuestionTypes.essay_question:
         case QuizQuestionTypes.short_answer_question:
@@ -83,6 +92,7 @@ export const subscribeToStudent = (question: Question): ko.Observable[] => {
             return question.student;
         case QuizQuestionTypes.multiple_dropdowns_question:
         case QuizQuestionTypes.fill_in_multiple_blanks_question:
+        case QuizQuestionTypes.likert_question:
             return Object.values(question.student);
         case QuizQuestionTypes.multiple_answers_question:
         default:
@@ -96,6 +106,7 @@ export const getValue = (question: Question): any => {
             return question.student.map((value: ko.Observable) => value());
         case QuizQuestionTypes.multiple_dropdowns_question:
         case QuizQuestionTypes.fill_in_multiple_blanks_question:
+        case QuizQuestionTypes.likert_question:
             let result: {[key: string]: string} = {};
             Object.entries(question.student).forEach(([key, value]: [string, ko.Observable])=> {
                 result[key] = value();
@@ -123,6 +134,7 @@ export interface Question {
     student: any
     answers?: string[] | {[key: string]: string[]}
     statements?: string[]
+    options?: string[]
     retainOrder?: boolean
 
     feedback: ko.Observable<Feedback>

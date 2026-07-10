@@ -32,7 +32,7 @@ export interface QuizzerQuestionStatusJson {
     status: ko.Observable<string>[];
     asStudent: ko.Observable<boolean>;
     question: Question;
-    quiz: ko.Observable<Quiz>;
+    quiz: Quiz;
     isAnchor: boolean;
     indexId: number
 }
@@ -40,7 +40,7 @@ export interface QuizzerQuestionStatusJson {
 export class QuizzerQuestionStatus {
     private status: ko.Observable<string>[];
     private asStudent: ko.Observable<boolean>;
-    private quiz: ko.Observable<Quiz>;
+    private quiz: Quiz;
     private question: Question;
     private isAnchor: boolean;
     private indexId: number;
@@ -60,7 +60,7 @@ export class QuizzerQuestionStatus {
             const graded = this.question && this.question.feedback();
             const errored = graded && this.question.feedback().status === "error";
             const correct = graded && this.question.feedback().correct;
-            if (graded && (!this.asStudent() || this.quiz().feedbackType() === QuizFeedbackType.IMMEDIATE)) {
+            if (graded && (!this.asStudent() || this.quiz.feedbackType() === QuizFeedbackType.IMMEDIATE)) {
                 if (errored) {
                     return 'error';
                 } else if (correct) {

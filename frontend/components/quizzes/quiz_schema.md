@@ -145,3 +145,40 @@ The feedback is more limited here, with only `wrong_any` supported. We could pro
 Not surprisingly for the `text_only_question`, but surprising for the `essay_question`, there is no feedback to specify here. The answer will always be considered correct and they get the full points each time. Usually you leave these as zero point questions.
 
 We could probably make it so that we give zero points for leaving it blank, but that'll probably just encourage people to write in gibberish. So I'm not sure it's worth it.
+
+### `likert_question`
+
+A survey-style matrix of radio buttons. Multiple statements share the same set of scale options; students select one option per statement.
+
+**Instructions fields:**
+
+* `"statements"`: A list of strings (the row labels — one per statement).
+* `"options"`: A list of strings (the column headers — the scale, e.g. "Strongly Disagree" through "Strongly Agree").
+
+**Example:**
+```json
+{
+  "type": "likert_question",
+  "body": "Rate your agreement with each statement.",
+  "points": 3,
+  "statements": ["I enjoy Python.", "Tests are useful.", "KO is fun."],
+  "options": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+}
+```
+
+**Check fields:**
+
+* `"correct"` *(optional)*: An object mapping statement index (as a string, e.g. `"0"`, `"1"`) to the correct option string. If omitted entirely, the question operates in *survey mode* — all submissions receive full credit.
+* `"wrong_any"` *(optional)*: Fallback feedback string shown when any answer is wrong (only relevant when `correct` is set).
+
+**Example check:**
+```json
+{
+  "correct": {"0": "Agree", "1": "Strongly Agree", "2": "Neutral"},
+  "wrong_any": "Some of your selections were unexpected."
+}
+```
+
+**Grading:** Partial credit is awarded as `number_correct / number_of_statements`. Each statement is weighted equally.
+
+**Student answer format:** An object mapping statement index strings to the selected option string, e.g. `{"0": "Agree", "1": "Neutral", "2": "Agree"}`.
