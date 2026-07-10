@@ -5,6 +5,7 @@ import os
 from urllib.parse import unquote
 
 from flask import render_template, current_app, send_from_directory, url_for, Blueprint, g, jsonify
+from controllers.helpers import login_required
 
 basic = Blueprint('basic', __name__)
 
@@ -63,3 +64,16 @@ def whoami():
     Useful for debugging authentication issues.
     """
     return jsonify(g.user.encode_json())
+
+
+@basic.route('/dashboard/', methods=['GET'])
+@basic.route('/dashboard', methods=['GET'])
+@login_required
+def react_dashboard():
+    """
+    Serve the React TypeScript instructor dashboard.
+
+    This is a separate frontend from the KnockoutJS frontend and provides
+    interactive charts and tables for submission metrics.
+    """
+    return render_template('react/dashboard.html')
