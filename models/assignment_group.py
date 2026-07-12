@@ -1,3 +1,4 @@
+import random
 from typing import List, Optional, TYPE_CHECKING
 
 from flask import url_for
@@ -32,12 +33,16 @@ class AssignmentGroup(EnhancedBase):
     course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
     position: Mapped[int] = mapped_column(Integer(), default=0)
     version: Mapped[int] = mapped_column(Integer(), default=0)
+    #: When > 0, students are assigned this many variation assignments from the pool
+    #: instead of completing all assignments.  0 means every student does all assignments.
+    variation_count: Mapped[int] = mapped_column(Integer(), default=0)
 
     forked: Mapped["AssignmentGroup"] = db.relationship("AssignmentGroup", remote_side="AssignmentGroup.id")
     owner: Mapped["User"] = db.relationship(back_populates="assignment_groups")
     course: Mapped["Course"] = db.relationship(back_populates="assignment_groups")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment_group")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment_group")
+    variations: Mapped[list["AssignmentGroupVariation"]] = db.relationship(back_populates="assignment_group")
 
     __table_args__ = (Index("assignment_group_url_index", "url"),
                       Index('assignment_group_course_index', "course_id"))
@@ -57,6 +62,7 @@ class AssignmentGroup(EnhancedBase):
                 'owner_id__email': user.email if user else '',
                 'course_id': self.course_id,
                 'position': self.position,
+                'variation_count': self.variation_count,
                 'id': self.id,
                 'date_modified': datetime_to_string(self.date_modified),
                 'date_created': datetime_to_string(self.date_created)}
@@ -160,7 +166,43 @@ class AssignmentGroup(EnhancedBase):
     # TODO
     # SELECT assignment, grp  FROM assignment JOIN assignment_group_membership as members ON members.assignment_id = assignment.id JOIN assignment_group as grp ON grp.id = members.assignment_group_id WHERE assignment.id IN (SELECT DISTINCT submission.assignment_id FROM submission WHERE submission.course_id=11) AND (grp.course_id=11 OR assignment.course_id = grp.course_id)
 
-    def get_assignments(self) -> 'List[models.Assignment]':
+    def get_assignments(self, user_id: int = None) -> 'List[models.Assignment]':
+        """
+        Return the assignments in this group.
+
+        If *user_id* is supplied **and** this group has ``variation_count > 0``,
+        the result is the union of:
+
+        * Required assignments (those whose membership has ``variation_group`` IS NULL)
+        * The variation assignments that have been specifically assigned to *user_id*
+          (recorded in ``AssignmentGroupVariation``).
+
+        When ``variation_count == 0`` (the default) or no *user_id* is given, all
+        assignments in the group are returned, preserving the existing behaviour.
+        """
+        if user_id is not None and self.variation_count > 0:
+            # Required assignments: membership has no variation_group
+            required = (models.Assignment.query
+                        .join(models.AssignmentGroupMembership,
+                              models.AssignmentGroupMembership.assignment_id == models.Assignment.id)
+                        .filter(models.AssignmentGroupMembership.assignment_group_id == self.id)
+                        .filter(models.AssignmentGroupMembership.variation_group.is_(None))
+                        .order_by(models.Assignment.name,
+                                  models.AssignmentGroupMembership.position)
+                        .all())
+            # Variation assignments specifically assigned to this user
+            from models.assignment_group_variation import AssignmentGroupVariation
+            assigned_ids = AssignmentGroupVariation.get_assignment_ids_for_user(
+                user_id, self.id)
+            if assigned_ids:
+                variation_assignments = (models.Assignment.query
+                                         .filter(models.Assignment.id.in_(assigned_ids))
+                                         .all())
+            else:
+                variation_assignments = []
+            combined = list({a.id: a for a in required + variation_assignments}.values())
+            return natsorted(combined, key=lambda a: a.title())
+        # Default: return all assignments
         assignments = (models.Assignment.query
                 .join(models.AssignmentGroupMembership,
                       models.AssignmentGroupMembership.assignment_id == models.Assignment.id)
@@ -187,6 +229,44 @@ class AssignmentGroup(EnhancedBase):
             return secure_filename(self.url) + extension
         else:
             return secure_filename(self.name) + extension
+
+    def get_variation_groups(self) -> 'List[int]':
+        """Return the distinct variation_group values used by memberships in this group."""
+        rows = (db.session.query(models.AssignmentGroupMembership.variation_group)
+                .filter(models.AssignmentGroupMembership.assignment_group_id == self.id)
+                .filter(models.AssignmentGroupMembership.variation_group.isnot(None))
+                .distinct()
+                .all())
+        return sorted(row[0] for row in rows)
+
+    def assign_variation_to_user(self, user_id: int,
+                                  assignment_ids: 'List[int]'):
+        """
+        Explicitly set the variation assignments for *user_id* in this group.
+
+        Replaces any previously stored variation assignments for that user.
+        """
+        from models.assignment_group_variation import AssignmentGroupVariation
+        AssignmentGroupVariation.assign_to_user(user_id, self.id, assignment_ids)
+
+    def assign_random_variation(self, user_id: int) -> 'List[int]':
+        """
+        Randomly choose *variation_count* variation groups and assign the
+        corresponding assignments to *user_id*.
+
+        Returns the list of assigned assignment IDs.
+        """
+        available_groups = self.get_variation_groups()
+        count = min(self.variation_count, len(available_groups))
+        selected_groups = random.sample(available_groups, count)
+        # Collect assignments that belong to the selected groups
+        memberships = (models.AssignmentGroupMembership.query
+                       .filter(models.AssignmentGroupMembership.assignment_group_id == self.id)
+                       .filter(models.AssignmentGroupMembership.variation_group.in_(selected_groups))
+                       .all())
+        assignment_ids = [m.assignment_id for m in memberships]
+        self.assign_variation_to_user(user_id, assignment_ids)
+        return assignment_ids
 
     def find_all_linked_resources(self) -> dict[str, list[Base]]:
         # Get any assignments that are forked from this one

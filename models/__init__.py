@@ -12,6 +12,7 @@ from models.assignment_tag import AssignmentTag
 from models.assignment_tag_membership import assignment_tag_membership
 from models.assignment_group import AssignmentGroup
 from models.assignment_group_membership import AssignmentGroupMembership
+from models.assignment_group_variation import AssignmentGroupVariation
 from models.authentication import Authentication
 from models.log_tables import AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog
 from models.review import Review
@@ -51,7 +52,7 @@ def init_database(app: Flask) -> Flask:
 
 #: A listing of all the tables
 ALL_TABLES = (
-    Assignment, AssignmentGroup, AssignmentGroupMembership,
+    Assignment, AssignmentGroup, AssignmentGroupMembership, AssignmentGroupVariation,
     AssignmentTag, assignment_tag_membership,
     Course, Invite,
     Submission, Review, SampleSubmission,

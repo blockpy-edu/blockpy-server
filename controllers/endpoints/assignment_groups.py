@@ -15,7 +15,10 @@ from models.enums.logs import AssignmentLogEvent
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.assignment_group_membership import AssignmentGroupMembership
+from models.assignment_group_variation import AssignmentGroupVariation
 from models.data_formats.portation import export_bundle, import_bundle, export_zip, export_pdf_zip
+from models.role import Role
+from models.enums.roles import UserRoles
 
 blueprint_assignment_group = Blueprint('assignment_group', __name__, url_prefix='/assignment_group')
 
@@ -387,3 +390,203 @@ def export_submissions():
     filename = course.get_url_or_id() + '-' + assignment_group.get_filename(extension='.zip')
     return Response(bundle, mimetype='application/zip',
                     headers={'Content-Disposition': 'attachment;filename={}'.format(filename)})
+
+
+# ---------------------------------------------------------------------------
+# Question Variations Endpoints
+# ---------------------------------------------------------------------------
+
+@blueprint_assignment_group.route('/get_variations', methods=['GET'])
+@blueprint_assignment_group.route('/get_variations/', methods=['GET'])
+@require_request_parameters('assignment_group_id')
+@login_required
+def get_variations():
+    """
+    Return variation configuration and, optionally, the assignments assigned to a
+    specific user in this group.
+
+    Query parameters:
+        assignment_group_id  – required
+        user_id              – optional; if omitted, defaults to the current user
+    """
+    if g.user.anonymous:
+        return jsonify(success=False, message="You must be logged in to view variation assignments.")
+    assignment_group_id = int(request.values.get('assignment_group_id'))
+    assignment_group = AssignmentGroup.by_id(assignment_group_id)
+    check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
+
+    requested_user_id = maybe_int(request.values.get('user_id'))
+    if requested_user_id is None:
+        requested_user_id = g.user.id
+    # Instructors may view any student's variations; students may only view their own
+    if requested_user_id != g.user.id:
+        require_course_instructor(g.user, assignment_group.course_id)
+
+    variation_groups = assignment_group.get_variation_groups()
+    assigned_ids = AssignmentGroupVariation.get_assignment_ids_for_user(
+        requested_user_id, assignment_group_id)
+
+    return jsonify(
+        success=True,
+        assignment_group_id=assignment_group_id,
+        variation_count=assignment_group.variation_count,
+        variation_groups=variation_groups,
+        assigned_assignment_ids=assigned_ids,
+        user_id=requested_user_id,
+    )
+
+
+@blueprint_assignment_group.route('/assign_variation', methods=['POST'])
+@blueprint_assignment_group.route('/assign_variation/', methods=['POST'])
+@require_request_parameters('assignment_group_id', 'user_id', 'assignment_ids')
+@login_required
+def assign_variation():
+    """
+    Explicitly assign a set of variation assignments to a specific user.
+
+    Form parameters:
+        assignment_group_id  – required
+        user_id              – required; the student being assigned
+        assignment_ids       – required; JSON array of assignment IDs
+    """
+    assignment_group_id = int(request.values.get('assignment_group_id'))
+    assignment_group = AssignmentGroup.by_id(assignment_group_id)
+    check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
+    require_course_instructor(g.user, assignment_group.course_id)
+
+    target_user_id = int(request.values.get('user_id'))
+    try:
+        assignment_ids = json.loads(request.values.get('assignment_ids'))
+    except (ValueError, TypeError):
+        return jsonify(success=False, message="assignment_ids must be a JSON array of integers")
+    if not isinstance(assignment_ids, list):
+        return jsonify(success=False, message="assignment_ids must be a list of integers")
+
+    # Validate all IDs belong to this group
+    valid_ids = {a.id for a in assignment_group.get_assignments()}
+    invalid = [aid for aid in assignment_ids if aid not in valid_ids]
+    if invalid:
+        return jsonify(success=False,
+                       message="Some assignment IDs do not belong to this group: {}".format(invalid))
+
+    assignment_group.assign_variation_to_user(target_user_id, assignment_ids)
+
+    return jsonify(
+        success=True,
+        assignment_group_id=assignment_group_id,
+        user_id=target_user_id,
+        assigned_assignment_ids=assignment_ids,
+    )
+
+
+@blueprint_assignment_group.route('/assign_variations_random', methods=['POST'])
+@blueprint_assignment_group.route('/assign_variations_random/', methods=['POST'])
+@require_request_parameters('assignment_group_id')
+@login_required
+def assign_variations_random():
+    """
+    Randomly assign variation assignments to all students enrolled in the group's course
+    who do not yet have a variation assignment for this group.
+
+    Form parameters:
+        assignment_group_id  – required
+        course_id            – optional; defaults to the group's own course
+        overwrite            – optional boolean; if true, re-assign even existing students
+    """
+    assignment_group_id = int(request.values.get('assignment_group_id'))
+    assignment_group = AssignmentGroup.by_id(assignment_group_id)
+    check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
+    require_course_instructor(g.user, assignment_group.course_id)
+
+    overwrite = maybe_bool(request.values.get('overwrite', 'false'))
+    course_id = maybe_int(request.values.get('course_id')) or assignment_group.course_id
+
+    if assignment_group.variation_count == 0:
+        return jsonify(success=False,
+                       message="This group has variation_count=0; set it > 0 to use variations.")
+
+    if not assignment_group.get_variation_groups():
+        return jsonify(success=False,
+                       message="No variation groups defined. "
+                               "Set variation_group on AssignmentGroupMembership records first.")
+
+    # Find all students in the course
+    student_roles = Role.query.filter_by(course_id=course_id, name=UserRoles.LEARNER).all()
+    assigned_count = 0
+    skipped_count = 0
+    for role in student_roles:
+        user_id = role.user_id
+        existing = AssignmentGroupVariation.get_assignment_ids_for_user(user_id, assignment_group_id)
+        if existing and not overwrite:
+            skipped_count += 1
+            continue
+        assignment_group.assign_random_variation(user_id)
+        assigned_count += 1
+
+    return jsonify(
+        success=True,
+        assignment_group_id=assignment_group_id,
+        course_id=course_id,
+        assigned_count=assigned_count,
+        skipped_count=skipped_count,
+    )
+
+
+@blueprint_assignment_group.route('/edit_variation_settings', methods=['GET', 'POST'])
+@blueprint_assignment_group.route('/edit_variation_settings/', methods=['GET', 'POST'])
+@require_request_parameters('assignment_group_id')
+@login_required
+def edit_variation_settings():
+    """
+    GET  – return the current variation_count and membership variation_group values.
+    POST – update variation_count on the group and variation_group on individual memberships.
+
+    Form parameters (POST):
+        assignment_group_id  – required
+        variation_count      – required integer; 0 = all assignments, N = student does N
+        variation_group[<membership_id>]  – optional per-membership variation group tag
+    """
+    assignment_group_id = int(request.values.get('assignment_group_id'))
+    assignment_group = AssignmentGroup.by_id(assignment_group_id)
+    check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
+    require_course_instructor(g.user, assignment_group.course_id)
+
+    if request.method == 'POST':
+        variation_count = maybe_int(request.values.get('variation_count'))
+        if variation_count is None or variation_count < 0:
+            return jsonify(success=False, message="variation_count must be a non-negative integer")
+        assignment_group.variation_count = variation_count
+
+        memberships = assignment_group.get_memberships()
+        for membership in memberships:
+            key = 'variation_group[{}]'.format(membership.id)
+            if key in request.values:
+                raw = request.values.get(key)
+                membership.variation_group = maybe_int(raw)
+
+        from models.generics.models import db
+        db.session.commit()
+
+        return jsonify(
+            success=True,
+            assignment_group_id=assignment_group_id,
+            variation_count=assignment_group.variation_count,
+        )
+    else:
+        memberships = assignment_group.get_memberships()
+        membership_data = [
+            {
+                'id': m.id,
+                'assignment_id': m.assignment_id,
+                'position': m.position,
+                'variation_group': m.variation_group,
+            }
+            for m in memberships
+        ]
+        return jsonify(
+            success=True,
+            assignment_group_id=assignment_group_id,
+            variation_count=assignment_group.variation_count,
+            memberships=membership_data,
+        )
+

@@ -21,6 +21,10 @@ class AssignmentGroupMembership(EnhancedBase):
 
     #: Logic for grading and visibility
     policy: Mapped[Optional[str]] = mapped_column(String(255), default="{}")
+    #: When None, this assignment is required for all students.
+    #: When set to a positive integer, this assignment belongs to variation pool N
+    #: and is only shown to students who have been assigned that variation.
+    variation_group: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True, default=None)
 
     assignment_group: Mapped[list["AssignmentGroup"]] = db.relationship(back_populates="memberships")
     assignment: Mapped[list["Assignment"]] = db.relationship(back_populates="memberships")
