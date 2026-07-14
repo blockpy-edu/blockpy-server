@@ -193,6 +193,9 @@ def parse_assignment_load(assignment_id_or_url=None):
         course_id = int(g.course.id) if 'course' in g and g.course else None
     # LTI submission URL
     new_submission_url = request.form.get('lis_result_sourcedid', None)
+    if (new_submission_url is None and request.method == 'POST'
+            and request.form.get('id_token') and session.get('lti_version') == 'LTI-1p3'):
+        new_submission_url = session.get('lis_result_sourcedid', None)
     new_due_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_dueat', None))
     new_lock_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_lockat', None))
     # Embedded?

@@ -3,7 +3,7 @@ from flask import Blueprint, url_for, session, request, jsonify, g, render_templ
     send_from_directory, current_app
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
-from controllers.auth import get_user, get_consumer_secrets
+from controllers.auth import get_user, get_consumer_secrets, get_lti13_platforms
 #from controllers.endpoints.blockpy import TransmissionStatuses
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
@@ -42,7 +42,7 @@ class GradePost:
     overwrite_human_grades: bool
 
     def submit(self):
-        lti = LTI(get_consumer_secrets(current_app))
+        lti = LTI(get_consumer_secrets(current_app), lti13_platforms=get_lti13_platforms(current_app))
         session['lis_outcome_service_url'] = self.lis_outcome_service_url
         if lti:
             existing_grade = lti.get_grade(endpoint=self.lis_result_sourcedid)

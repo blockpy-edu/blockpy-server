@@ -8,6 +8,7 @@ flask-mail
 flask-wtf
 flask-assets
 Flask-JWT-Extended
+PyJWT[crypto]
 flask-migrate
 flask_cors
 flask-debugtoolbar
