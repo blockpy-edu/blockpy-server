@@ -1,0 +1,54 @@
+{% if submissions %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for submission in submissions %}
+            <tr>
+                <td>
+                    {% if submission.user %}
+                        {{ submission.user.name() }}
+                    {% else %}
+                        Unknown User
+                    {% endif %}
+                </td>
+                <td>
+                    <small>{{ submission.date_modified.strftime("%b %d, %I:%M %p") if submission.date_modified else "N/A" }}</small>
+                </td>
+                <td>
+                    {% if submission.correct %}
+                        <span class="badge bg-success">Correct</span>
+                    {% else %}
+                        <span class="badge bg-warning">In Progress</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary"
+                            hx-get="{{ url_for('htmx_routes.submission_detail', submission_id=submission.id) }}"
+                            hx-target="#submission-detail-{{ submission.id }}"
+                            hx-swap="innerHTML">
+                        View
+                    </button>
+                </td>
+            </tr>
+            <tr id="submission-detail-{{ submission.id }}" style="display: none;">
+                <td colspan="4">
+                    <!-- Submission details will be loaded here -->
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No submissions found for this assignment.
+</div>
+{% endif %}

@@ -1,0 +1,124 @@
+{% extends 'htmx/layout.html' %}
+
+{% block title %}{{ assignment.title() }}{% endblock %}
+
+{% block body %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('htmx_routes.courses') }}">Courses</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('htmx_routes.course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
+        <li class="breadcrumb-item active">{{ assignment.title() }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-md-8">
+        <h1>{{ assignment.title() }}</h1>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Assignment Details</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Type:</dt>
+                    <dd class="col-sm-9">
+                        <span class="badge bg-info">{{ assignment.type }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-3">Version:</dt>
+                    <dd class="col-sm-9">{{ assignment.version if assignment.version else 'N/A' }}</dd>
+                    
+                    <dt class="col-sm-3">Modified:</dt>
+                    <dd class="col-sm-9">
+                        {{ assignment.date_modified.strftime("%b %d, %Y at %I:%M %p") if assignment.date_modified else "N/A" }}
+                    </dd>
+                    
+                    {% if assignment.date_created %}
+                    <dt class="col-sm-3">Created:</dt>
+                    <dd class="col-sm-9">
+                        {{ assignment.date_created.strftime("%b %d, %Y") }}
+                    </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Instructions</h5>
+            </div>
+            <div class="card-body">
+                {% if assignment.type == 'blockpy' %}
+                    <div>{{ assignment.instructions|safe }}</div>
+                {% elif assignment.type == 'maze' %}
+                    <p>Maze Level: {{ assignment.instructions }}</p>
+                {% elif assignment.type == 'quiz' %}
+                    <p>This is a quiz assignment.</p>
+                {% else %}
+                    <pre>{{ assignment.instructions }}</pre>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if course.is_instructor(g.user.id) %}
+        <div class="card">
+            <div class="card-header">
+                <h5>Submissions</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary"
+                        hx-get="{{ url_for('htmx_routes.assignment_submissions', assignment_id=assignment.id, course_id=course.id) }}"
+                        hx-target="#submissions-list"
+                        hx-swap="innerHTML">
+                    Load Submissions
+                </button>
+                <div id="submissions-list" class="mt-3"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('assignments.load', assignment_id=assignment.id, course_id=course.id) }}" 
+                   class="btn btn-primary btn-block d-block mb-2">
+                    Open Assignment
+                </a>
+                
+                {% if course.is_instructor(g.user.id) %}
+                <a href="{{ url_for('assignments.load', assignment_id=assignment.id, course_id=course.id) }}" 
+                   class="btn btn-outline-secondary btn-block d-block mb-2">
+                    Edit Assignment
+                </a>
+                
+                <hr>
+                
+                <a href="{{ url_for('grading.assignment_dashboard', course_id=course.id, assignment_id=assignment.id) }}" 
+                   class="btn btn-outline-info btn-block d-block">
+                    View Grading Dashboard
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Statistics</h5>
+            </div>
+            <div class="card-body" id="stats-container">
+                <button class="btn btn-sm btn-outline-primary"
+                        hx-get="{{ url_for('htmx_routes.assignment_stats', assignment_id=assignment.id, course_id=course.id) }}"
+                        hx-target="#stats-container"
+                        hx-swap="innerHTML">
+                    Load Statistics
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
