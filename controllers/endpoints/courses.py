@@ -1274,3 +1274,388 @@ def manage_time():
                             missing_assignments=missing_assignments
                            )
 
+
+
+# ==================== Posts/Q&A Endpoints ====================
+
+@courses.route('/<int:course_id>/posts', methods=['POST'])
+@login_required
+@require_request_parameters('title', 'content')
+def create_post(course_id):
+    """
+    Create a new post/question in a course.
+    Students can ask questions, instructors can post announcements.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    
+    # Check user is in course
+    if not user.in_course(course_id):
+        return ajax_failure("You are not in this course.", 403)
+    
+    # Get parameters
+    title = request.values.get('title', '')
+    content = request.values.get('content', '')
+    content_format = request.values.get('content_format', 'markdown')
+    assignment_id = maybe_int(request.values.get('assignment_id'))
+    assignment_group_id = maybe_int(request.values.get('assignment_group_id'))
+    submission_id = maybe_int(request.values.get('submission_id'))
+    
+    # Validate title and content
+    if not title or not content:
+        return ajax_failure("Title and content are required.")
+    
+    # Create the post
+    try:
+        new_post = Post.new(
+            title=title,
+            content=content,
+            content_format=content_format,
+            author_id=user_id,
+            course_id=course_id,
+            assignment_id=assignment_id,
+            assignment_group_id=assignment_group_id,
+            submission_id=submission_id
+        )
+        
+        # Log the action
+        make_log_entry(course_id, SubmissionLogEvent.ASSIGNMENT.value,
+                      f"Created post: {new_post.id}", None)
+        
+        return ajax_success({
+            'post': new_post.encode_json()
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error creating post: {e}")
+        return ajax_failure(f"Failed to create post: {str(e)}")
+
+
+@courses.route('/posts', methods=['GET'])
+@login_required
+def list_posts():
+    """
+    List posts across courses. 
+    - For instructors: can see all posts in their courses (with filters)
+    - For students: can only see their own posts
+    """
+    from models.post import Post
+    from models.enums import PostStatus
+    
+    user, user_id = get_user()
+    
+    # Get filter parameters
+    course_ids = request.values.get('course_ids', '')
+    status = request.values.get('status', '')  # open, answered, closed
+    is_answered = request.values.get('is_answered', '')  # true/false
+    is_public = request.values.get('is_public', '')  # true/false
+    
+    # Parse course_ids
+    if course_ids:
+        course_id_list = [int(cid) for cid in course_ids.split(',') if cid.isdigit()]
+    else:
+        # Get all courses user is in
+        user_roles = user.roles
+        course_id_list = list(set([role.course_id for role in user_roles]))
+    
+    # Check if user is instructor in any of these courses
+    is_instructor_in_any = any(user.is_instructor(cid) for cid in course_id_list)
+    
+    # Build query
+    query = Post.query
+    
+    if is_instructor_in_any:
+        # Instructors can see all posts in their courses
+        query = query.filter(Post.course_id.in_(course_id_list))
+    else:
+        # Students only see their own posts
+        query = query.filter(
+            Post.author_id == user_id,
+            Post.course_id.in_(course_id_list)
+        )
+    
+    # Apply filters
+    if status:
+        query = query.filter(Post.status == PostStatus(status))
+    
+    if is_answered:
+        answered_bool = is_answered.lower() == 'true'
+        query = query.filter(Post.is_answered == answered_bool)
+    
+    if is_public:
+        public_bool = is_public.lower() == 'true'
+        query = query.filter(Post.is_public == public_bool)
+    
+    # Order by date (newest first)
+    query = query.order_by(Post.date_created.desc())
+    
+    # Execute query
+    posts = query.all()
+    
+    return ajax_success({
+        'posts': [post.encode_json() for post in posts],
+        'count': len(posts)
+    })
+
+
+@courses.route('/posts/my', methods=['GET'])
+@login_required
+def my_posts():
+    """
+    List current user's own posts across all their courses.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    
+    # Get user's courses
+    user_roles = user.roles
+    course_ids = list(set([role.course_id for role in user_roles]))
+    
+    # Get user's posts
+    posts = Post.query.filter(
+        Post.author_id == user_id,
+        Post.course_id.in_(course_ids)
+    ).order_by(Post.date_created.desc()).all()
+    
+    return ajax_success({
+        'posts': [post.encode_json() for post in posts],
+        'count': len(posts)
+    })
+
+
+@courses.route('/posts/<int:post_id>', methods=['GET'])
+@login_required
+def get_post(post_id):
+    """
+    Get a specific post with all its comments.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions
+    is_instructor = user.is_instructor(post.course_id)
+    is_author = post.author_id == user_id
+    
+    if not (is_instructor or is_author or post.is_public):
+        return ajax_failure("You do not have permission to view this post.", 403)
+    
+    # Include comments
+    comments = [comment.encode_json() for comment in post.comments]
+    
+    # Include author info
+    post_data = post.encode_json()
+    post_data['comments'] = comments
+    post_data['author'] = post.author.encode_json()
+    
+    return ajax_success({
+        'post': post_data
+    })
+
+
+@courses.route('/posts/<int:post_id>/comments', methods=['POST'])
+@login_required
+@require_request_parameters('content')
+def add_comment(post_id):
+    """
+    Add a comment to a post.
+    """
+    from models.post import Post, Comment
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions - instructors or post author can comment
+    is_instructor = user.is_instructor(post.course_id)
+    is_author = post.author_id == user_id
+    
+    if not (is_instructor or is_author):
+        return ajax_failure("You do not have permission to comment on this post.", 403)
+    
+    # Get parameters
+    content = request.values.get('content', '')
+    content_format = request.values.get('content_format', 'markdown')
+    
+    if not content:
+        return ajax_failure("Content is required.")
+    
+    # Create comment
+    try:
+        new_comment = Comment.new(
+            content=content,
+            post_id=post_id,
+            author_id=user_id,
+            content_format=content_format
+        )
+        
+        # If comment is from instructor, mark post as answered
+        if is_instructor and post.author_id != user_id:
+            post.mark_answered(True)
+        
+        return ajax_success({
+            'comment': new_comment.encode_json()
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error creating comment: {e}")
+        return ajax_failure(f"Failed to create comment: {str(e)}")
+
+
+@courses.route('/posts/<int:post_id>/public', methods=['PUT'])
+@login_required
+def mark_post_public(post_id):
+    """
+    Mark a post as public (only instructors).
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions - only instructors
+    if not user.is_instructor(post.course_id):
+        return ajax_failure("Only instructors can mark posts as public.", 403)
+    
+    # Get parameter
+    is_public = maybe_bool(request.values.get('is_public', 'true'))
+    
+    # Update post
+    post.mark_public(is_public)
+    
+    return ajax_success({
+        'post': post.encode_json()
+    })
+
+
+@courses.route('/posts/<int:post_id>/promote', methods=['PUT'])
+@login_required
+def promote_post(post_id):
+    """
+    Promote a post from submission-level to assignment-level (only instructors).
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions - only instructors
+    if not user.is_instructor(post.course_id):
+        return ajax_failure("Only instructors can promote posts.", 403)
+    
+    # Promote post
+    success = post.promote_to_assignment()
+    
+    if success:
+        return ajax_success({
+            'post': post.encode_json()
+        })
+    else:
+        return ajax_failure("Post cannot be promoted (must be associated with both submission and assignment).")
+
+
+@courses.route('/posts/<int:post_id>/check', methods=['GET'])
+@login_required
+def check_post_updates(post_id):
+    """
+    Check if there are updates to a post (new comments, status changes).
+    Used for polling.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions
+    is_instructor = user.is_instructor(post.course_id)
+    is_author = post.author_id == user_id
+    
+    if not (is_instructor or is_author or post.is_public):
+        return ajax_failure("You do not have permission to view this post.", 403)
+    
+    # Get last_check timestamp from request
+    last_check = request.values.get('last_check')
+    
+    has_updates = False
+    new_comments = []
+    
+    if last_check:
+        from common.dates import string_to_datetime
+        last_check_dt = string_to_datetime(last_check)
+        
+        # Check for new comments since last check
+        new_comments = [
+            comment.encode_json() 
+            for comment in post.comments 
+            if comment.date_created > last_check_dt
+        ]
+        
+        # Check if post was modified since last check
+        has_updates = post.date_modified > last_check_dt or len(new_comments) > 0
+    
+    return ajax_success({
+        'has_updates': has_updates,
+        'post': post.encode_json(),
+        'new_comments': new_comments
+    })
+
+
+@courses.route('/posts/list', methods=['GET'])
+@courses.route('/posts/list/<int:course_id>', methods=['GET'])
+@login_required
+def list_posts_page(course_id=None):
+    """
+    Render the posts list page.
+    """
+    user, user_id = get_user()
+    
+    course = None
+    if course_id:
+        course = Course.by_id(course_id)
+        check_resource_exists(course, "Course", course_id)
+        if not user.in_course(course_id):
+            flash("You are not in this course.")
+            return redirect(url_for('courses.index'))
+        g.course = course
+    
+    is_instructor = course and user.is_instructor(course_id)
+    
+    return render_template('courses/posts.html',
+                          is_instructor=is_instructor,
+                          course=course)
+
+
+@courses.route('/posts/<int:post_id>/view', methods=['GET'])
+@login_required
+def view_post_page(post_id):
+    """
+    Render the post detail page.
+    """
+    from models.post import Post
+    
+    user, user_id = get_user()
+    post = Post.query.get(post_id)
+    check_resource_exists(post, "Post", post_id)
+    
+    # Check permissions
+    is_instructor = user.is_instructor(post.course_id)
+    is_author = post.author_id == user_id
+    
+    if not (is_instructor or is_author or post.is_public):
+        flash("You do not have permission to view this post.")
+        return redirect(url_for('courses.index'))
+    
+    # Can comment if instructor or author
+    can_comment = is_instructor or is_author
+    
+    return render_template('courses/post_detail.html',
+                          post=post,
+                          is_instructor=is_instructor,
+                          can_comment=can_comment)

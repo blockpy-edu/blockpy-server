@@ -63,6 +63,11 @@ export class AssignmentInterface {
         windowFocus: (event: Event) => void,
     }
 
+    // Question/Help functionality
+    questionTitle: ko.Observable<string>;
+    questionContent: ko.Observable<string>;
+    includeCode: ko.Observable<boolean>;
+
     constructor(params: AssignmentInterfaceJson) {
         this.assignmentSubscriptions = {
             windowBlur: null,
@@ -81,6 +86,11 @@ export class AssignmentInterface {
         this.assignment = ko.observable(null);
         this.submission = ko.observable(null);
         this.markCorrect = params.markCorrect;
+
+        // Initialize question/help observables
+        this.questionTitle = ko.observable("");
+        this.questionContent = ko.observable("");
+        this.includeCode = ko.observable(false);
 
         let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         BlockPyServer.altLogEntry = this.logEvent.bind(this);
@@ -388,6 +398,83 @@ export class AssignmentInterface {
             onSuccess,
             onError
         );
+    }
+
+    /**
+     * Show the question modal dialog
+     */
+    showQuestionModal() {
+        $('#question-modal').modal('show');
+    }
+
+    /**
+     * Submit a question to the instructor
+     */
+    submitQuestion() {
+        const title = this.questionTitle();
+        const content = this.questionContent();
+        const includeCode = this.includeCode();
+        
+        if (!title || !content) {
+            alert('Please fill in both title and question details.');
+            return;
+        }
+        
+        // Get current assignment and submission info
+        let questionContent = content;
+        if (includeCode) {
+            try {
+                const blockpy = window["$MAIN_BLOCKPY_EDITOR"];
+                if (blockpy && blockpy.model && blockpy.model.submission) {
+                    const code = blockpy.model.submission.code();
+                    questionContent += "\n\n---\n**My Current Code:**\n```python\n" + code + "\n```";
+                }
+            } catch (e) {
+                console.error("Failed to get code:", e);
+            }
+        }
+        
+        // Find submission_id if available
+        let submissionId = null;
+        try {
+            const blockpy = window["$MAIN_BLOCKPY_EDITOR"];
+            if (blockpy && blockpy.model && blockpy.model.submission) {
+                submissionId = blockpy.model.submission.id();
+            }
+        } catch (e) {
+            console.log("No submission ID available:", e);
+        }
+        
+        // Submit the question via AJAX
+        const data = {
+            title: title,
+            content: questionContent,
+            content_format: 'markdown',
+            assignment_id: this.currentAssignmentId(),
+            assignment_group_id: this.assignmentGroupId,
+            submission_id: submissionId
+        };
+
+        $.ajax({
+            url: '/courses/' + this.courseId + '/posts',
+            method: 'POST',
+            data: data,
+            success: (response) => {
+                if (response.success) {
+                    alert('Question submitted successfully! An instructor will respond soon.');
+                    $('#question-modal').modal('hide');
+                    // Clear form
+                    this.questionTitle("");
+                    this.questionContent("");
+                    this.includeCode(false);
+                } else {
+                    alert('Failed to submit question: ' + response.message);
+                }
+            },
+            error: (xhr, status, error) => {
+                alert('Error submitting question: ' + error);
+            }
+        });
     }
 }
 

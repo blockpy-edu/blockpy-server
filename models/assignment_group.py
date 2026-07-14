@@ -38,6 +38,7 @@ class AssignmentGroup(EnhancedBase):
     course: Mapped["Course"] = db.relationship(back_populates="assignment_groups")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment_group")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment_group")
+    posts: Mapped[list["Post"]] = db.relationship(back_populates="assignment_group")
 
     __table_args__ = (Index("assignment_group_url_index", "url"),
                       Index('assignment_group_course_index', "course_id"))

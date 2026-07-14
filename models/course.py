@@ -53,6 +53,7 @@ class Course(Base):
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="course")
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="course")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="course")
+    posts: Mapped[list["Post"]] = db.relationship(back_populates="course")
 
     __table_args__ = (Index('course_url_index', "url"),)
 
