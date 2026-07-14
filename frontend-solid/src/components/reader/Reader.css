@@ -1,0 +1,54 @@
+.reader-container {
+    position: relative;
+}
+
+.reader-content {
+    background-color: #FBFAF7;
+    padding: 1rem;
+}
+
+.reader-video-display {
+    margin: 0 auto;
+    display: block;
+}
+
+#reader-youtube-video {
+    margin: 0 auto;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .reader-video-display,
+    #reader-youtube-video {
+        width: 100%;
+        height: auto;
+    }
+}
+
+.textbook-navigation {
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .textbook-navigation {
+        height: 300px;
+        overflow: auto;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+}
+
+.book-item {
+    cursor: pointer;
+    padding: 5px;
+}
+
+.book-item.disabled {
+    cursor: default;
+}
+
+.list-group-item.disabled.list-group-item-secondary {
+    color: #383d41;
+    background-color: #d6d8db;
+}

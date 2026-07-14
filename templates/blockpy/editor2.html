@@ -1,0 +1,326 @@
+{% extends 'helpers/layout.html' %}
+
+{% from 'helpers/assignment_groups.html' import assignment_group_header %}
+
+{% block title %}
+    BlockPy Editor (SolidJS)
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+    <!-- SolidJS Frontend Bundle -->
+    <script src="{{ url_for('static', filename='libs/blockpy_server_solid/frontend-solid.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/blockpy_server_solid/frontend-solid.css') }}">
+    
+    <!-- BlockPy Core (still needed for Python/Skulpt execution) -->
+    <script src="{{ url_for('static', filename='libs/blockpy/blockpy_complete.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/blockpy/blockpy.css') }}">
+{% endblock %}
+
+{% block body %}
+
+    <span class='delete-on-load'>
+        Loading SolidJS Editor... If this doesn't load, please check your browser console for errors.
+        <a target="_blank" href="{{ url_for('blockpy.load_assignment', assignment_id=current_assignment_id, course_id=course_id, assignment_group_id=assignment_group_id, embed=embed, read_only=read_only) }}">Click here to try again</a>.
+    </span>
+
+    {% if group and group|length > 1 %}
+        {{ assignment_group_header(group, current_assignment_id, embed, 'blockpy.load') }}
+        <script>
+            $(document).ready(function () {
+                loadNavigation();
+            });
+        </script>
+    {% else %}
+        <script>
+            function markCorrect(args) {
+                console.log('Mark correct:', args);
+            }
+        </script>
+    {% endif %}
+
+    <!-- Main container for SolidJS components -->
+    <div id="solidjs-editor-container" style='height:100%; width:100%;'></div>
+
+    {% if group and group|length > 1 %}
+        {{ assignment_group_header(group, current_assignment_id, embed, 'blockpy.load') }}
+    {% endif %}
+
+    <script>
+        // Configuration constants
+        window.$blocklyMediaPath = {{ url_for('static', filename='blockly/media/')|tojson }};
+        
+        // URL endpoints
+        window.$blockPyUrls = {
+            "importDatasets": {{ config['CORGIS_URL']|tojson }},
+            'loadAssignment': {{ url_for('blockpy.load_assignment')|tojson }},
+            'instructionsAssignmentSetup': {{ url_for('courses.making_problems')|tojson }},
+            'forkAssignment': {{ url_for('blockpy.fork_assignment')|tojson }},
+            'downloadFile': {{ url_for('blockpy.download_file', external=True)|tojson }},
+            {% if submissions -%}
+            'saveAssignment': {{ url_for('blockpy.save_assignment')|tojson }},
+            'loadHistory': {{ url_for('blockpy.load_history')|tojson }},
+            'logEvent': {{ url_for('blockpy.log_event')|tojson }},
+            'saveFile': {{ url_for('blockpy.save_file')|tojson }},
+            'saveImage': {{ url_for('blockpy.save_image')|tojson }},
+            'listUploadedFiles': {{ url_for('blockpy.list_files')|tojson }},
+            'uploadFile': {{ url_for('blockpy.upload_file')|tojson }},
+            'renameFile': {{ url_for('blockpy.rename_file')|tojson }},
+            'updateSubmission': {{ url_for('blockpy.update_submission')|tojson }},
+            'updateSubmissionStatus': {{ url_for('blockpy.update_submission_status')|tojson }},
+            "openaiProxy": {{ url_for('blockpy.openai')|tojson }},
+            "shareUrl": {{ url_for('blockpy.share_url', _external=True)|tojson }},
+            {%- endif %}
+        };
+        
+        // User data
+        window.$blockPyUserData = {
+            "user.id": {{ user_id|tojson }},
+            {% if user %}
+            "user.name": {{ user.name()|tojson }},
+            {% endif %}
+            "user.role": {{ role|tojson }},
+            "user.course_id": {{ course_id|tojson }},
+            "access_token": window.accessToken,
+        };
+
+        // Assignment metadata
+        const ASSIGNMENT_METADATA = {
+            quizzes: {{ quiz_questions|tojson }},
+            readings: {{ readings|tojson }},
+            textbooks: {{ textbooks|tojson }},
+            kettles: {{ kettles|tojson }},
+            explains: {{ explains|tojson }},
+            currentAssignmentId: {{ current_assignment_id|tojson }},
+            assignmentGroupId: {{ (assignment_group_id or None)|tojson }},
+            courseId: {{ course_id or "null" }},
+            embed: {{ embed|tojson }},
+            readOnly: {{ read_only|tojson }},
+            isInstructor: {{ (role in ("owner", "grader"))|tojson }}
+        };
+
+        // User object
+        const loggedInUser = {{ user.encode_json()|tojson if user else "{id:null,email:null,first_name:null,last_name:null}" }};
+
+        // Initialize the appropriate component based on assignment type
+        $(document).ready(function () {
+            const assignmentId = ASSIGNMENT_METADATA.currentAssignmentId;
+            
+            // Determine assignment type
+            function getAssignmentType(id) {
+                if (ASSIGNMENT_METADATA.quizzes.includes(id)) return 'quiz';
+                if (ASSIGNMENT_METADATA.readings.includes(id)) return 'reading';
+                if (ASSIGNMENT_METADATA.textbooks.includes(id)) return 'textbook';
+                if (ASSIGNMENT_METADATA.kettles.includes(id)) return 'typescript';
+                if (ASSIGNMENT_METADATA.explains.includes(id)) return 'explain';
+                return 'blockpy'; // Default coding assignment
+            }
+
+            const assignmentType = getAssignmentType(assignmentId);
+            
+            // Initialize the appropriate SolidJS component
+            switch(assignmentType) {
+                case 'quiz':
+                    console.log('Initializing Quiz component with SolidJS');
+                    // Load quiz data from backend first
+                    fetch(window.$blockPyUrls.loadAssignment + '?assignment_id=' + assignmentId + 
+                          '&course_id=' + ASSIGNMENT_METADATA.courseId)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.payload) {
+                                frontendSolid.initQuizzer('#solidjs-editor-container', 
+                                    data.payload, 
+                                    ASSIGNMENT_METADATA.isInstructor);
+                            }
+                        });
+                    break;
+                    
+                case 'reading':
+                    console.log('Initializing Reader component with SolidJS');
+                    frontendSolid.initReader('#solidjs-editor-container', {
+                        courseId: ASSIGNMENT_METADATA.courseId,
+                        currentAssignmentId: assignmentId,
+                        assignmentGroupId: ASSIGNMENT_METADATA.assignmentGroupId,
+                        isInstructor: ASSIGNMENT_METADATA.isInstructor,
+                        user: loggedInUser,
+                        markCorrect: markCorrect
+                    });
+                    break;
+                    
+                case 'textbook':
+                    console.log('Initializing Textbook component with SolidJS');
+                    // Load textbook data first
+                    fetch(window.$blockPyUrls.loadAssignment + '?assignment_id=' + assignmentId + 
+                          '&course_id=' + ASSIGNMENT_METADATA.courseId)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.payload) {
+                                frontendSolid.initTextbook('#solidjs-editor-container', {
+                                    courseId: ASSIGNMENT_METADATA.courseId,
+                                    textbook: data.payload,
+                                    isInstructor: ASSIGNMENT_METADATA.isInstructor,
+                                    user: loggedInUser,
+                                    initialPageId: null
+                                });
+                            }
+                        });
+                    break;
+                    
+                case 'typescript':
+                case 'blockpy':
+                    console.log('Initializing Coding Assignment component with SolidJS');
+                    // Load assignment data from backend
+                    fetch(window.$blockPyUrls.loadAssignment + '?assignment_id=' + assignmentId + 
+                          '&course_id=' + ASSIGNMENT_METADATA.courseId)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.payload) {
+                                const assignmentData = data.payload;
+                                frontendSolid.initCodingAssignment('#solidjs-editor-container', {
+                                    assignment: {
+                                        id: assignmentData.assignment_id,
+                                        name: assignmentData.name || 'Coding Assignment',
+                                        instructions: assignmentData.instructions || '',
+                                        runtime: assignmentType === 'typescript' ? 'typescript' : 'python',
+                                        files: assignmentData.files || [
+                                            { 
+                                                name: assignmentType === 'typescript' ? 'main.ts' : 'main.py',
+                                                content: assignmentData.starting_code || '',
+                                                language: assignmentType === 'typescript' ? 'typescript' : 'python'
+                                            }
+                                        ],
+                                        mainFile: assignmentType === 'typescript' ? 'main.ts' : 'main.py',
+                                        settings: {
+                                            timeLimit: assignmentData.time_limit || null,
+                                            enableTrace: true,
+                                            enableRepl: true
+                                        }
+                                    },
+                                    user: loggedInUser,
+                                    courseId: ASSIGNMENT_METADATA.courseId,
+                                    isInstructor: ASSIGNMENT_METADATA.isInstructor,
+                                    urls: window.$blockPyUrls
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Failed to load assignment:', error);
+                            document.getElementById('solidjs-editor-container').innerHTML = 
+                                '<div class="alert alert-danger">Failed to load assignment. Please refresh the page.</div>';
+                        });
+                    break;
+                    
+                default:
+                    console.warn('Unknown assignment type:', assignmentType);
+                    document.getElementById('solidjs-editor-container').innerHTML = 
+                        '<div class="alert alert-warning">Unknown assignment type: ' + assignmentType + '</div>';
+            }
+
+            // Emoji proxy for Skulpt
+            Sk.emojiProxy = (part) => `{{ url_for('static', filename='images/emoji/') }}${part.toLowerCase()}.svg`;
+
+            // Remove the loading screen
+            $('.delete-on-load').remove();
+
+            {% if passcode_protected %}
+            // TODO: Implement passcode protection in SolidJS version
+            alert('Passcode protection not yet implemented in SolidJS version');
+            {% endif %}
+
+            // Handle iframe resizing for embedded mode
+            {% if embed %}
+                function fixCanvasSize() {
+                    window.parent.postMessage(JSON.stringify({
+                        subject: "lti.frameResize",
+                        "height": $("body").height()+50
+                    }), '*')
+                }
+                try {
+                    fixCanvasSize();
+                    var resizeId;
+                    var ro = new ResizeObserver(entries => {
+                        for (let entry of entries) {
+                            if (entry.target === document.body) {
+                                clearTimeout(resizeId);
+                                resizeId = setTimeout(fixCanvasSize, 500);
+                            }
+                        }
+                    });
+                    ro.observe(document.body);
+                } catch(e) {
+                    console.error('Resize observer error:', e);
+                }
+            {% endif %}
+        });
+    </script>
+
+    <!-- Activity duration clock (reused from original) -->
+    <script>
+        const pageStartTime = {{ (session_start_time or 0)|tojson }} || Date.now();
+        let activityDuration = 0;
+        let clockMode = 'session';
+        
+        function refreshClock() {
+            if (clockMode != 'loading') {
+                const duration = Math.floor((Date.now() - pageStartTime)/1000 + activityDuration);
+                const hours = Math.floor(duration/60/60);
+                let oMinutes = Math.floor(duration/60 % 60);
+                let minutes = oMinutes < 10 ? "0"+oMinutes : oMinutes;
+                if (hours >= 99) {
+                    $(".assignment-selector-clock").html(`99+ hours spent`);
+                } else if (hours < 1) {
+                    if (oMinutes < 1) {
+                        $(".assignment-selector-clock").html(`(Just started)`);
+                    } else if (oMinutes === 1) {
+                        $(".assignment-selector-clock").html(`~${oMinutes} minute spent`);
+                    } else {
+                        $(".assignment-selector-clock").html(`~${oMinutes} minutes spent`);
+                    }
+                } else {
+                    $(".assignment-selector-clock").html(`~${hours}:${minutes} hours spent`);
+                }
+            } else {
+                $(".assignment-selector-clock").html(`(Getting Total)`);
+            }
+        };
+        
+        $(function() {
+            refreshClock();
+            setInterval(refreshClock, 10000);
+            $(".assignment-selector-clock").click(() => {
+                if (clockMode == 'session') {
+                    if (typeof window.ACTIVITY_GET_DURATION !== 'undefined') {
+                        clockMode = 'loading';
+                        window.ACTIVITY_GET_DURATION().done((result) => {
+                            activityDuration = result;
+                            clockMode = 'activity';
+                        }).catch((err) => {
+                            console.error(err);
+                            clockMode = 'session';
+                            activityDuration = 0;
+                        }).always(() => {
+                            refreshClock();
+                        });
+                    }
+                } else {
+                    activityDuration = 0;
+                    clockMode = 'session';
+                }
+                refreshClock();
+            })
+        });
+        
+        window.ACTIVITY_GET_DURATION = () => {
+            {% if assignment_group_id %}
+            return $.get({{ url_for('blockpy.estimate_group_duration', assignment_group_id=assignment_group_id, course_id=course_id)|tojson }}).then((result) => {
+                return result.duration;
+            });
+            {% else %}
+            return Promise.resolve(0);
+            {% endif %}
+        };
+    </script>
+
+{% endblock %}
