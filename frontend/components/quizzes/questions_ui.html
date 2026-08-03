@@ -54,7 +54,9 @@
                         </div>
                     </div>
                     <!-- Multiple Choice -->
-                    <div data-bind="case: 'multiple_choice_question'">
+                    <div data-bind="case: 'multiple_choice_question',
+                                    css: { 'quizzer-question-mcq-horizontal': $data.horizontal }"
+                         class="quizzer-question-mcq-answers">
                         <!-- ko foreach: answers -->
                         <div class="form-check">
                           <label data-bind="attr: {for: 'question-mcq-'+$parentContext.$index()+'-'+$index()}" class="form-check-label">
