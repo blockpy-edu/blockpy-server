@@ -52,8 +52,12 @@ def abort_with_failure(code, message, as_html=False):
         abort(make_response(jsonify(success=False, message=message), code))
 
 
-def require_course_instructor(user, course_id, addendum="", as_html=False):
+def require_course_instructor(user, course_id, addendum="", as_html=False, allow_fork=False):
     if not user.is_instructor(course_id):
+        if allow_fork and user.is_instructor(allow_fork):
+            message = ('You are not an instructor (course ID {}), but you can fork this question for your own course'
+                       ' (course ID {}).').format(course_id, allow_fork)
+            abort(make_response(jsonify(success=False, message=message, forkable=True), 200))
         if user.anonymous:
             abort_with_failure(200, f'You are not logged in. Please log in as an instructor (course ID {course_id}). {addendum}', as_html)
         else:
@@ -254,6 +258,8 @@ def parse_assignment_load(assignment_id_or_url=None):
     for assignment in assignments:
         if assignment.has_passcode() and not passcode_protected:
             passcode_protected = True
+    # Check for studio flag
+    use_studio = maybe_bool(request.args.get('use_studio', None))
     # Combine the submissions and assignments
     group = list(zip(assignments, submissions))
     # Get session start time
@@ -271,7 +277,8 @@ def parse_assignment_load(assignment_id_or_url=None):
                 course_id=course_id,
                 embed=embed,
                 session_start_time=session_start_time,
-                passcode_protected=passcode_protected)
+                passcode_protected=passcode_protected,
+                use_studio=use_studio)
 
 
 def check_permissions(viewer, submission, assignment, ip_address):
