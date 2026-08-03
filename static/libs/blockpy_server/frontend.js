@@ -4630,7 +4630,6 @@ class QuizzerQuestionStatus {
             const graded = this.question && this.question.feedback();
             const errored = graded && this.question.feedback().status === "error";
             const correct = graded && this.question.feedback().correct;
-            console.log(this.quiz);
             if (graded && (!this.asStudent() || this.quiz.feedbackType() === _quiz__WEBPACK_IMPORTED_MODULE_2__.QuizFeedbackType.IMMEDIATE)) {
                 if (errored) {
                     return 'error';
