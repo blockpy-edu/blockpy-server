@@ -2,6 +2,7 @@ import datetime
 import random
 import os
 import json
+import csv
 from pprint import pprint
 
 import click
@@ -507,3 +508,104 @@ def add_missing_counters(user, overwrite: str):
     #             backfilled += 1
     #     db.session.commit()
     #     click.echo(f"Backfilled {backfilled} users")
+
+
+@cli.command("make_fake_dashboard")
+@click.option("--course", '-c', "course_id",
+              help="Process this course by its id")
+@click.option("--output", '-o', "output",
+              help="The filename to write to")
+@click.option("--format", "-f", "format", default='json',
+              help="The format to write the dashboard to")
+def make_fake_dashboard(course_id, output, format):
+    """
+    Build up the fake dashboard file.
+    """
+    click.echo("Starting fake dashboard...")
+    from models.log_tables import SubmissionLog
+    from models.submission import Submission
+    from models.course import Course
+    from models.counters.submission_counts import SubmissionCounts
+    from models.enums.metrics import SubmissionMetrics
+    from controllers.endpoints.courses import SPECIAL_METRICS, compute_special_metrics
+
+    course = Course.by_id(course_id)
+    click.echo("Getting user's submitted assignments")
+    suas = course.get_users_submitted_assignments(user_ids=None)
+    click.echo("Getting submission counts")
+    counts = course.get_submission_counts()
+
+    click.echo(f"Indexing {len(suas)} submissions")
+    by_submission = {}
+    found = []
+    for submission, student, assignment in suas:
+        by_submission[submission.id] = {}
+        found.append([submission.id, assignment, student])
+        by_submission[submission.id]["score"] = submission.score
+        by_submission[submission.id]["full_score"] = submission.full_score()
+        by_submission[submission.id]["correct"] = int(submission.correct)
+        by_submission[submission.id]["date_created"] = submission.date_created
+        by_submission[submission.id]["date_modified"] = submission.date_modified
+        by_submission[submission.id]["date_started"] = submission.date_started
+        by_submission[submission.id]["date_submitted"] = submission.date_submitted
+        by_submission[submission.id]["date_graded"] = submission.date_graded
+        by_submission[submission.id]["date_due"] = submission.date_due
+        by_submission[submission.id]["date_locked"] = submission.date_locked
+        by_submission[submission.id]["modifications"] = submission.version
+        by_submission[submission.id]["attempts"] = submission.attempts
+
+    click.echo(f"Indexing {len(counts)} Counts")
+    for count, in counts:
+        if count.submission_id not in by_submission:
+            # TODO: Mark missing data
+            continue
+        by_submission[count.submission_id][count.metric] = count.value
+
+    if format == "json":
+        click.echo("Streamlining")
+        result = [[a.url, u.id, s] for sub, a, u, s in found]
+        click.echo("Writing out")
+        with open(output, 'w', encoding="utf-8") as f:
+            f.write(json.dumps(result, indent=4, sort_keys=True))
+        click.echo(f"Wrote {len(found)} submissions")
+
+    elif format in ('csv', 'html', 'summary'):
+        click.echo("Pivoting")
+        all_metrics = set([])
+        pivoted = {}
+        for submission_id, assignment, user in found:
+            metrics = by_submission[submission_id]
+            all_metrics.update(metrics.keys())
+            pivoted.setdefault(user, {}).setdefault(assignment, {})[submission_id] = metrics
+        all_metrics = sorted(all_metrics)
+        # Handle numbers well for excel
+        result = []
+        header = ["User ID", "User Name", "User Email",
+                  "Assignment ID", "Assignment Name", "Assignment URL",
+                  "Submission ID"]
+        full_header = header + SPECIAL_METRICS + all_metrics
+        result.append(full_header)
+
+        click.echo("Streamlining")
+        for user, assignments in pivoted.items():
+            for assignment, submission in assignments.items():
+                for submission_id, metrics in submission.items():
+                    values = [metrics.get(metric, "") for metric in all_metrics]
+                    special_metrics = compute_special_metrics(metrics)
+                    result.append([user.id, user.name(), user.email,
+                                     assignment.id, assignment.name, assignment.url,
+                                     submission_id, *special_metrics, *values])
+        click.echo("Writing out")
+        if format == 'csv':
+            with open(output, "w", encoding="utf-8", newline='') as f:
+                writer = csv.writer(f)
+                for row in result:
+                    writer.writerow(row)
+        if format == 'html':
+            with open(output, 'w', encoding='utf-8') as f:
+                output.write("<table border='1'>\n  <tr>" + "".join(f"<th>{h}</th>" for h in full_header) + "</tr>\n")
+                for row in result:
+                    output.write("  <tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>\n")
+            output.write("</table>")
+
+        click.echo(f"Processed {len(result)} rows")

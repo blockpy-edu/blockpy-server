@@ -124,6 +124,7 @@ export interface Question {
     answers?: string[] | {[key: string]: string[]}
     statements?: string[]
     retainOrder?: boolean
+    horizontal: boolean
 
     feedback: ko.Observable<Feedback>
     visible: ko.Observable<boolean>

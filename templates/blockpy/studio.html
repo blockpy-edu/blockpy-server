@@ -1,0 +1,116 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+    BlockPy Studio
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+
+{% block extrahead %}
+
+    {% assets "studio_js" %}
+        <script crossorigin src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+    {% assets "studio_css" %}
+        <link rel="stylesheet" crossorigin href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+{% endblock %}
+
+{% block body %}
+
+<!doctype html>
+
+    <!-- Static dev harness: mounts the app from a hand-written BootConfig,
+         no server required (DEVELOPMENT_PLAN.md §0.1). Mirrors the spec §5.2
+         bootstrapping contract. -->
+    <span class="delete-on-load"
+      >Loading! Please wait. If this doesn't load, and you are using Safari, then please stop using
+      Safari!</span
+    >
+    <div id="blockpy-root"></div>
+    <script type="application/json" id="blockpy-config">
+      {
+        "urls": {
+          "loadAssignment": {{ url_for('blockpy.load_assignment')|tojson }},
+          "downloadFile": {{ url_for('blockpy.download_file', external=True)|tojson }},
+          "importDatasets": {{ config['CORGIS_URL']|tojson }},
+
+          {% if submissions -%}
+            "saveAssignment": {{ url_for('blockpy.save_assignment')|tojson }},
+            "estimateGroupDuration": {{ url_for('blockpy.estimate_group_duration')|tojson }},
+            "startAssignment": {{ url_for('blockpy.start_assignment')|tojson }},
+            "loadHistory": {{ url_for('blockpy.load_history')|tojson }},
+            "logEvent": {{ url_for('blockpy.log_event')|tojson }},
+            "saveFile": {{ url_for('blockpy.save_file')|tojson }},
+            "saveImage": {{ url_for('blockpy.save_image')|tojson }},
+            "listUploadedFiles": {{ url_for('blockpy.list_files')|tojson }},
+            "uploadFile": {{ url_for('blockpy.upload_file')|tojson }},
+            "renameFile": {{ url_for('blockpy.rename_file')|tojson }},
+            "updateSubmission": {{ url_for('blockpy.update_submission')|tojson }},
+            "updateSubmissionStatus": {{ url_for('blockpy.update_submission_status')|tojson }},
+            "openaiProxy": {{ url_for('blockpy.openai')|tojson }},
+            "shareUrl": {{ url_for('blockpy.share_url', _external=True)|tojson }},
+            {%- endif %}
+
+          "loadAssignmentByUrl": {{ url_for('assignments.by_url')|tojson }}
+        },
+        "user": {
+          "id": {{ user_id|tojson }},
+          "name": {% if user %} {{ user.name()|tojson }} {% else %} "Unknown User" {%  endif %},
+          "role": {{ role|tojson }},
+          "courseId": {{ course_id|tojson }}
+        },
+        "assignment": {
+          "currentAssignmentId": {{ current_assignment_id }},
+          "assignmentGroupId": {{ assignment_group_id or "null" }},
+          "typeIndex": {
+            "quiz": {{ quiz_questions|tojson }},
+            "reading": {{ readings|tojson }},
+            "textbook": {{ textbooks|tojson }},
+            "java": {{ javas|tojson }},
+            "typescript": {{ kettles|tojson }},
+            "explain": {{ explains|tojson }},
+            "blockpy": {{ blockpys|tojson }}
+          }
+        },
+        "group": {
+          "assignments": [ {% for assignment, submission in group %}
+            {
+                "id": {{ assignment.id }},
+                "name": {{ assignment.name|tojson }},
+                "url": {{ assignment.url|tojson}},
+                "subordinate": {{ assignment.subordinate|tojson }},
+                "hidden": {{ assignment.hidden|tojson }},
+                "correct": {{ submission.correct|tojson }}
+            }{{ "," if not loop.last else "" }}
+        {% endfor %}
+          ],
+          "anySecretive": false,
+          "currentAssignmentId": {{ current_assignment_id }}
+        },
+        "display": {
+            "instructor": {{ (role in ("owner", "grader"))|tojson }},
+            "readOnly": {{ (read_only or False)|tojson }},
+            "embed": true
+        },
+        "passcodeProtected": {{ passcode_protected|tojson }},
+        "sessionStartTime": {{ session_start_time|tojson }},
+        "paths": {
+          "blocklyMedia": {{ url_for('static', filename='blockly/media/')|tojson }},
+          "emojiProxy": {{ url_for('static', filename='images/emoji/')|tojson }},
+          "pyodideIndexURL": "https://cdn.jsdelivr.net/pyodide/v314.0.2/full/",
+          "assets": {{ url_for('static', filename="studio/assets/")|tojson }}
+        },
+        "settings": {},
+        "corgisUrl": {{ config['CORGIS_URL']|tojson }}
+      }
+    </script>
+
+    <script>
+      BlockPyStudio.mount('#blockpy-root', '#blockpy-config');
+    </script>
+
+{% endblock %}

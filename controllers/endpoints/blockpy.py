@@ -151,7 +151,8 @@ def load_editor(editor_information):
             if assignment.type in types:
                 by_type[name].append(assignment.id)
                 break
-    response = make_response(render_template('blockpy/editor.html', ip=request.remote_addr,
+    template = 'blockpy/editor.html' if not editor_information.get('use_studio') else 'blockpy/studio.html'
+    response = make_response(render_template(template, ip=request.remote_addr,
                            **by_type,
                            **editor_information))
     return response

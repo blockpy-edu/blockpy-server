@@ -168,7 +168,17 @@ def get_bundles(app):
         'blockly_maze_js': Bundle(
             'blockly-games/common/boot.js',
             'blockly-games/common/storage.js',
-            output='gen/blockly_maze.js')
+            output='gen/blockly_maze.js'),
+
+        'studio_js': Bundle(
+            "studio/blockpy-studio.iife.js",
+            output="gen/studio.js"
+        ),
+
+        "studio_css": Bundle(
+            "studio/app.css",
+            output="gen/studio.css"
+        )
     }
 
 

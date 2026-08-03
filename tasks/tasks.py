@@ -330,6 +330,7 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
                            and s.version > 0]
             reports[student] = []
             for (submission, assignment, assignment_group) in submissions:
+                submission_id = submission.id if submission else None
                 try:
                     history = submission.get_logs()
                     filename = f"{directory}/{assignment.id}_{student.id}.json"
@@ -503,6 +504,18 @@ def duration_until_success(history, filename, short_threshold=10):
     #return (end_time - start_time).total_seconds()
 
 def _added_chars(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    # Pure append or prepend
+    if b.startswith(a) or a.startswith(b):
+        return max(0, len(b) - len(a))
+    # Skip very large strings
+    if len(b) + len(a) > 1024*100:
+        return max(0, len(b) - len(a))
+    # Use alt path for longer strings
+    # if len(a) + len(b) > 1024:
+    return find_common_span(a, b)
+
     # Count only inserted text; deletions don't reduce the count.
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
     add = 0
@@ -512,6 +525,23 @@ def _added_chars(a: str, b: str) -> int:
         elif tag == 'replace':
             add += (j2 - j1)  # inserted side of the replacement counts as additions
     return add
+
+def find_common_span(a: str, b: str) -> int:
+    # Trim common prefix
+    prefix = 0
+    max_prefix = min(len(a), len(b))
+    while prefix < max_prefix and a[prefix] == b[prefix]:
+        prefix += 1
+
+    # Trim common suffix after prefix
+    ai = len(a) - 1
+    bi = len(b) - 1
+    while ai >= prefix and bi >= prefix and a[ai] == b[bi]:
+        ai -= 1
+        bi -= 1
+
+    # Inserted/replaced region in b
+    return max(0, bi - prefix + 1)
 
 def copy_paste_additions(history, characters_per_second_threshold=30):
     # Find the difference between consecutive edits in terms of additive edit distance (non negative length change)
