@@ -2,7 +2,7 @@
     <div class="card m-4" data-bind="visible: visible() || !$component.asStudent(),">
         <div class="quizzer-question card-body">
             <quizzer-question-status params="indexId: 1+$index(), status: student, question: $data, isAnchor: true,
-                                             quiz: $component.quiz(), asStudent: $component.asStudent()" class="float-right"></quizzer-question-status>
+                                             quiz: $component.quiz, asStudent: $component.asStudent()" class="float-right"></quizzer-question-status>
             <h5 class="card-title">Question <span data-bind="text: 1+$index()"></span></h5>
             <div data-bind="if: !$component.asStudent()" style="float: right">
                 <button class="btn btn-sm mr-2"
@@ -13,10 +13,12 @@
                                text: $data.editing() ? 'Cancel' : 'Edit'"></button>
             </div>
             <h6 class="card-subtitle mb-2 text-muted">
+                <!-- ko if: $parent.quiz().gradeMode() !== 'SURVEY' -->
                 <!-- ko if: feedback() && (!$component.asStudent() || $component.quiz().feedbackType() === 'IMMEDIATE') -->
                 <span data-bind="text: Math.round(((feedback().score * points) + Number.EPSILON) * 100) / 100 + ' /'"></span>
                 <!-- /ko -->
                 <span data-bind="text: points"></span> points
+                <!-- /ko -->
                 <span data-bind="text: ' ('+id+')', visible: !$component.asStudent()"></span>
             </h6>
             <div data-bind="if: pool() && !$component.asStudent()">

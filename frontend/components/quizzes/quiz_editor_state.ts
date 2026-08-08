@@ -560,7 +560,11 @@ export class QuizEditorState {
         this.questions.push(new QuizEditorQuestion(id, {type: 'multiple_choice_question', body: '', points: 1}, {}));
     }
 
-    removeQuestion(q: QuizEditorQuestion) { this.questions.remove(q); }
+    removeQuestion(q: QuizEditorQuestion) {
+        if (confirm("Are you sure you want to delete that question?")) {
+            this.questions.remove(q);
+        }
+    }
 
     addPool() {
         this.pools.push(new QuizEditorPool({name: '', amount: 1, questions: []}));

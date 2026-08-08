@@ -230,7 +230,7 @@ export const QUIZZER_HTML = `
             <span data-bind="foreach: quiz()?.questions().filter(question => !asStudent() || question.visible())">
                 <quizzer-question-status params="indexId: 1+$index(), status: student, 
                                                  question: $data, isAnchor: false, 
-                                                 quiz: $component.quiz(), asStudent: $component.asStudent()"></quizzer-question-status>
+                                                 quiz: $component.quiz, asStudent: $component.asStudent()"></quizzer-question-status>
             </span>
         </div>
     

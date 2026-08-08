@@ -11,6 +11,10 @@ export enum QuizMode {
     READY = "READY"
 }
 
+export enum QuizGradeMode {
+    QUIZ = "QUIZ", SURVEY = "SURVEY"
+}
+
 export enum QuizFeedbackType {
     // TODO: Support other kinds besides immediate
     IMMEDIATE = "IMMEDIATE", NONE = "NONE", SUMMARY = "SUMMARY"
@@ -34,6 +38,8 @@ export interface QuizInstructionsSettings {
     coolDown?: number
     /** What type of feedback this is **/
     feedbackType?: QuizFeedbackType
+    /** How do we grade it? **/
+    gradeMode?: QuizGradeMode
     /** How many questions to show on each "page"; -1 is all questions on one page */
     questionsPerPage?: number
     /** What to use when choose the pool, for consistency */
@@ -73,6 +79,7 @@ export const EMPTY_QUIZ_INSTRUCTIONS_STRING = JSON.stringify({
         attemptLimit: -1,
         coolDown: -1,
         feedbackType: QuizFeedbackType.IMMEDIATE,
+        gradeMode: QuizGradeMode.QUIZ,
         questionsPerPage: -1,
         poolRandomness: QuizPoolRandomness.SEED,
         readingId: null
@@ -111,6 +118,7 @@ export function fillInMissingQuizInstructionFields(quizInstructions: QuizInstruc
     quizInstructions.settings.questionsPerPage ??= -1;
     quizInstructions.settings.poolRandomness ??= QuizPoolRandomness.ATTEMPT;
     quizInstructions.settings.readingId ??= null;
+    quizInstructions.settings.gradeMode ??= QuizGradeMode.QUIZ;
 }
 
 
@@ -128,6 +136,7 @@ export class Quiz {
     attemptMulligans: ko.Observable<number>;
 
     feedbackType: ko.Observable<QuizFeedbackType>;
+    gradeMode: ko.Observable<QuizGradeMode>;
 
     readingId: ko.Observable<number|null>;
     attemptLimit: ko.Observable<number>;
@@ -147,6 +156,7 @@ export class Quiz {
         this.attemptLimit = ko.observable<number>(-1);
         this.readingId = ko.observable<number|null>(null);
         this.feedbackType = ko.observable<QuizFeedbackType>(QuizFeedbackType.IMMEDIATE);
+        this.gradeMode = ko.observable<QuizGradeMode>(QuizGradeMode.QUIZ);
         this.lookupReading = lookupReading;
 
         this.pools = ko.observable<QuestionPool[]>([]);
@@ -230,6 +240,7 @@ export class Quiz {
         }
         //console.log(instructions.settings);
         this.feedbackType(instructions.settings.feedbackType);
+        this.gradeMode(instructions.settings.gradeMode);
         this.poolRandomness(instructions.settings.poolRandomness);
         this.includeFeedbacks(currentAnswer.feedback);
         this.includePools(instructions.pools || []);
