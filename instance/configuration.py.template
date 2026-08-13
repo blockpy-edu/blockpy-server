@@ -70,3 +70,6 @@ PROFILE_RUNTIME = False
 # Canvas settings to prevent folks from logging in normally off the firewall
 # (they should use LTI)
 PREFERRED_LOGIN_URL = "https://udel.instructure.com/"
+# Shared secret for the LAPIS feedback ingestion endpoint
+# (must match the LAPIS repo's .env BLOCKPY_LAPIS_TOKEN).
+LAPIS_FEEDBACK_TOKEN = "change-me"

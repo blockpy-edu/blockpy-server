@@ -83,14 +83,17 @@ def run_migrations_online():
     )
 
     with connectable.connect() as connection:
+        # Newer flask-migrate already supplies compare_type via
+        # configure_args; setdefault avoids the duplicate-kwarg crash.
+        conf_args = dict(current_app.extensions['migrate'].configure_args)
+        conf_args.setdefault('compare_type', True)
+        conf_args.setdefault('compare_server_default', True)
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             process_revision_directives=process_revision_directives,
             include_schemas=True,
-            compare_type=True,
-            compare_server_default=True,
-            **current_app.extensions['migrate'].configure_args
+            **conf_args
         )
 
         with context.begin_transaction():

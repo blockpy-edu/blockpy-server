@@ -1,0 +1,40 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Feedback
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>Feedback</h1>
+    <p class="text-muted">
+        Personalized feedback from your instructor, grouped by analysis
+        window.
+    </p>
+
+    {% if not windows %}
+        <p>No feedback yet — check back later in the semester.</p>
+    {% endif %}
+
+    {% for window, items in windows %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>{{ window or "General" }}</strong>
+            </div>
+            <div class="card-body">
+                {% for item in items %}
+                    <div class="mb-2 lapis-feedback-body">
+                        {{ item.body|markdown|safe }}
+                        <p class="text-muted small mb-0">
+                            Released
+                            {{ item.date_released.strftime('%B %d, %Y') if item.date_released else '' }}
+                            {% if item.course %} &middot; {{ item.course.name }}{% endif %}
+                        </p>
+                    </div>
+                    {% if not loop.last %}<hr>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -73,6 +73,7 @@ function renameCourse() {
 {% else %}
     <a href="{{ url_for('courses.view_assignments', course_id=course.id) }}" class='btn btn-outline-secondary'>View Assignments</a> View all the available assignments for this course.<br><br>
     <a href="{{ url_for('courses.submissions_user', course_id=course.id, owner_id=g.user.id) }}" class='btn btn-outline-secondary'>View Your Submissions</a> View your submissions for all of the assignments.<br><br>
+    <a href="{{ url_for('lapis.student_feedback', course_id=course.id) }}" class='btn btn-outline-secondary'>Feedback</a> Personalized feedback from your instructor.<br><br>
 {% endif %}
 
     <h3>Textbook{{ 's' if textbooks|length > 1 else '' }}</h3>

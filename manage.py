@@ -9,6 +9,7 @@ from flask import current_app
 from scripts.setup import cli
 import scripts.db_commands
 import scripts.external_commands
+import scripts.import_eol
 
 
 @cli.command('huey')
