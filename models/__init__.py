@@ -21,7 +21,7 @@ from models.invite import Invite
 from models.report import Report
 from models.grade_history import GradeHistory
 from models.counters import SubmissionCounts
-from models.lapis_feedback import LapisFeedback
+#from models.lapis_feedback import LapisFeedback
 
 
 from models.generics.schemas import (UserSchema, RoleSchema, CourseSchema, AssignmentSchema, AssignmentTagSchema,
@@ -59,7 +59,8 @@ ALL_TABLES = (
     User, Role, Authentication,
     Report, GradeHistory,
     AccessLog, ErrorLog, CourseLog, RoleLog, AssignmentLog, SubmissionLog,
-    SubmissionCounts, LapisFeedback
+    SubmissionCounts,
+    #LapisFeedback
 )
 
 
