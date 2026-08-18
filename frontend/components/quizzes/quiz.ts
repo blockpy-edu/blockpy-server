@@ -137,6 +137,10 @@ export class Quiz {
 
     feedbackType: ko.Observable<QuizFeedbackType>;
     gradeMode: ko.Observable<QuizGradeMode>;
+    isSurvey: ko.PureComputed<boolean>;
+    /** Student-facing noun for this assessment ("quiz" or "survey"), lowercase and Title Case */
+    kindName: ko.PureComputed<string>;
+    kindTitle: ko.PureComputed<string>;
 
     readingId: ko.Observable<number|null>;
     attemptLimit: ko.Observable<number>;
@@ -175,6 +179,18 @@ export class Quiz {
             return this.attemptLimit() === -1 ? 'infinite attempts left.' :
                 attempts < 0 ? 'no attempts left!' :
                 attempts === 1 ? 'only one attempt left.' : `${attempts} attempts left.`;
+        }, this);
+
+        this.isSurvey = ko.pureComputed<boolean>( () => {
+            return this.gradeMode() === QuizGradeMode.SURVEY;
+        }, this);
+
+        this.kindName = ko.pureComputed<string>( () => {
+            return this.isSurvey() ? "survey" : "quiz";
+        }, this);
+
+        this.kindTitle = ko.pureComputed<string>( () => {
+            return this.isSurvey() ? "Survey" : "Quiz";
         }, this);
 
         this.canAttempt = ko.pureComputed<boolean>( () => {

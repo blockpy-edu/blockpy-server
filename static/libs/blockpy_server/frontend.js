@@ -3418,6 +3418,15 @@ class Quiz {
                 attempts < 0 ? 'no attempts left!' :
                     attempts === 1 ? 'only one attempt left.' : `${attempts} attempts left.`;
         }, this);
+        this.isSurvey = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            return this.gradeMode() === QuizGradeMode.SURVEY;
+        }, this);
+        this.kindName = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            return this.isSurvey() ? "survey" : "quiz";
+        }, this);
+        this.kindTitle = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            return this.isSurvey() ? "Survey" : "Quiz";
+        }, this);
         this.canAttempt = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
             const attempts = (this.attemptLimit() + this.attemptMulligans() - this.attemptCount());
             return this.attemptLimit() === -1 || attempts > 0;
@@ -4111,20 +4120,20 @@ const QUIZ_PREVIEW = `
 <div data-bind="switch: quiz()?.attemptStatus()">
 <p>
     <!-- ko case: 'READY' -->
-        There is a quiz below this reading, which you have not started yet.
+        There is a <span data-bind="text: quiz()?.kindName()"></span> below this reading, which you have not started yet.
         You have <span data-bind="text: quiz()?.attemptsLeft()"></span><br>
         <div class="text-center" data-bind="visible: quiz()?.canAttempt()">
-            <a href="#quiz-start">Jump down</a> to begin the quiz.
+            <a href="#quiz-start">Jump down</a> to begin the <span data-bind="text: quiz()?.kindName()"></span>.
         </div>
     <!-- /ko -->
     <!-- ko case: 'ATTEMPTING' -->
-        There is a quiz in progress below this reading. 
+        There is a <span data-bind="text: quiz()?.kindName()"></span> in progress below this reading.
         <div class="text-center">
-            <a href="#quiz-start">Jump down</a> to return to the quiz.
+            <a href="#quiz-start">Jump down</a> to return to the <span data-bind="text: quiz()?.kindName()"></span>.
         </div>
     <!-- /ko -->
     <!-- ko case: 'COMPLETED' -->
-        You have completed the quiz below this reading.<br>
+        You have completed the <span data-bind="text: quiz()?.kindName()"></span> below this reading.<br>
         <span data-bind="switch: quiz()?.feedbackType()">
             <!-- ko case: 'IMMEDIATE' -->
             You can see the feedback for each question below.<br> 
@@ -4138,7 +4147,7 @@ const QUIZ_PREVIEW = `
         </span>
         You have <span data-bind="text: quiz()?.attemptsLeft()"></span><br>
         <div class="text-center" data-bind="visible: quiz()?.canAttempt()">
-            <a href="#quiz-start">Jump down</a> to return to the quiz.
+            <a href="#quiz-start">Jump down</a> to return to the <span data-bind="text: quiz()?.kindName()"></span>.
         </div>
     <!-- /ko -->
 </p>
@@ -4151,14 +4160,14 @@ const INSTRUCTIONS_BAR_HTML = (position) => `
     <!-- /ko -->
     <div data-bind="switch: quiz()?.attemptStatus()">
         <!-- ko case: 'READY' -->
-            To begin the quiz, click "Start Quiz".<br>
+            To begin the <span data-bind="text: quiz()?.kindName()"></span>, click "Start <span data-bind="text: quiz()?.kindTitle()"></span>".<br>
             You have <span data-bind="text: quiz()?.attemptsLeft()"></span><br>
             <div class="text-center" data-bind="visible: quiz()?.canAttempt()">
-                <button data-bind="click: startQuiz" class="btn btn-success">Start Quiz</button>
+                <button data-bind="click: startQuiz" class="btn btn-success">Start <span data-bind="text: quiz()?.kindTitle()"></span></button>
             </div>
         <!-- /ko -->
         <!-- ko case: 'ATTEMPTING' -->
-            <span>Quiz In Progress!</span><br>
+            <span><span data-bind="text: quiz()?.kindTitle()"></span> In Progress!</span><br>
             <!--<button data-bind="click: saveSubmission">SAVE</button><br>-->
             <div class="text-center">
                 <button data-bind="click: submit, disable: isDirty"
@@ -4166,7 +4175,7 @@ const INSTRUCTIONS_BAR_HTML = (position) => `
             </div>
         <!-- /ko -->
         <!-- ko case: 'COMPLETED' -->
-            You have completed the quiz.<br>
+            You have completed the <span data-bind="text: quiz()?.kindName()"></span>.<br>
             <span data-bind="switch: quiz()?.feedbackType()">
                 <!-- ko case: 'IMMEDIATE' -->
                 You can see the feedback for each question ${position}.<br>
@@ -4180,8 +4189,8 @@ const INSTRUCTIONS_BAR_HTML = (position) => `
             </span>
             You have <span data-bind="text: quiz()?.attemptsLeft()"></span><br>
             <div class="text-center" data-bind="visible: quiz()?.canAttempt()">
-                To try again, click "Start Quiz".<br>
-                <button data-bind="click: startQuiz" class="btn btn-success">Try Quiz Again</button>
+                To try again, click "Try <span data-bind="text: quiz()?.kindTitle()"></span> Again".<br>
+                <button data-bind="click: startQuiz" class="btn btn-success">Try <span data-bind="text: quiz()?.kindTitle()"></span> Again</button>
             </div>
             You can now continue to the next part of the assignment.
         <!-- /ko -->
