@@ -1,359 +1,441 @@
-var Re=Object.defineProperty;var Se=(t,e,n)=>e in t?Re(t,e,{enumerable:!0,configurable:!0,writable:!0,value:n}):t[e]=n;var Oe=(t,e)=>()=>(e||t((e={exports:{}}).exports,e),e.exports);var E=(t,e,n)=>Se(t,typeof e!="symbol"?e+"":e,n);var Ge=Oe((Ke,C)=>{var Ie=Object.defineProperty,o=(t,e)=>Ie(t,"name",{value:e,configurable:!0}),$=(t=>typeof require<"u"?require:typeof Proxy<"u"?new Proxy(t,{get:(e,n)=>(typeof require<"u"?require:e)[n]}):t)(function(t){if(typeof require<"u")return require.apply(this,arguments);throw Error('Dynamic require of "'+t+'" is not supported')}),Pe=(()=>{for(var t=new Uint8Array(128),e=0;e<64;e++)t[e<26?e+65:e<52?e+71:e<62?e-4:e*4-205]=e;return n=>{for(var r=n.length,s=new Uint8Array((r-(n[r-1]=="=")-(n[r-2]=="="))*3/4|0),a=0,i=0;a<r;){var l=t[n.charCodeAt(a++)],c=t[n.charCodeAt(a++)],u=t[n.charCodeAt(a++)],d=t[n.charCodeAt(a++)];s[i++]=l<<2|c>>4,s[i++]=c<<4|u>>2,s[i++]=u<<6|d}return s}})();function J(t){return!isNaN(parseFloat(t))&&isFinite(t)}o(J,"_isNumber");function g(t){return t.charAt(0).toUpperCase()+t.substring(1)}o(g,"_capitalize");function P(t){return function(){return this[t]}}o(P,"_getter");var k=["isConstructor","isEval","isNative","isToplevel"],N=["columnNumber","lineNumber"],x=["fileName","functionName","source"],Ae=["args"],Te=["evalOrigin"],I=k.concat(N,x,Ae,Te);function m(t){if(t)for(var e=0;e<I.length;e++)t[I[e]]!==void 0&&this["set"+g(I[e])](t[I[e]])}o(m,"StackFrame");m.prototype={getArgs:o(function(){return this.args},"getArgs"),setArgs:o(function(t){if(Object.prototype.toString.call(t)!=="[object Array]")throw new TypeError("Args must be an Array");this.args=t},"setArgs"),getEvalOrigin:o(function(){return this.evalOrigin},"getEvalOrigin"),setEvalOrigin:o(function(t){if(t instanceof m)this.evalOrigin=t;else if(t instanceof Object)this.evalOrigin=new m(t);else throw new TypeError("Eval Origin must be an Object or StackFrame")},"setEvalOrigin"),toString:o(function(){var t=this.getFileName()||"",e=this.getLineNumber()||"",n=this.getColumnNumber()||"",r=this.getFunctionName()||"";return this.getIsEval()?t?"[eval] ("+t+":"+e+":"+n+")":"[eval]:"+e+":"+n:r?r+" ("+t+":"+e+":"+n+")":t+":"+e+":"+n},"toString")};m.fromString=o(function(t){var e=t.indexOf("("),n=t.lastIndexOf(")"),r=t.substring(0,e),s=t.substring(e+1,n).split(","),a=t.substring(n+1);if(a.indexOf("@")===0)var i=/@(.+?)(?::(\d+))?(?::(\d+))?$/.exec(a,""),l=i[1],c=i[2],u=i[3];return new m({functionName:r,args:s||void 0,fileName:l,lineNumber:c||void 0,columnNumber:u||void 0})},"StackFrame$$fromString");for(h=0;h<k.length;h++)m.prototype["get"+g(k[h])]=P(k[h]),m.prototype["set"+g(k[h])]=(function(t){return function(e){this[t]=!!e}})(k[h]);var h;for(v=0;v<N.length;v++)m.prototype["get"+g(N[v])]=P(N[v]),m.prototype["set"+g(N[v])]=(function(t){return function(e){if(!J(e))throw new TypeError(t+" must be a Number");this[t]=Number(e)}})(N[v]);var v;for(b=0;b<x.length;b++)m.prototype["get"+g(x[b])]=P(x[b]),m.prototype["set"+g(x[b])]=(function(t){return function(e){this[t]=String(e)}})(x[b]);var b,A=m;function G(){var t=/^\s*at .*(\S+:\d+|\(native\))/m,e=/^(eval@)?(\[native code])?$/;return{parse:o(function(n){if(n.stack&&n.stack.match(t))return this.parseV8OrIE(n);if(n.stack)return this.parseFFOrSafari(n);throw new Error("Cannot parse given Error object")},"ErrorStackParser$$parse"),extractLocation:o(function(n){if(n.indexOf(":")===-1)return[n];var r=/(.+?)(?::(\d+))?(?::(\d+))?$/,s=r.exec(n.replace(/[()]/g,""));return[s[1],s[2]||void 0,s[3]||void 0]},"ErrorStackParser$$extractLocation"),parseV8OrIE:o(function(n){var r=n.stack.split(`
-`).filter(function(s){return!!s.match(t)},this);return r.map(function(s){s.indexOf("(eval ")>-1&&(s=s.replace(/eval code/g,"eval").replace(/(\(eval at [^()]*)|(,.*$)/g,""));var a=s.replace(/^\s+/,"").replace(/\(eval code/g,"(").replace(/^.*?\s+/,""),i=a.match(/ (\(.+\)$)/);a=i?a.replace(i[0],""):a;var l=this.extractLocation(i?i[1]:a),c=i&&a||void 0,u=["eval","<anonymous>"].indexOf(l[0])>-1?void 0:l[0];return new A({functionName:c,fileName:u,lineNumber:l[1],columnNumber:l[2],source:s})},this)},"ErrorStackParser$$parseV8OrIE"),parseFFOrSafari:o(function(n){var r=n.stack.split(`
-`).filter(function(s){return!s.match(e)},this);return r.map(function(s){if(s.indexOf(" > eval")>-1&&(s=s.replace(/ line (\d+)(?: > eval line \d+)* > eval:\d+:\d+/g,":$1")),s.indexOf("@")===-1&&s.indexOf(":")===-1)return new A({functionName:s});var a=/((.*".+"[^@]*)?[^@]*)(?:@)/,i=s.match(a),l=i&&i[1]?i[1]:void 0,c=this.extractLocation(s.replace(a,""));return new A({functionName:l,fileName:c[0],lineNumber:c[1],columnNumber:c[2],source:s})},this)},"ErrorStackParser$$parseFFOrSafari")}}o(G,"ErrorStackParser");var Le=new G,Fe=Le;function H(){var i;if(typeof API<"u"&&API!==globalThis.API)return API.runtimeEnv;let t=typeof Bun<"u",e=typeof Deno<"u",n=typeof process=="object"&&typeof process.versions=="object"&&typeof process.versions.node=="string"&&!process.browser,r=typeof navigator=="object"&&typeof navigator.userAgent=="string"&&navigator.userAgent.indexOf("Chrome")===-1&&navigator.userAgent.indexOf("Safari")>-1,s=typeof read=="function"&&typeof load=="function",a=typeof navigator=="object"&&((i=navigator.userAgent)==null?void 0:i.includes("Cloudflare-Workers"));return K({IN_BUN:t,IN_DENO:e,IN_NODE:n,IN_SAFARI:r,IN_SHELL:s,IN_WORKERD:a})}o(H,"getGlobalRuntimeEnv");var _=H();function K(t){let e=t.IN_NODE&&typeof C<"u"&&C.exports&&typeof $=="function"&&typeof __dirname=="string",n=t.IN_NODE&&!e,r=!t.IN_NODE&&!t.IN_DENO&&!t.IN_BUN,s=r&&typeof window<"u"&&typeof window.document<"u"&&typeof document.createElement=="function"&&"sessionStorage"in window&&typeof globalThis.importScripts!="function",a=r&&typeof globalThis.WorkerGlobalScope<"u"&&typeof globalThis.self<"u"&&globalThis.self instanceof globalThis.WorkerGlobalScope;if(a&&z())throw new Error("Classic web workers are not supported");let i={...t,IN_BROWSER:r,IN_BROWSER_MAIN_THREAD:s,IN_BROWSER_WEB_WORKER:a,IN_NODE_COMMONJS:e,IN_NODE_ESM:n};if(!(i.IN_BROWSER_MAIN_THREAD||i.IN_BROWSER_WEB_WORKER||i.IN_NODE||i.IN_SHELL||i.IN_WORKERD))throw new Error(`Cannot determine runtime environment: ${JSON.stringify(i)}`);return i}o(K,"calculateDerivedFlags");function z(){try{return globalThis.importScripts("data:text/javascript,"),!0}catch{return!1}}o(z,"isClassicWorker");var V,L,W,M;async function U(){if(!_.IN_NODE||(V=(await import("./__vite-browser-external-9wXp6ZBx.js")).default,W=await import("./__vite-browser-external-9wXp6ZBx.js"),M=await import("./__vite-browser-external-9wXp6ZBx.js"),(await import("./__vite-browser-external-9wXp6ZBx.js")).default,L=await import("./__vite-browser-external-9wXp6ZBx.js"),j=L.sep,typeof $<"u"))return;let t=W,e=await import("./__vite-browser-external-9wXp6ZBx.js"),n=await import("./__vite-browser-external-9wXp6ZBx.js"),r=await import("./__vite-browser-external-9wXp6ZBx.js"),s={fs:t,crypto:e,ws:n,child_process:r};globalThis.require=function(a){return s[a]}}o(U,"initNodeModules");function X(t,e){return L.resolve(e||".",t)}o(X,"node_resolvePath");function Y(t,e){return e===void 0&&(e=location),new URL(t,e).toString()}o(Y,"browser_resolvePath");var S;_.IN_NODE?S=X:_.IN_SHELL?S=o(t=>t,"resolvePath"):S=Y;var j;_.IN_NODE||(j="/");function Q(t,e){return t.startsWith("file://")&&(t=t.slice(7)),t.includes("://")?{response:fetch(t)}:{binary:M.readFile(t).then(n=>new Uint8Array(n.buffer,n.byteOffset,n.byteLength))}}o(Q,"node_getBinaryResponse");function Z(t,e){if(t.startsWith("file://")&&(t=t.slice(7)),t.includes("://"))throw new Error("Shell cannot fetch urls");return{binary:Promise.resolve(new Uint8Array(readbuffer(t)))}}o(Z,"shell_getBinaryResponse");function ee(t,e){let n=new URL(t,location);return{response:fetch(n,e?{integrity:e}:{})}}o(ee,"browser_getBinaryResponse");var O;_.IN_NODE?O=Q:_.IN_SHELL?O=Z:O=ee;async function te(t,e){let{response:n,binary:r}=O(t,e);if(r)return r;let s=await n;if(!s.ok)throw new Error(`Failed to load '${t}': request failed.`);return new Uint8Array(await s.arrayBuffer())}o(te,"loadBinaryFile");var F;_.IN_NODE?F=ne:F=o(async t=>await import(t),"loadScript");async function ne(t){return t.startsWith("file://")&&(t=t.slice(7)),t.includes("://")?await import(t):await import(V.pathToFileURL(t).href)}o(ne,"nodeLoadScript");async function re(t){if(_.IN_NODE){await U();let e=await M.readFile(t,{encoding:"utf8"});return JSON.parse(e)}else if(_.IN_SHELL){let e=read(t);return JSON.parse(e)}else return await(await fetch(t)).json()}o(re,"loadLockFile");async function se(){if(_.IN_NODE_COMMONJS)return __dirname;let t;try{throw new Error}catch(r){t=r}let e=Fe.parse(t)[0].fileName;if(_.IN_NODE&&!e.startsWith("file://")&&(e=`file://${e}`),_.IN_NODE_ESM){let r=await import("./__vite-browser-external-9wXp6ZBx.js");return(await import("./__vite-browser-external-9wXp6ZBx.js")).fileURLToPath(r.dirname(e))}let n=e.lastIndexOf(j);if(n===-1)throw new Error("Could not extract indexURL path from pyodide module location. Please pass the indexURL explicitly to loadPyodide.");return e.slice(0,n)}o(se,"calculateDirname");function ie(t){var e;return t.substring(0,t.lastIndexOf("/")+1)||((e=globalThis.location)==null?void 0:e.toString())||"."}o(ie,"calculateInstallBaseUrl");function ae(t){let e=t.FS,n=t.FS.filesystems.MEMFS,r=t.PATH,s={DIR_MODE:16895,FILE_MODE:33279,mount:o(function(a){if(!a.opts.fileSystemHandle)throw new Error("opts.fileSystemHandle is required");return n.mount.apply(null,arguments)},"mount"),syncfs:o(async(a,i,l)=>{try{let c=s.getLocalSet(a),u=await s.getRemoteSet(a),d=i?u:c,f=i?c:u;await s.reconcile(a,d,f),l(null)}catch(c){l(c)}},"syncfs"),getLocalSet:o(a=>{let i=Object.create(null);function l(d){return d!=="."&&d!==".."}o(l,"isRealDir");function c(d){return f=>r.join2(d,f)}o(c,"toAbsolute");let u=e.readdir(a.mountpoint).filter(l).map(c(a.mountpoint));for(;u.length;){let d=u.pop(),f=e.stat(d);e.isDir(f.mode)&&u.push.apply(u,e.readdir(d).filter(l).map(c(d))),i[d]={timestamp:f.mtime,mode:f.mode}}return{type:"local",entries:i}},"getLocalSet"),getRemoteSet:o(async a=>{let i=Object.create(null),l=await De(a.opts.fileSystemHandle);for(let[c,u]of l)c!=="."&&(i[r.join2(a.mountpoint,c)]={timestamp:u.kind==="file"?new Date((await u.getFile()).lastModified):new Date,mode:u.kind==="file"?s.FILE_MODE:s.DIR_MODE});return{type:"remote",entries:i,handles:l}},"getRemoteSet"),loadLocalEntry:o(a=>{let i=e.lookupPath(a,{}).node,l=e.stat(a);if(e.isDir(l.mode))return{timestamp:l.mtime,mode:l.mode};if(e.isFile(l.mode))return i.contents=n.getFileDataAsTypedArray(i),{timestamp:l.mtime,mode:l.mode,contents:i.contents};throw new Error("node type not supported")},"loadLocalEntry"),storeLocalEntry:o((a,i)=>{if(e.isDir(i.mode))e.mkdirTree(a,i.mode);else if(e.isFile(i.mode))e.writeFile(a,i.contents,{canOwn:!0});else throw new Error("node type not supported");e.chmod(a,i.mode),e.utime(a,i.timestamp,i.timestamp)},"storeLocalEntry"),removeLocalEntry:o(a=>{var i=e.stat(a);e.isDir(i.mode)?e.rmdir(a):e.isFile(i.mode)&&e.unlink(a)},"removeLocalEntry"),loadRemoteEntry:o(async a=>{if(a.kind==="file"){let i=await a.getFile();return{contents:new Uint8Array(await i.arrayBuffer()),mode:s.FILE_MODE,timestamp:new Date(i.lastModified)}}else{if(a.kind==="directory")return{mode:s.DIR_MODE,timestamp:new Date};throw new Error("unknown kind: "+a.kind)}},"loadRemoteEntry"),storeRemoteEntry:o(async(a,i,l)=>{let c=a.get(r.dirname(i)),u=e.isFile(l.mode)?await c.getFileHandle(r.basename(i),{create:!0}):await c.getDirectoryHandle(r.basename(i),{create:!0});if(u.kind==="file"){let d=await u.createWritable();await d.write(l.contents),await d.close()}a.set(i,u)},"storeRemoteEntry"),removeRemoteEntry:o(async(a,i)=>{await a.get(r.dirname(i)).removeEntry(r.basename(i)),a.delete(i)},"removeRemoteEntry"),reconcile:o(async(a,i,l)=>{let c=0,u=[];Object.keys(i.entries).forEach(function(p){let y=i.entries[p],w=l.entries[p];(!w||e.isFile(y.mode)&&y.timestamp.getTime()>w.timestamp.getTime())&&(u.push(p),c++)}),u.sort();let d=[];if(Object.keys(l.entries).forEach(function(p){i.entries[p]||(d.push(p),c++)}),d.sort().reverse(),!c)return;let f=i.type==="remote"?i.handles:l.handles;for(let p of u){let y=r.normalize(p.replace(a.mountpoint,"/")).substring(1);if(l.type==="local"){let w=f.get(y),xe=await s.loadRemoteEntry(w);s.storeLocalEntry(p,xe)}else{let w=s.loadLocalEntry(p);await s.storeRemoteEntry(f,y,w)}}for(let p of d)if(l.type==="local")s.removeLocalEntry(p);else{let y=r.normalize(p.replace(a.mountpoint,"/")).substring(1);await s.removeRemoteEntry(f,y)}},"reconcile")};t.FS.filesystems.NATIVEFS_ASYNC=s}o(ae,"initializeNativeFS");var De=o(async t=>{let e=[];async function n(s){for await(let a of s.values())e.push(a),a.kind==="directory"&&await n(a)}o(n,"collect"),await n(t);let r=new Map;r.set(".",t);for(let s of e){let a=(await t.resolve(s)).join("/");r.set(a,s)}return r},"getFsHandles"),Ce=Pe("AGFzbQEAAAABDANfAGAAAW9gAW8BfwMDAgECBygCE0pzdl9HZXRFcnJvcl9pbXBvcnQAAA5Kc3ZFcnJvcl9DaGVjawABChMCBwD7AQD7GwsJACAA+xr7FAAL"),Me=(async function(){if(!(globalThis.navigator&&(/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==="MacIntel"&&typeof navigator.maxTouchPoints<"u"&&navigator.maxTouchPoints>1)))try{let t=await WebAssembly.compile(Ce);return await WebAssembly.instantiate(t)}catch(t){if(t instanceof WebAssembly.CompileError)return;throw t}})();async function oe(){let t=await Me;if(t)return t.exports;let e=Symbol("error marker");return{Jsv_GetError_import:o(()=>e,"Jsv_GetError_import"),JsvError_Check:o(n=>n===e,"JsvError_Check")}}o(oe,"getJsvErrorImport");function le(t){let e={config:t,runtimeEnv:_},n={noImageDecoding:!0,noAudioDecoding:!0,noWasmDecoding:!1,preRun:me(t),print:t.stdout,printErr:t.stderr,onExit(r){n.exitCode=r},thisProgram:t._sysExecutable,arguments:t.args,API:e,locateFile:o(r=>t.indexURL+r,"locateFile"),instantiateWasm:_e(t.indexURL)};return n}o(le,"createSettings");function ce(t){return function(e){let n="/";try{e.FS.mkdirTree(t)}catch(r){console.error(`Error occurred while making a home directory '${t}':`),console.error(r),console.error(`Using '${n}' for a home directory instead`),t=n}e.FS.chdir(t)}}o(ce,"createHomeDirectory");function ue(t){return function(e){Object.assign(e.ENV,t)}}o(ue,"setEnvironment");function de(t){return t?[async e=>{e.addRunDependency("fsInitHook");try{await t(e.FS,{sitePackages:e.API.sitePackages})}finally{e.removeRunDependency("fsInitHook")}}]:[]}o(de,"callFsInitHook");function pe(t){let e=t.HEAPU32[t._Py_Version>>>2],n=e>>>24&255,r=e>>>16&255,s=e>>>8&255;return[n,r,s]}o(pe,"computeVersionTuple");function fe(t){let e=te(t);return async n=>{n.API.pyVersionTuple=pe(n);let[r,s]=n.API.pyVersionTuple;n.FS.mkdirTree("/lib"),n.API.sitePackages=`/lib/python${r}.${s}/site-packages`,n.FS.mkdirTree(n.API.sitePackages),n.addRunDependency("install-stdlib");try{let a=await e;n.FS.writeFile(`/lib/python${r}${s}.zip`,a)}catch(a){console.error("Error occurred while installing the standard library:"),console.error(a)}finally{n.removeRunDependency("install-stdlib")}}}o(fe,"installStdlib");function me(t){let e;return t.stdLibURL!=null?e=t.stdLibURL:e=t.indexURL+"python_stdlib.zip",[fe(e),ce(t.env.HOME),ue(t.env),ae,...de(t.fsInit)]}o(me,"getFileSystemInitializationFuncs");function _e(t){if(typeof WasmOffsetConverter<"u")return;let{binary:e,response:n}=O(t+"pyodide.asm.wasm"),r=oe();return function(s,a){return(async function(){let{Jsv_GetError_import:i,JsvError_Check:l}=await r;s.env.Jsv_GetError_import=i,s.env.JsvError_Check=l;try{let c;n?c=await WebAssembly.instantiateStreaming(n,s):c=await WebAssembly.instantiate(await e,s);let{instance:u,module:d}=c;a(u,d)}catch(c){console.warn("wasm instantiation failed!"),console.warn(c)}})(),{}}}o(_e,"getInstantiateWasmFunc");var Ue="314.0.2";function R(t){return t===void 0||t.endsWith("/")?t:t+"/"}o(R,"withTrailingSlash");var D=Ue;async function ge(t={}){var s,a;if(await U(),t.lockFileContents&&t.lockFileURL)throw new Error("Can't pass both lockFileContents and lockFileURL");let e=t.indexURL||await se();if(e=R(S(e)),t.packageBaseUrl=R(t.packageBaseUrl),t.cdnUrl=R(t.packageBaseUrl??`https://cdn.jsdelivr.net/pyodide/v${D}/full/`),!t.lockFileContents){let i=t.lockFileURL??e+"pyodide-lock.json";t.lockFileContents=re(i),t.packageBaseUrl??(t.packageBaseUrl=ie(i))}t.indexURL=e,t.packageCacheDir&&(t.packageCacheDir=R(S(t.packageCacheDir)));let n={jsglobals:globalThis,stdin:globalThis.prompt?()=>globalThis.prompt():void 0,args:[],env:{},packages:[],packageCacheDir:t.packageBaseUrl,enableRunUntilComplete:!0,checkAPIVersion:!0,BUILD_ID:"a4189f0fe3d610ecd603639c08596362b70a34b106c58c9a93486c22df4c89a5"},r=Object.assign(n,t);return(s=r.env).HOME??(s.HOME="/home/pyodide"),(a=r.env).PYTHONINSPECT??(a.PYTHONINSPECT="1"),r}o(ge,"initializeConfiguration");function ye(t){let e=le(t),n=e.API;return n.lockFilePromise=Promise.resolve(t.lockFileContents),e}o(ye,"createEmscriptenSettings");async function he(t){if(t.createPyodideModule)return t.createPyodideModule;let e=`${t.indexURL}pyodide.asm.mjs`;return(await F(e)).default}o(he,"loadWasmScript");async function ve(t,e){if(!t._loadSnapshot)return;let n=await t._loadSnapshot,r=ArrayBuffer.isView(n)?n:new Uint8Array(n);return e.noInitialRun=!0,e.INITIAL_MEMORY=r.length,r}o(ve,"prepareSnapshot");async function be(t,e){let n=await t(e);if(e.exitCode!==void 0)throw new n.ExitStatus(e.exitCode);return n}o(be,"instantiatePyodideModule");function we(t,e){let n=t.API;if(e.pyproxyToStringRepr&&n.setPyProxyToStringMethod(!0),e.convertNullToNone&&n.setCompatNullToNone(!0),e.toJsLiteralMap&&n.setCompatToJsLiteralMap(!0),n.version!==D&&e.checkAPIVersion)throw new Error(`Pyodide version does not match: '${D}' <==> '${n.version}'. If you updated the Pyodide version, make sure you also updated the 'indexURL' parameter passed to loadPyodide.`);t.locateFile=r=>{throw r.endsWith(".so")?new Error(`Failed to find dynamic library "${r}"`):new Error(`Unexpected call to locateFile("${r}")`)}}o(we,"configureAPI");function Ee(t,e,n){let r=t.API,s;return e&&(s=r.restoreSnapshot(e)),r.finalizeBootstrap(s,n._snapshotDeserializer)}o(Ee,"bootstrapPyodide");async function ke(t,e){let n=t._api;return n.sys.path.insert(0,""),n._pyodide.set_excepthook(),await n.packageIndexReady,n.initializeStreams(e.stdin,e.stdout,e.stderr),t}o(ke,"finalizeSetup");async function Ne(t={}){let e=await ge(t),n=ye(e),r=await he(e),s=await ve(e,n),a=await be(r,n);we(a,e);let i=Ee(a,s,e);return await ke(i,e)}o(Ne,"loadPyodide");function je(t){return t.crossOriginIsolated===!0&&typeof t.SharedArrayBuffer=="function"?"isolated":"compat"}var Be=`# The in-worker Python runtime, installed into Pyodide once at boot
-# (bundled as a string via a Vite \`?raw\` import — see raw.d.ts). Implements
-# per-job isolation (spec 6.2): fresh __main__ module dict per job,
-# sys.modules snapshot/restore, FS staging under /mnt/blockpy with artifact
-# diff-back (spec 7.5, LD-3x), scripted stdin, student-relative traceback
-# line mapping (spec 6.3 — instructor answer_prefix lines are subtracted, as
-# legacy Skulpt did), live stdout/stderr tee streaming, and opt-in
-# sys.settrace tracing whose step counter doubles as the instruction limit
-# (E3, spec 6.2).
-import builtins
-import contextlib
-import io
-import json
-import os
-import sys
-import traceback
-import types
-import warnings
-
-MOUNT = '/mnt/blockpy'
-TRACE_STORAGE_CAP = 10000
-
-# Plot capture (spec 10.2): headless Agg backend — figures are snapshotted
-# into PNGs after each run instead of "shown". Set before matplotlib can be
-# imported; silence Agg's "cannot be shown" warning from plt.show().
-os.environ.setdefault('MPLBACKEND', 'Agg')
-warnings.filterwarnings('ignore', message='.*non-interactive.*cannot be shown.*')
-
-
-class TraceLimitError(Exception):
-    pass
-
-
-class _Tee(io.StringIO):
-    """Accumulates output while forwarding each chunk to a JS callback."""
-
-    def __init__(self, callback):
-        super().__init__()
-        self.callback = callback
-
-    def write(self, text):
-        # JS null arrives as JsNull (not None) — guard on callability.
-        if text and callable(self.callback):
-            self.callback(text)
-        return super().write(text)
-
-
-class StudioRuntime:
-    def __init__(self):
-        self.baseline_modules = set(sys.modules)
-        self.last_globals = None
-        self.staged = {}
-
-    # -- filesystem staging (spec 7.5) --------------------------------------
-
-    def stage_files(self, files):
-        os.makedirs(MOUNT, exist_ok=True)
-        for root, dirs, names in os.walk(MOUNT, topdown=False):
-            for name in names:
-                os.remove(os.path.join(root, name))
-            for d in dirs:
-                os.rmdir(os.path.join(root, d))
-        self.staged = dict(files)
-        for name, contents in files.items():
-            path = os.path.join(MOUNT, name)
-            parent = os.path.dirname(path)
-            if parent:
-                os.makedirs(parent, exist_ok=True)
-            with open(path, 'w', encoding='utf-8') as handle:
-                handle.write(contents)
-        os.chdir(MOUNT)
-
-    def collect_artifacts(self):
-        artifacts = {}
-        for root, _dirs, names in os.walk(MOUNT):
-            for name in names:
-                path = os.path.join(root, name)
-                rel = os.path.relpath(path, MOUNT).replace(os.sep, '/')
-                try:
-                    with open(path, 'r', encoding='utf-8') as handle:
-                        contents = handle.read()
-                except (OSError, UnicodeDecodeError):
-                    continue
-                if self.staged.get(rel) != contents:
-                    artifacts[rel] = contents
-        return artifacts
-
-    # -- per-job isolation (spec 6.2) ----------------------------------------
-
-    def restore_modules(self):
-        for name in list(sys.modules):
-            if name in self.baseline_modules:
-                continue
-            module = sys.modules[name]
-            file = getattr(module, '__file__', '') or ''
-            if '/site-packages/' in file:
-                # Installed packages (loadPackage/micropip) are expensive to
-                # re-initialize (matplotlib takes seconds) and stateless per
-                # job in practice — adopt into the baseline. Per-job figure
-                # state is reset by capture_figures (plt.close('all')).
-                self.baseline_modules.add(name)
-                continue
-            # Stdlib, student/staged (/mnt/blockpy), and dynamic modules stay
-            # per-job (§6.2): purge so the next run reimports fresh state.
-            del sys.modules[name]
-
-    # -- mock URLs (spec 10.4, legacy configurations.js openURL) -------------
-
-    def install_requests_mock(self):
-        """Install a per-job \`requests\` shim resolving \`?mock_urls.blockpy\`.
-
-        Legacy parity: ALL url access goes through the mock table — the map
-        is JSON \`{filename: [url, ...]}\`; a hit returns the staged file's
-        contents, no map or an unknown url raises the legacy IOError texts
-        (configurations.js:135-155). The module is dynamic (no __file__), so
-        restore_modules purges it after every job.
-        """
-        mock_map = None
-        raw = self.staged.get('mock_urls.blockpy')
-        if raw is not None:
-            try:
-                mock_map = json.loads(raw)
-            except Exception:  # noqa: BLE001 - bad JSON = no mocks (legacy)
-                mock_map = None
-        staged = self.staged
-
-        class MockResponse:
-            def __init__(self, text):
-                self.text = text
-                self.content = text.encode('utf-8')
-                self.status_code = 200
-                self.ok = True
-
-            def json(self):
-                return json.loads(self.text)
-
-            def raise_for_status(self):
-                return None
-
-        def get(url, *args, **kwargs):
-            if mock_map is None:
-                raise OSError(
-                    'Cannot access url: URL Data was not made available '
-                    'for this assignment'
-                )
-            for filename, urls in mock_map.items():
-                if url in urls:
-                    contents = staged.get(filename)
-                    if contents is None:
-                        # Map keys use legacy prefixed names; staging is
-                        # prefix-stripped.
-                        contents = staged.get(filename.lstrip('!^?&$*#'))
-                    if contents is None:
-                        raise OSError('File not found: ' + filename)
-                    return MockResponse(contents)
-            raise OSError(
-                'Cannot access url: ' + url +
-                ' was not made available for this assignment'
-            )
-
-        module = types.ModuleType('requests')
-        module.get = get
-        module.Response = MockResponse
-        sys.modules['requests'] = module
-
-    # -- plot capture (spec 10.2) --------------------------------------------
-
-    def capture_figures(self):
-        """Snapshot every open matplotlib figure to base64 PNG, then close.
-
-        Runs only when the student's code actually imported matplotlib.
-        Fail-soft: a broken figure never breaks the run result.
-        """
-        if 'matplotlib' not in sys.modules:
-            return []
-        try:
-            import base64
-            import matplotlib.pyplot as plt
-            images = []
-            for number in plt.get_fignums():
-                buffer = io.BytesIO()
-                plt.figure(number).savefig(buffer, format='png')
-                images.append(base64.b64encode(buffer.getvalue()).decode('ascii'))
-            plt.close('all')
-            return images
-        except Exception:  # noqa: BLE001
-            return []
-
-    # -- tracing (E3): step events + instruction limit ------------------------
-
-    def make_tracer(self, target_filename, prefix_lines, step_limit, steps):
-        state = {'count': 0}
-
-        def snapshot_locals(frame):
-            snapshot = {}
-            for key, value in frame.f_locals.items():
-                if key.startswith('__'):
-                    continue
-                try:
-                    snapshot[key] = repr(value)[:120]
-                except Exception:  # noqa: BLE001
-                    snapshot[key] = '<unrepresentable>'
-            return snapshot
-
-        def tracer(frame, event, arg):
-            if frame.f_code.co_filename != target_filename:
-                return None
-            state['count'] += 1
-            if step_limit is not None and state['count'] > step_limit:
-                raise TraceLimitError(
-                    'Execution exceeded the configured limit of '
-                    + str(step_limit) + ' steps'
-                )
-            if len(steps) < TRACE_STORAGE_CAP:
-                step = {
-                    'event': event,
-                    'line': frame.f_lineno,
-                    'student_line': frame.f_lineno - prefix_lines,
-                }
-                # 'line' fires BEFORE the line executes; 'return' fires as
-                # the frame exits, so the module-level return carries the
-                # final variable state (the trace explorer's last page).
-                if event == 'line' or event == 'return':
-                    step['locals'] = snapshot_locals(frame)
-                steps.append(step)
-            return tracer
-
-        return tracer
-
-    # -- execution ------------------------------------------------------------
-
-    def run(self, code, filename='answer.py', prefix='', suffix='',
-            inputs=None, mode='exec', extract_result=False,
-            trace=False, trace_limit=None, on_stdout=None, on_stderr=None,
-            allow_real_requests=False):
-        full = (prefix or '') + code + (suffix or '')
-        prefix_lines = (prefix or '').count('\\n')
-        # JS null arrives as JsNull (not None) — normalize scalar options.
-        if not isinstance(trace_limit, int):
-            trace_limit = None
-
-        module = types.ModuleType('__main__')
-        module.__dict__['__file__'] = filename
-
-        input_values = iter(inputs or [])
-
-        def scripted_input(prompt=''):
-            print(prompt, end='')
-            try:
-                return next(input_values)
-            except StopIteration:
-                raise EOFError('No scripted input available') from None
-
-        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
-        steps = []
-        old_input = builtins.input
-        old_main = sys.modules.get('__main__')
-        builtins.input = scripted_input
-        sys.modules['__main__'] = module
-        # Legacy parity (spec 10.4): requests resolves through the mock-urls
-        # table, never the network — unless the allow_real_requests setting
-        # is on (M3.5), in which case the REAL requests package (installed
-        # host-side with pyodide-http patching) stays importable.
-        if not allow_real_requests:
-            self.install_requests_mock()
-        error = None
-        value = None
-        try:
-            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                compiled = compile(full, filename, mode)
-                if trace:
-                    sys.settrace(
-                        self.make_tracer(filename, prefix_lines, trace_limit, steps),
-                    )
-                try:
-                    result = eval(compiled, module.__dict__)
-                finally:
-                    if trace:
-                        sys.settrace(None)
-                if mode == 'eval':
-                    value = repr(result)
-                elif extract_result and 'result' in module.__dict__:
-                    value = json.dumps(module.__dict__['result'])
-        except BaseException as exc:  # noqa: BLE001 - full error report needed
-            error = self.format_error(exc, filename, prefix_lines)
-        finally:
-            # Snapshot plots BEFORE the module restore unloads matplotlib —
-            # figures drawn before an error still surface (spec 10.2).
-            images = self.capture_figures()
-            builtins.input = old_input
-            if old_main is not None:
-                sys.modules['__main__'] = old_main
-            self.restore_modules()
-
-        self.last_globals = module.__dict__
-        return {
-            'error': error,
-            'value': value,
-            'stdout': stdout.getvalue(),
-            'stderr': stderr.getvalue(),
-            'trace': steps if trace else None,
-            'images': images,
-        }
-
-    def evaluate(self, expression, on_stdout=None, on_stderr=None):
-        """Persistent REPL bound to the last run's namespace (spec 6.4)."""
-        target = self.last_globals if self.last_globals is not None else {}
-        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
-        error = None
-        value = None
-        try:
-            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                compiled = compile(expression, 'evaluations', 'eval')
-                value = repr(eval(compiled, target))
-        except BaseException as exc:  # noqa: BLE001
-            error = self.format_error(exc, 'evaluations', 0)
-        finally:
-            self.restore_modules()
-        return {
-            'error': error,
-            'value': value,
-            'stdout': stdout.getvalue(),
-            'stderr': stderr.getvalue(),
-            'trace': None,
-        }
-
-    def clear_namespace(self):
-        self.last_globals = None
-
-    # -- error shaping (spec 6.3) ----------------------------------------------
-
-    def format_error(self, exc, filename, prefix_lines):
-        line = None
-        if isinstance(exc, SyntaxError) and exc.filename == filename:
-            line = exc.lineno
-        else:
-            for frame, lineno in traceback.walk_tb(exc.__traceback__):
-                if frame.f_code.co_filename == filename:
-                    line = lineno
-        formatted = ''.join(
-            traceback.format_exception(type(exc), exc, exc.__traceback__),
-        )
-        student_line = None if line is None else line - prefix_lines
-        return {
-            'type': type(exc).__name__,
-            'message': str(exc),
-            'line': line,
-            'student_line': student_line,
-            'traceback': formatted,
-        }
-
-
-_studio_runtime = StudioRuntime()
-`,qe=`# The Pedal "blockpy environment" contract for Studio (spec 10.1) — a
+var Re=Object.defineProperty;var Se=(n,e,t)=>e in n?Re(n,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):n[e]=t;var Ie=(n,e)=>()=>(e||n((e={exports:{}}).exports,e),e.exports);var y=(n,e,t)=>Se(n,typeof e!="symbol"?e+"":e,t);var Ke=Ie((Ye,M)=>{var Oe=Object.defineProperty,o=(n,e)=>Oe(n,"name",{value:e,configurable:!0}),$=(n=>typeof require<"u"?require:typeof Proxy<"u"?new Proxy(n,{get:(e,t)=>(typeof require<"u"?require:e)[t]}):n)(function(n){if(typeof require<"u")return require.apply(this,arguments);throw Error('Dynamic require of "'+n+'" is not supported')}),Pe=(()=>{for(var n=new Uint8Array(128),e=0;e<64;e++)n[e<26?e+65:e<52?e+71:e<62?e-4:e*4-205]=e;return t=>{for(var s=t.length,i=new Uint8Array((s-(t[s-1]=="=")-(t[s-2]=="="))*3/4|0),r=0,a=0;r<s;){var l=n[t.charCodeAt(r++)],u=n[t.charCodeAt(r++)],c=n[t.charCodeAt(r++)],d=n[t.charCodeAt(r++)];i[a++]=l<<2|u>>4,i[a++]=u<<4|c>>2,i[a++]=c<<6|d}return i}})();function G(n){return!isNaN(parseFloat(n))&&isFinite(n)}o(G,"_isNumber");function v(n){return n.charAt(0).toUpperCase()+n.substring(1)}o(v,"_capitalize");function T(n){return function(){return this[n]}}o(T,"_getter");var x=["isConstructor","isEval","isNative","isToplevel"],N=["columnNumber","lineNumber"],R=["fileName","functionName","source"],Te=["args"],Ae=["evalOrigin"],P=x.concat(N,R,Te,Ae);function m(n){if(n)for(var e=0;e<P.length;e++)n[P[e]]!==void 0&&this["set"+v(P[e])](n[P[e]])}o(m,"StackFrame");m.prototype={getArgs:o(function(){return this.args},"getArgs"),setArgs:o(function(n){if(Object.prototype.toString.call(n)!=="[object Array]")throw new TypeError("Args must be an Array");this.args=n},"setArgs"),getEvalOrigin:o(function(){return this.evalOrigin},"getEvalOrigin"),setEvalOrigin:o(function(n){if(n instanceof m)this.evalOrigin=n;else if(n instanceof Object)this.evalOrigin=new m(n);else throw new TypeError("Eval Origin must be an Object or StackFrame")},"setEvalOrigin"),toString:o(function(){var n=this.getFileName()||"",e=this.getLineNumber()||"",t=this.getColumnNumber()||"",s=this.getFunctionName()||"";return this.getIsEval()?n?"[eval] ("+n+":"+e+":"+t+")":"[eval]:"+e+":"+t:s?s+" ("+n+":"+e+":"+t+")":n+":"+e+":"+t},"toString")};m.fromString=o(function(n){var e=n.indexOf("("),t=n.lastIndexOf(")"),s=n.substring(0,e),i=n.substring(e+1,t).split(","),r=n.substring(t+1);if(r.indexOf("@")===0)var a=/@(.+?)(?::(\d+))?(?::(\d+))?$/.exec(r,""),l=a[1],u=a[2],c=a[3];return new m({functionName:s,args:i||void 0,fileName:l,lineNumber:u||void 0,columnNumber:c||void 0})},"StackFrame$$fromString");for(b=0;b<x.length;b++)m.prototype["get"+v(x[b])]=T(x[b]),m.prototype["set"+v(x[b])]=(function(n){return function(e){this[n]=!!e}})(x[b]);var b;for(w=0;w<N.length;w++)m.prototype["get"+v(N[w])]=T(N[w]),m.prototype["set"+v(N[w])]=(function(n){return function(e){if(!G(e))throw new TypeError(n+" must be a Number");this[n]=Number(e)}})(N[w]);var w;for(k=0;k<R.length;k++)m.prototype["get"+v(R[k])]=T(R[k]),m.prototype["set"+v(R[k])]=(function(n){return function(e){this[n]=String(e)}})(R[k]);var k,A=m;function H(){var n=/^\s*at .*(\S+:\d+|\(native\))/m,e=/^(eval@)?(\[native code])?$/;return{parse:o(function(t){if(t.stack&&t.stack.match(n))return this.parseV8OrIE(t);if(t.stack)return this.parseFFOrSafari(t);throw new Error("Cannot parse given Error object")},"ErrorStackParser$$parse"),extractLocation:o(function(t){if(t.indexOf(":")===-1)return[t];var s=/(.+?)(?::(\d+))?(?::(\d+))?$/,i=s.exec(t.replace(/[()]/g,""));return[i[1],i[2]||void 0,i[3]||void 0]},"ErrorStackParser$$extractLocation"),parseV8OrIE:o(function(t){var s=t.stack.split(`
+`).filter(function(i){return!!i.match(n)},this);return s.map(function(i){i.indexOf("(eval ")>-1&&(i=i.replace(/eval code/g,"eval").replace(/(\(eval at [^()]*)|(,.*$)/g,""));var r=i.replace(/^\s+/,"").replace(/\(eval code/g,"(").replace(/^.*?\s+/,""),a=r.match(/ (\(.+\)$)/);r=a?r.replace(a[0],""):r;var l=this.extractLocation(a?a[1]:r),u=a&&r||void 0,c=["eval","<anonymous>"].indexOf(l[0])>-1?void 0:l[0];return new A({functionName:u,fileName:c,lineNumber:l[1],columnNumber:l[2],source:i})},this)},"ErrorStackParser$$parseV8OrIE"),parseFFOrSafari:o(function(t){var s=t.stack.split(`
+`).filter(function(i){return!i.match(e)},this);return s.map(function(i){if(i.indexOf(" > eval")>-1&&(i=i.replace(/ line (\d+)(?: > eval line \d+)* > eval:\d+:\d+/g,":$1")),i.indexOf("@")===-1&&i.indexOf(":")===-1)return new A({functionName:i});var r=/((.*".+"[^@]*)?[^@]*)(?:@)/,a=i.match(r),l=a&&a[1]?a[1]:void 0,u=this.extractLocation(i.replace(r,""));return new A({functionName:l,fileName:u[0],lineNumber:u[1],columnNumber:u[2],source:i})},this)},"ErrorStackParser$$parseFFOrSafari")}}o(H,"ErrorStackParser");var Fe=new H,Le=Fe;function z(){var a;if(typeof API<"u"&&API!==globalThis.API)return API.runtimeEnv;let n=typeof Bun<"u",e=typeof Deno<"u",t=typeof process=="object"&&typeof process.versions=="object"&&typeof process.versions.node=="string"&&!process.browser,s=typeof navigator=="object"&&typeof navigator.userAgent=="string"&&navigator.userAgent.indexOf("Chrome")===-1&&navigator.userAgent.indexOf("Safari")>-1,i=typeof read=="function"&&typeof load=="function",r=typeof navigator=="object"&&((a=navigator.userAgent)==null?void 0:a.includes("Cloudflare-Workers"));return K({IN_BUN:n,IN_DENO:e,IN_NODE:t,IN_SAFARI:s,IN_SHELL:i,IN_WORKERD:r})}o(z,"getGlobalRuntimeEnv");var _=z();function K(n){let e=n.IN_NODE&&typeof M<"u"&&M.exports&&typeof $=="function"&&typeof __dirname=="string",t=n.IN_NODE&&!e,s=!n.IN_NODE&&!n.IN_DENO&&!n.IN_BUN,i=s&&typeof window<"u"&&typeof window.document<"u"&&typeof document.createElement=="function"&&"sessionStorage"in window&&typeof globalThis.importScripts!="function",r=s&&typeof globalThis.WorkerGlobalScope<"u"&&typeof globalThis.self<"u"&&globalThis.self instanceof globalThis.WorkerGlobalScope;if(r&&V())throw new Error("Classic web workers are not supported");let a={...n,IN_BROWSER:s,IN_BROWSER_MAIN_THREAD:i,IN_BROWSER_WEB_WORKER:r,IN_NODE_COMMONJS:e,IN_NODE_ESM:t};if(!(a.IN_BROWSER_MAIN_THREAD||a.IN_BROWSER_WEB_WORKER||a.IN_NODE||a.IN_SHELL||a.IN_WORKERD))throw new Error(`Cannot determine runtime environment: ${JSON.stringify(a)}`);return a}o(K,"calculateDerivedFlags");function V(){try{return globalThis.importScripts("data:text/javascript,"),!0}catch{return!1}}o(V,"isClassicWorker");var Y,L,W,U;async function j(){if(!_.IN_NODE||(Y=(await import("./__vite-browser-external-9wXp6ZBx.js")).default,W=await import("./__vite-browser-external-9wXp6ZBx.js"),U=await import("./__vite-browser-external-9wXp6ZBx.js"),(await import("./__vite-browser-external-9wXp6ZBx.js")).default,L=await import("./__vite-browser-external-9wXp6ZBx.js"),B=L.sep,typeof $<"u"))return;let n=W,e=await import("./__vite-browser-external-9wXp6ZBx.js"),t=await import("./__vite-browser-external-9wXp6ZBx.js"),s=await import("./__vite-browser-external-9wXp6ZBx.js"),i={fs:n,crypto:e,ws:t,child_process:s};globalThis.require=function(r){return i[r]}}o(j,"initNodeModules");function Q(n,e){return L.resolve(e||".",n)}o(Q,"node_resolvePath");function X(n,e){return e===void 0&&(e=location),new URL(n,e).toString()}o(X,"browser_resolvePath");var I;_.IN_NODE?I=Q:_.IN_SHELL?I=o(n=>n,"resolvePath"):I=X;var B;_.IN_NODE||(B="/");function Z(n,e){return n.startsWith("file://")&&(n=n.slice(7)),n.includes("://")?{response:fetch(n)}:{binary:U.readFile(n).then(t=>new Uint8Array(t.buffer,t.byteOffset,t.byteLength))}}o(Z,"node_getBinaryResponse");function ee(n,e){if(n.startsWith("file://")&&(n=n.slice(7)),n.includes("://"))throw new Error("Shell cannot fetch urls");return{binary:Promise.resolve(new Uint8Array(readbuffer(n)))}}o(ee,"shell_getBinaryResponse");function ne(n,e){let t=new URL(n,location);return{response:fetch(t,e?{integrity:e}:{})}}o(ne,"browser_getBinaryResponse");var O;_.IN_NODE?O=Z:_.IN_SHELL?O=ee:O=ne;async function te(n,e){let{response:t,binary:s}=O(n,e);if(s)return s;let i=await t;if(!i.ok)throw new Error(`Failed to load '${n}': request failed.`);return new Uint8Array(await i.arrayBuffer())}o(te,"loadBinaryFile");var D;_.IN_NODE?D=re:D=o(async n=>await import(n),"loadScript");async function re(n){return n.startsWith("file://")&&(n=n.slice(7)),n.includes("://")?await import(n):await import(Y.pathToFileURL(n).href)}o(re,"nodeLoadScript");async function se(n){if(_.IN_NODE){await j();let e=await U.readFile(n,{encoding:"utf8"});return JSON.parse(e)}else if(_.IN_SHELL){let e=read(n);return JSON.parse(e)}else return await(await fetch(n)).json()}o(se,"loadLockFile");async function ie(){if(_.IN_NODE_COMMONJS)return __dirname;let n;try{throw new Error}catch(s){n=s}let e=Le.parse(n)[0].fileName;if(_.IN_NODE&&!e.startsWith("file://")&&(e=`file://${e}`),_.IN_NODE_ESM){let s=await import("./__vite-browser-external-9wXp6ZBx.js");return(await import("./__vite-browser-external-9wXp6ZBx.js")).fileURLToPath(s.dirname(e))}let t=e.lastIndexOf(B);if(t===-1)throw new Error("Could not extract indexURL path from pyodide module location. Please pass the indexURL explicitly to loadPyodide.");return e.slice(0,t)}o(ie,"calculateDirname");function ae(n){var e;return n.substring(0,n.lastIndexOf("/")+1)||((e=globalThis.location)==null?void 0:e.toString())||"."}o(ae,"calculateInstallBaseUrl");function oe(n){let e=n.FS,t=n.FS.filesystems.MEMFS,s=n.PATH,i={DIR_MODE:16895,FILE_MODE:33279,mount:o(function(r){if(!r.opts.fileSystemHandle)throw new Error("opts.fileSystemHandle is required");return t.mount.apply(null,arguments)},"mount"),syncfs:o(async(r,a,l)=>{try{let u=i.getLocalSet(r),c=await i.getRemoteSet(r),d=a?c:u,f=a?u:c;await i.reconcile(r,d,f),l(null)}catch(u){l(u)}},"syncfs"),getLocalSet:o(r=>{let a=Object.create(null);function l(d){return d!=="."&&d!==".."}o(l,"isRealDir");function u(d){return f=>s.join2(d,f)}o(u,"toAbsolute");let c=e.readdir(r.mountpoint).filter(l).map(u(r.mountpoint));for(;c.length;){let d=c.pop(),f=e.stat(d);e.isDir(f.mode)&&c.push.apply(c,e.readdir(d).filter(l).map(u(d))),a[d]={timestamp:f.mtime,mode:f.mode}}return{type:"local",entries:a}},"getLocalSet"),getRemoteSet:o(async r=>{let a=Object.create(null),l=await De(r.opts.fileSystemHandle);for(let[u,c]of l)u!=="."&&(a[s.join2(r.mountpoint,u)]={timestamp:c.kind==="file"?new Date((await c.getFile()).lastModified):new Date,mode:c.kind==="file"?i.FILE_MODE:i.DIR_MODE});return{type:"remote",entries:a,handles:l}},"getRemoteSet"),loadLocalEntry:o(r=>{let a=e.lookupPath(r,{}).node,l=e.stat(r);if(e.isDir(l.mode))return{timestamp:l.mtime,mode:l.mode};if(e.isFile(l.mode))return a.contents=t.getFileDataAsTypedArray(a),{timestamp:l.mtime,mode:l.mode,contents:a.contents};throw new Error("node type not supported")},"loadLocalEntry"),storeLocalEntry:o((r,a)=>{if(e.isDir(a.mode))e.mkdirTree(r,a.mode);else if(e.isFile(a.mode))e.writeFile(r,a.contents,{canOwn:!0});else throw new Error("node type not supported");e.chmod(r,a.mode),e.utime(r,a.timestamp,a.timestamp)},"storeLocalEntry"),removeLocalEntry:o(r=>{var a=e.stat(r);e.isDir(a.mode)?e.rmdir(r):e.isFile(a.mode)&&e.unlink(r)},"removeLocalEntry"),loadRemoteEntry:o(async r=>{if(r.kind==="file"){let a=await r.getFile();return{contents:new Uint8Array(await a.arrayBuffer()),mode:i.FILE_MODE,timestamp:new Date(a.lastModified)}}else{if(r.kind==="directory")return{mode:i.DIR_MODE,timestamp:new Date};throw new Error("unknown kind: "+r.kind)}},"loadRemoteEntry"),storeRemoteEntry:o(async(r,a,l)=>{let u=r.get(s.dirname(a)),c=e.isFile(l.mode)?await u.getFileHandle(s.basename(a),{create:!0}):await u.getDirectoryHandle(s.basename(a),{create:!0});if(c.kind==="file"){let d=await c.createWritable();await d.write(l.contents),await d.close()}r.set(a,c)},"storeRemoteEntry"),removeRemoteEntry:o(async(r,a)=>{await r.get(s.dirname(a)).removeEntry(s.basename(a)),r.delete(a)},"removeRemoteEntry"),reconcile:o(async(r,a,l)=>{let u=0,c=[];Object.keys(a.entries).forEach(function(p){let h=a.entries[p],g=l.entries[p];(!g||e.isFile(h.mode)&&h.timestamp.getTime()>g.timestamp.getTime())&&(c.push(p),u++)}),c.sort();let d=[];if(Object.keys(l.entries).forEach(function(p){a.entries[p]||(d.push(p),u++)}),d.sort().reverse(),!u)return;let f=a.type==="remote"?a.handles:l.handles;for(let p of c){let h=s.normalize(p.replace(r.mountpoint,"/")).substring(1);if(l.type==="local"){let g=f.get(h),E=await i.loadRemoteEntry(g);i.storeLocalEntry(p,E)}else{let g=i.loadLocalEntry(p);await i.storeRemoteEntry(f,h,g)}}for(let p of d)if(l.type==="local")i.removeLocalEntry(p);else{let h=s.normalize(p.replace(r.mountpoint,"/")).substring(1);await i.removeRemoteEntry(f,h)}},"reconcile")};n.FS.filesystems.NATIVEFS_ASYNC=i}o(oe,"initializeNativeFS");var De=o(async n=>{let e=[];async function t(i){for await(let r of i.values())e.push(r),r.kind==="directory"&&await t(r)}o(t,"collect"),await t(n);let s=new Map;s.set(".",n);for(let i of e){let r=(await n.resolve(i)).join("/");s.set(r,i)}return s},"getFsHandles"),Ce=Pe("AGFzbQEAAAABDANfAGAAAW9gAW8BfwMDAgECBygCE0pzdl9HZXRFcnJvcl9pbXBvcnQAAA5Kc3ZFcnJvcl9DaGVjawABChMCBwD7AQD7GwsJACAA+xr7FAAL"),Me=(async function(){if(!(globalThis.navigator&&(/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==="MacIntel"&&typeof navigator.maxTouchPoints<"u"&&navigator.maxTouchPoints>1)))try{let n=await WebAssembly.compile(Ce);return await WebAssembly.instantiate(n)}catch(n){if(n instanceof WebAssembly.CompileError)return;throw n}})();async function le(){let n=await Me;if(n)return n.exports;let e=Symbol("error marker");return{Jsv_GetError_import:o(()=>e,"Jsv_GetError_import"),JsvError_Check:o(t=>t===e,"JsvError_Check")}}o(le,"getJsvErrorImport");function ce(n){let e={config:n,runtimeEnv:_},t={noImageDecoding:!0,noAudioDecoding:!0,noWasmDecoding:!1,preRun:_e(n),print:n.stdout,printErr:n.stderr,onExit(s){t.exitCode=s},thisProgram:n._sysExecutable,arguments:n.args,API:e,locateFile:o(s=>n.indexURL+s,"locateFile"),instantiateWasm:he(n.indexURL)};return t}o(ce,"createSettings");function ue(n){return function(e){let t="/";try{e.FS.mkdirTree(n)}catch(s){console.error(`Error occurred while making a home directory '${n}':`),console.error(s),console.error(`Using '${t}' for a home directory instead`),n=t}e.FS.chdir(n)}}o(ue,"createHomeDirectory");function de(n){return function(e){Object.assign(e.ENV,n)}}o(de,"setEnvironment");function pe(n){return n?[async e=>{e.addRunDependency("fsInitHook");try{await n(e.FS,{sitePackages:e.API.sitePackages})}finally{e.removeRunDependency("fsInitHook")}}]:[]}o(pe,"callFsInitHook");function fe(n){let e=n.HEAPU32[n._Py_Version>>>2],t=e>>>24&255,s=e>>>16&255,i=e>>>8&255;return[t,s,i]}o(fe,"computeVersionTuple");function me(n){let e=te(n);return async t=>{t.API.pyVersionTuple=fe(t);let[s,i]=t.API.pyVersionTuple;t.FS.mkdirTree("/lib"),t.API.sitePackages=`/lib/python${s}.${i}/site-packages`,t.FS.mkdirTree(t.API.sitePackages),t.addRunDependency("install-stdlib");try{let r=await e;t.FS.writeFile(`/lib/python${s}${i}.zip`,r)}catch(r){console.error("Error occurred while installing the standard library:"),console.error(r)}finally{t.removeRunDependency("install-stdlib")}}}o(me,"installStdlib");function _e(n){let e;return n.stdLibURL!=null?e=n.stdLibURL:e=n.indexURL+"python_stdlib.zip",[me(e),ue(n.env.HOME),de(n.env),oe,...pe(n.fsInit)]}o(_e,"getFileSystemInitializationFuncs");function he(n){if(typeof WasmOffsetConverter<"u")return;let{binary:e,response:t}=O(n+"pyodide.asm.wasm"),s=le();return function(i,r){return(async function(){let{Jsv_GetError_import:a,JsvError_Check:l}=await s;i.env.Jsv_GetError_import=a,i.env.JsvError_Check=l;try{let u;t?u=await WebAssembly.instantiateStreaming(t,i):u=await WebAssembly.instantiate(await e,i);let{instance:c,module:d}=u;r(c,d)}catch(u){console.warn("wasm instantiation failed!"),console.warn(u)}})(),{}}}o(he,"getInstantiateWasmFunc");var Ue="314.0.2";function S(n){return n===void 0||n.endsWith("/")?n:n+"/"}o(S,"withTrailingSlash");var C=Ue;async function ge(n={}){var i,r;if(await j(),n.lockFileContents&&n.lockFileURL)throw new Error("Can't pass both lockFileContents and lockFileURL");let e=n.indexURL||await ie();if(e=S(I(e)),n.packageBaseUrl=S(n.packageBaseUrl),n.cdnUrl=S(n.packageBaseUrl??`https://cdn.jsdelivr.net/pyodide/v${C}/full/`),!n.lockFileContents){let a=n.lockFileURL??e+"pyodide-lock.json";n.lockFileContents=se(a),n.packageBaseUrl??(n.packageBaseUrl=ae(a))}n.indexURL=e,n.packageCacheDir&&(n.packageCacheDir=S(I(n.packageCacheDir)));let t={jsglobals:globalThis,stdin:globalThis.prompt?()=>globalThis.prompt():void 0,args:[],env:{},packages:[],packageCacheDir:n.packageBaseUrl,enableRunUntilComplete:!0,checkAPIVersion:!0,BUILD_ID:"a4189f0fe3d610ecd603639c08596362b70a34b106c58c9a93486c22df4c89a5"},s=Object.assign(t,n);return(i=s.env).HOME??(i.HOME="/home/pyodide"),(r=s.env).PYTHONINSPECT??(r.PYTHONINSPECT="1"),s}o(ge,"initializeConfiguration");function ye(n){let e=ce(n),t=e.API;return t.lockFilePromise=Promise.resolve(n.lockFileContents),e}o(ye,"createEmscriptenSettings");async function ve(n){if(n.createPyodideModule)return n.createPyodideModule;let e=`${n.indexURL}pyodide.asm.mjs`;return(await D(e)).default}o(ve,"loadWasmScript");async function be(n,e){if(!n._loadSnapshot)return;let t=await n._loadSnapshot,s=ArrayBuffer.isView(t)?t:new Uint8Array(t);return e.noInitialRun=!0,e.INITIAL_MEMORY=s.length,s}o(be,"prepareSnapshot");async function we(n,e){let t=await n(e);if(e.exitCode!==void 0)throw new t.ExitStatus(e.exitCode);return t}o(we,"instantiatePyodideModule");function ke(n,e){let t=n.API;if(e.pyproxyToStringRepr&&t.setPyProxyToStringMethod(!0),e.convertNullToNone&&t.setCompatNullToNone(!0),e.toJsLiteralMap&&t.setCompatToJsLiteralMap(!0),t.version!==C&&e.checkAPIVersion)throw new Error(`Pyodide version does not match: '${C}' <==> '${t.version}'. If you updated the Pyodide version, make sure you also updated the 'indexURL' parameter passed to loadPyodide.`);n.locateFile=s=>{throw s.endsWith(".so")?new Error(`Failed to find dynamic library "${s}"`):new Error(`Unexpected call to locateFile("${s}")`)}}o(ke,"configureAPI");function Ee(n,e,t){let s=n.API,i;return e&&(i=s.restoreSnapshot(e)),s.finalizeBootstrap(i,t._snapshotDeserializer)}o(Ee,"bootstrapPyodide");async function xe(n,e){let t=n._api;return t.sys.path.insert(0,""),t._pyodide.set_excepthook(),await t.packageIndexReady,t.initializeStreams(e.stdin,e.stdout,e.stderr),n}o(xe,"finalizeSetup");async function Ne(n={}){let e=await ge(n),t=ye(e),s=await ve(e),i=await be(e,t),r=await we(s,t);ke(r,e);let a=Ee(r,i,e);return await xe(a,e)}o(Ne,"loadPyodide");function je(n){return n.crossOriginIsolated===!0&&typeof n.SharedArrayBuffer=="function"?"isolated":"compat"}var Be=`# The in-worker Python runtime, installed into Pyodide once at boot\r
+# (bundled as a string via a Vite \`?raw\` import - see raw.d.ts). Implements\r
+# per-job isolation (spec 6.2): fresh __main__ module dict per job,\r
+# sys.modules snapshot/restore, FS staging under /mnt/blockpy with artifact\r
+# diff-back (spec 7.5, LD-3x), scripted stdin, student-relative traceback\r
+# line mapping (spec 6.3 - instructor answer_prefix lines are subtracted, as\r
+# legacy Skulpt did), live stdout/stderr tee streaming, and opt-in\r
+# sys.settrace tracing whose step counter doubles as the instruction limit\r
+# (E3, spec 6.2).\r
+import builtins\r
+import contextlib\r
+import io\r
+import json\r
+import linecache\r
+import os\r
+import sys\r
+import traceback\r
+import types\r
+import warnings\r
+\r
+MOUNT = '/mnt/blockpy'\r
+TRACE_STORAGE_CAP = 10000\r
+# Pyodide tunes the recursion limit to the wasm stack at boot; remember it\r
+# so the health canary scales to platforms with shallow stacks (§6.6).\r
+BOOT_RECURSION_LIMIT = sys.getrecursionlimit()\r
+\r
+# Plot capture (spec 10.2): headless Agg backend - figures are snapshotted\r
+# into PNGs after each run instead of "shown". Set before matplotlib can be\r
+# imported; silence Agg's "cannot be shown" warning from plt.show().\r
+os.environ.setdefault('MPLBACKEND', 'Agg')\r
+warnings.filterwarnings('ignore', message='.*non-interactive.*cannot be shown.*')\r
+\r
+\r
+class TraceLimitError(Exception):\r
+    pass\r
+\r
+\r
+class _Tee(io.StringIO):\r
+    """Accumulates output while forwarding each chunk to a JS callback."""\r
+\r
+    def __init__(self, callback):\r
+        super().__init__()\r
+        self.callback = callback\r
+\r
+    def write(self, text):\r
+        # JS null arrives as JsNull (not None) - guard on callability.\r
+        if text and callable(self.callback):\r
+            self.callback(text)\r
+        return super().write(text)\r
+\r
+\r
+class StudioRuntime:\r
+    def __init__(self):\r
+        self.baseline_modules = set(sys.modules)\r
+        self.last_globals = None\r
+        self.staged = {}\r
+\r
+    # -- filesystem staging (spec 7.5) --------------------------------------\r
+\r
+    def stage_files(self, files):\r
+        os.makedirs(MOUNT, exist_ok=True)\r
+        for root, dirs, names in os.walk(MOUNT, topdown=False):\r
+            for name in names:\r
+                os.remove(os.path.join(root, name))\r
+            for d in dirs:\r
+                os.rmdir(os.path.join(root, d))\r
+        self.staged = dict(files)\r
+        for name, contents in files.items():\r
+            path = os.path.join(MOUNT, name)\r
+            parent = os.path.dirname(path)\r
+            if parent:\r
+                os.makedirs(parent, exist_ok=True)\r
+            with open(path, 'w', encoding='utf-8') as handle:\r
+                handle.write(contents)\r
+        os.chdir(MOUNT)\r
+\r
+    def collect_artifacts(self):\r
+        artifacts = {}\r
+        for root, _dirs, names in os.walk(MOUNT):\r
+            for name in names:\r
+                path = os.path.join(root, name)\r
+                rel = os.path.relpath(path, MOUNT).replace(os.sep, '/')\r
+                try:\r
+                    with open(path, 'r', encoding='utf-8') as handle:\r
+                        contents = handle.read()\r
+                except (OSError, UnicodeDecodeError):\r
+                    continue\r
+                if self.staged.get(rel) != contents:\r
+                    artifacts[rel] = contents\r
+        return artifacts\r
+\r
+    # -- per-job isolation (spec 6.2) ----------------------------------------\r
+\r
+    def restore_modules(self):\r
+        for name in list(sys.modules):\r
+            if name in self.baseline_modules:\r
+                continue\r
+            module = sys.modules[name]\r
+            file = getattr(module, '__file__', '') or ''\r
+            if '/site-packages/' in file:\r
+                # Installed packages (loadPackage/micropip) are expensive to\r
+                # re-initialize (matplotlib takes seconds) and stateless per\r
+                # job in practice - adopt into the baseline. Per-job figure\r
+                # state is reset by capture_figures (plt.close('all')).\r
+                self.baseline_modules.add(name)\r
+                continue\r
+            # Stdlib, student/staged (/mnt/blockpy), and dynamic modules stay\r
+            # per-job (§6.2): purge so the next run reimports fresh state.\r
+            del sys.modules[name]\r
+\r
+    # -- mock URLs (spec 10.4, legacy configurations.js openURL) -------------\r
+\r
+    def install_requests_mock(self):\r
+        """Install a per-job \`requests\` shim resolving \`?mock_urls.blockpy\`.\r
+\r
+        Legacy parity: ALL url access goes through the mock table - the map\r
+        is JSON \`{filename: [url, ...]}\`; a hit returns the staged file's\r
+        contents, no map or an unknown url raises the legacy IOError texts\r
+        (configurations.js:135-155). The module is dynamic (no __file__), so\r
+        restore_modules purges it after every job.\r
+        """\r
+        mock_map = None\r
+        raw = self.staged.get('mock_urls.blockpy')\r
+        if raw is not None:\r
+            try:\r
+                mock_map = json.loads(raw)\r
+            except Exception:  # noqa: BLE001 - bad JSON = no mocks (legacy)\r
+                mock_map = None\r
+        staged = self.staged\r
+\r
+        class MockResponse:\r
+            def __init__(self, text):\r
+                self.text = text\r
+                self.content = text.encode('utf-8')\r
+                self.status_code = 200\r
+                self.ok = True\r
+\r
+            def json(self):\r
+                return json.loads(self.text)\r
+\r
+            def raise_for_status(self):\r
+                return None\r
+\r
+        def get(url, *args, **kwargs):\r
+            if mock_map is None:\r
+                raise OSError(\r
+                    'Cannot access url: URL Data was not made available '\r
+                    'for this assignment'\r
+                )\r
+            for filename, urls in mock_map.items():\r
+                if url in urls:\r
+                    contents = staged.get(filename)\r
+                    if contents is None:\r
+                        # Map keys use legacy prefixed names; staging is\r
+                        # prefix-stripped.\r
+                        contents = staged.get(filename.lstrip('!^?&$*#'))\r
+                    if contents is None:\r
+                        raise OSError('File not found: ' + filename)\r
+                    return MockResponse(contents)\r
+            raise OSError(\r
+                'Cannot access url: ' + url +\r
+                ' was not made available for this assignment'\r
+            )\r
+\r
+        module = types.ModuleType('requests')\r
+        module.get = get\r
+        module.Response = MockResponse\r
+        sys.modules['requests'] = module\r
+\r
+    # -- plot capture (spec 10.2) --------------------------------------------\r
+\r
+    def capture_figures(self):\r
+        """Snapshot every open matplotlib figure to base64 PNG, then close.\r
+\r
+        Runs only when the student's code actually imported matplotlib.\r
+        Fail-soft: a broken figure never breaks the run result.\r
+        """\r
+        if 'matplotlib' not in sys.modules:\r
+            return []\r
+        try:\r
+            import base64\r
+            import matplotlib.pyplot as plt\r
+            images = []\r
+            for number in plt.get_fignums():\r
+                buffer = io.BytesIO()\r
+                plt.figure(number).savefig(buffer, format='png')\r
+                images.append(base64.b64encode(buffer.getvalue()).decode('ascii'))\r
+            plt.close('all')\r
+            return images\r
+        except Exception:  # noqa: BLE001\r
+            return []\r
+\r
+    # -- tracing (E3): step events + instruction limit ------------------------\r
+\r
+    def make_tracer(self, target_filename, prefix_lines, step_limit, steps):\r
+        state = {'count': 0}\r
+\r
+        def snapshot_locals(frame):\r
+            snapshot = {}\r
+            for key, value in frame.f_locals.items():\r
+                if key.startswith('__'):\r
+                    continue\r
+                try:\r
+                    snapshot[key] = repr(value)[:120]\r
+                except Exception:  # noqa: BLE001\r
+                    snapshot[key] = '<unrepresentable>'\r
+            return snapshot\r
+\r
+        def tracer(frame, event, arg):\r
+            if frame.f_code.co_filename != target_filename:\r
+                return None\r
+            state['count'] += 1\r
+            if step_limit is not None and state['count'] > step_limit:\r
+                raise TraceLimitError(\r
+                    'Execution exceeded the configured limit of '\r
+                    + str(step_limit) + ' steps'\r
+                )\r
+            if len(steps) < TRACE_STORAGE_CAP:\r
+                step = {\r
+                    'event': event,\r
+                    'line': frame.f_lineno,\r
+                    'student_line': frame.f_lineno - prefix_lines,\r
+                }\r
+                # 'line' fires BEFORE the line executes; 'return' fires as\r
+                # the frame exits, so the module-level return carries the\r
+                # final variable state (the trace explorer's last page).\r
+                if event == 'line' or event == 'return':\r
+                    step['locals'] = snapshot_locals(frame)\r
+                steps.append(step)\r
+            return tracer\r
+\r
+        return tracer\r
+\r
+    # -- execution ------------------------------------------------------------\r
+\r
+    @staticmethod\r
+    def can_suspend():\r
+        """True when JSPI is available, so run_sync can suspend at input()."""\r
+        try:\r
+            from pyodide.ffi import can_run_sync\r
+            return bool(can_run_sync())\r
+        except Exception:  # noqa: BLE001 - non-Pyodide/no-JSPI hosts\r
+            return False\r
+\r
+    def run(self, code, filename='answer.py', prefix='', suffix='',\r
+            inputs=None, mode='exec', extract_result=False,\r
+            trace=False, trace_limit=None, on_stdout=None, on_stderr=None,\r
+            allow_real_requests=False, on_input=None):\r
+        full = (prefix or '') + code + (suffix or '')\r
+        prefix_lines = (prefix or '').count('\\n')\r
+        # JS null arrives as JsNull (not None) - normalize scalar options.\r
+        if not isinstance(trace_limit, int):\r
+            trace_limit = None\r
+\r
+        module = types.ModuleType('__main__')\r
+        module.__dict__['__file__'] = filename\r
+\r
+        input_values = iter(inputs or [])\r
+        interactive = callable(on_input) and self.can_suspend()\r
+\r
+        def scripted_input(prompt=''):\r
+            # Queued inputs replay first (legacy Edit Queued Inputs); the\r
+            # prompt echoes to stdout exactly as before.\r
+            try:\r
+                value = next(input_values)\r
+            except StopIteration:\r
+                value = None\r
+            if value is not None:\r
+                print(prompt, end='')\r
+                return value\r
+            if interactive:\r
+                # Interactive input (spec §6.5): JSPI suspends this\r
+                # synchronous call while the console shows a textbox. The\r
+                # prompt is NOT echoed to stdout - the console's input line\r
+                # displays (and then freezes with) it, legacy-style.\r
+                from pyodide.ffi import run_sync\r
+                return str(run_sync(on_input(str(prompt))))\r
+            print(prompt, end='')\r
+            raise EOFError('No scripted input available')\r
+\r
+        # The executed source must exist as a REAL file under its compile\r
+        # filename: Python 3.13+ recovers traceback source lines through\r
+        # linecache (SyntaxError.text is no longer always carried), so a\r
+        # synthetic filename yields line-less tracebacks. The staged map is\r
+        # updated so artifact diff-back never reports the write itself.\r
+        try:\r
+            parent = os.path.dirname(filename)\r
+            if parent:\r
+                os.makedirs(parent, exist_ok=True)\r
+            with open(filename, 'w', encoding='utf-8') as handle:\r
+                handle.write(full)\r
+            self.staged[filename] = full\r
+            # Same filename, new contents every run - drop stale cache\r
+            # entries (MEMFS mtime granularity defeats checkcache).\r
+            linecache.clearcache()\r
+        except OSError:\r
+            pass  # absolute/odd filenames: run anyway, tracebacks degrade\r
+\r
+        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)\r
+        steps = []\r
+        old_input = builtins.input\r
+        old_main = sys.modules.get('__main__')\r
+        builtins.input = scripted_input\r
+        sys.modules['__main__'] = module\r
+        # Legacy parity (spec 10.4): requests resolves through the mock-urls\r
+        # table, never the network - unless the allow_real_requests setting\r
+        # is on (M3.5), in which case the REAL requests package (installed\r
+        # host-side with pyodide-http patching) stays importable.\r
+        if not allow_real_requests:\r
+            self.install_requests_mock()\r
+        error = None\r
+        value = None\r
+        try:\r
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):\r
+                compiled = compile(full, filename, mode)\r
+                if trace:\r
+                    sys.settrace(\r
+                        self.make_tracer(filename, prefix_lines, trace_limit, steps),\r
+                    )\r
+                try:\r
+                    result = eval(compiled, module.__dict__)\r
+                finally:\r
+                    if trace:\r
+                        sys.settrace(None)\r
+                if mode == 'eval':\r
+                    value = repr(result)\r
+                elif extract_result and 'result' in module.__dict__:\r
+                    value = json.dumps(module.__dict__['result'])\r
+        except BaseException as exc:  # noqa: BLE001 - full error report needed\r
+            error = self.format_error(exc, filename, prefix_lines)\r
+        finally:\r
+            # Snapshot plots BEFORE the module restore unloads matplotlib -\r
+            # figures drawn before an error still surface (spec 10.2).\r
+            images = self.capture_figures()\r
+            builtins.input = old_input\r
+            if old_main is not None:\r
+                sys.modules['__main__'] = old_main\r
+            self.restore_modules()\r
+\r
+        self.last_globals = module.__dict__\r
+        return {\r
+            'error': error,\r
+            'value': value,\r
+            'stdout': stdout.getvalue(),\r
+            'stderr': stderr.getvalue(),\r
+            'trace': steps if trace else None,\r
+            'images': images,\r
+        }\r
+\r
+    def evaluate(self, expression, on_stdout=None, on_stderr=None):\r
+        """Persistent REPL bound to the last run's namespace (spec 6.4)."""\r
+        target = self.last_globals if self.last_globals is not None else {}\r
+        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)\r
+        error = None\r
+        value = None\r
+        try:\r
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):\r
+                compiled = compile(expression, 'evaluations', 'eval')\r
+                value = repr(eval(compiled, target))\r
+        except BaseException as exc:  # noqa: BLE001\r
+            error = self.format_error(exc, 'evaluations', 0)\r
+        finally:\r
+            self.restore_modules()\r
+        return {\r
+            'error': error,\r
+            'value': value,\r
+            'stdout': stdout.getvalue(),\r
+            'stderr': stderr.getvalue(),\r
+            'trace': None,\r
+        }\r
+\r
+    def clear_namespace(self):\r
+        self.last_globals = None\r
+\r
+    # -- crash recovery (spec 6.6) ---------------------------------------------\r
+\r
+    def stack_canary(self):\r
+        """Probe wasm stack headroom after a job (§6.6 crash recovery).\r
+\r
+        A stack-overflow fatal (unbounded recursion through C layers, e.g. a\r
+        recursive __getattr__ - pyodide#5959/#5987) can leave the interpreter\r
+        dead or with a corrupted stack pointer WITHOUT failing the job that\r
+        caused it (grading fail-softs around it). On a healthy interpreter\r
+        this probe returns instantly; on a poisoned one it triggers the\r
+        fatal NOW, JS-side, where the worker host answers by reloading the\r
+        runner - instead of the fatal landing on the student's next Run.\r
+        """\r
+        prev = sys.getrecursionlimit()\r
+        depth = min(500, BOOT_RECURSION_LIMIT // 2)\r
+\r
+        def probe(n):\r
+            return probe(n - 1) if n else 0\r
+\r
+        try:\r
+            sys.setrecursionlimit(max(prev, depth * 4))\r
+            return probe(depth)\r
+        finally:\r
+            sys.setrecursionlimit(prev)\r
+\r
+    # -- error shaping (spec 6.3) ----------------------------------------------\r
+\r
+    def format_error(self, exc, filename, prefix_lines):\r
+        line = None\r
+        if isinstance(exc, SyntaxError) and exc.filename == filename:\r
+            line = exc.lineno\r
+        else:\r
+            for frame, lineno in traceback.walk_tb(exc.__traceback__):\r
+                if frame.f_code.co_filename == filename:\r
+                    line = lineno\r
+        # Students must never see the runtime harness frames. This module is\r
+        # loaded via runPython (co_filename "<exec>"), so the caught exception\r
+        # opens with our own run/evaluate frame - drop every leading harness\r
+        # frame before formatting (the student's <module> frame comes right\r
+        # after; a SyntaxError from compile() has ONLY harness frames and\r
+        # formats fine with tb=None from its own attributes).\r
+        tb = exc.__traceback__\r
+        while tb is not None and tb.tb_frame.f_code.co_filename == '<exec>':\r
+            tb = tb.tb_next\r
+        parts = traceback.format_exception(type(exc), exc, tb)\r
+        # Non-leading harness frames (e.g. the trace-limit tracer at the tail)\r
+        # can't be dropped by the walk above - filter their formatted entries.\r
+        formatted = ''.join(\r
+            part for part in parts if not part.startswith('  File "<exec>"')\r
+        )\r
+        student_line = None if line is None else line - prefix_lines\r
+        return {\r
+            'type': type(exc).__name__,\r
+            'message': str(exc),\r
+            'line': line,\r
+            'student_line': student_line,\r
+            'traceback': formatted,\r
+        }\r
+\r
+\r
+_studio_runtime = StudioRuntime()\r
+`,qe=`# The Pedal "blockpy environment" contract for Studio (spec 10.1) - a
 # faithful port of the legacy instructor wrappers:
 #   blockpy/src/engine/on_run.js   WRAP_INSTRUCTOR_CODE  (grading pass)
 #   blockpy/src/engine/on_eval.js  WRAP_INSTRUCTOR_CODE  (console-eval pass)
@@ -379,12 +461,44 @@ _studio_runtime = StudioRuntime()
 # against the bakery corpus).
 import importlib
 import json
+import linecache
 import os
 import shutil
 import sys
 
 _INSTRUCTOR_PKG = '_instructor'
 _PREFIXES = '!^?&$*#'
+
+
+def _studio_patch_pedal_traceback():
+    """Pedal 3.0.1 on Python 3.13+: SyntaxError feedback crashes.
+
+    CPython renamed FrameSummary._line to _lines (3.13); pedal's
+    _fix_frame_line writes the recovered source to \`_lines\`, but its own
+    FakeFrame.line property still reads \`_line\` - so format_line receives
+    None and dies in inject_line ("'NoneType' object has no attribute
+    'split'"), turning EVERY student syntax error into an Internal Grading
+    Error. Until the upstream fix ships (SERVER-TEAM/PEDAL FLAG: make
+    FakeFrame honor the _lines rename + None-guard format_line's 3.13
+    branch), patch FakeFrame.line to fall back _line -> _lines ->
+    linecache (the grading staging below writes the REAL files linecache
+    needs). Idempotent; safe on older pedals/pythons (pure fallback).
+    """
+    from pedal.utilities import exceptions as pedal_exceptions
+
+    fake_frame = pedal_exceptions.FakeFrame
+    if getattr(fake_frame, '_studio_patched', False):
+        return
+
+    def line(self):
+        for value in (self._line, getattr(self, '_lines', None)):
+            if isinstance(value, str):
+                return value
+        text = linecache.getline(self.filename or '', self.lineno or 0)
+        return text.rstrip('\\n') if text else ''
+
+    fake_frame.line = property(line)
+    fake_frame._studio_patched = True
 
 
 def _studio_pedal_stage(files):
@@ -414,7 +528,7 @@ def _studio_pedal_stage(files):
 
 
 # The names legacy preloaded into the instructor script's namespace
-# (on_run.js:33-36 / on_eval.js:15-18) — graders may use parse_program and
+# (on_run.js:33-36 / on_eval.js:15-18) - graders may use parse_program and
 # the sandbox/core commands without importing them.
 _INSTRUCTOR_PRELUDE = (
     'from pedal.cait.cait_api import parse_program\\n'
@@ -488,7 +602,7 @@ def _studio_pedal_resolve():
             })
 
     # First error line (feedback.js:155-165 findFirstErrorLine reads
-    # DATA['location'].line) — drives the editor-error-line highlight.
+    # DATA['location'].line) - drives the editor-error-line highlight.
     line = None
     try:
         data = final.data
@@ -523,7 +637,7 @@ def _studio_pedal_resolve():
 
 def _studio_fail_soft():
     # Grader or Pedal-internal crash (e.g. Pedal 3.0.1's syntax-error
-    # formatter breaks on Python 3.14 when SyntaxError.text is None —
+    # formatter breaks on Python 3.14 when SyntaxError.text is None -
     # see docs/appendices/skulpt-compat.md). Surface a renderable
     # system-error feedback instead of killing the run; the client logs
     # it as X-System.Error (legacy pathway).
@@ -543,13 +657,14 @@ def _studio_fail_soft():
 def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
     from pedal.core.report import MAIN_REPORT
 
+    _studio_patch_pedal_traceback()
     MAIN_REPORT.clear()
     options = json.loads(options_json) if options_json else {}
     _studio_pedal_stage(json.loads(files_json) if files_json else {})
 
     try:
         # bakery's module-level student_tests ledger lives in site-packages
-        # and survives across runs — legacy reset it every grading pass
+        # and survives across runs - legacy reset it every grading pass
         # (on_run.js:30-31). Optional: bakery may not be installed.
         try:
             from bakery import student_tests
@@ -570,6 +685,23 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
         student_files = dict(options.get('student_files') or {})
         student_files['answer.py'] = student_code
 
+        # Real source files for every compiled name: Python 3.13+ recovers
+        # traceback/SyntaxError source lines through linecache, so grading
+        # against purely-synthetic filenames loses the offending line (and
+        # the FakeFrame patch above falls back to linecache). Written AFTER
+        # the instructor staging so answer.py always carries THIS pass's
+        # student code.
+        for _name, _contents in list(student_files.items()) + [('on_run.py', on_run)]:
+            try:
+                _parent = os.path.dirname(_name)
+                if _parent:
+                    os.makedirs(_parent, exist_ok=True)
+                with open(_name, 'w', encoding='utf-8') as _handle:
+                    _handle.write(_contents)
+            except (OSError, TypeError):
+                pass  # odd names/contents: grading proceeds, lines degrade
+        linecache.clearcache()
+
         # setup_environment = BlockPyEnvironment: HtmlFormatter + verify +
         # (unless skipped) tifa + set_input + start_trace -> run, exactly
         # the legacy pipeline (on_run.js:38-53).
@@ -587,7 +719,7 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
         # Pool-question seed = submission id (on_run.js:43-45). LEGACY BUG
         # FIXED (ledger LD-22): legacy called set_seed BEFORE
         # setup_environment, whose report.clear() erased the stored seed
-        # (report['questions']['seed']) — pools were never actually seeded.
+        # (report['questions']['seed']) - pools were never actually seeded.
         # Seeding AFTER setup makes it stick.
         seed = options.get('seed')
         if seed is not None and seed != '':
@@ -608,13 +740,14 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
 def _studio_pedal_evaluate(evaluation, on_eval, options_json):
     # Console-evaluation grading (on_eval.js): KEEP the last grading pass's
     # report and sandbox; clear the presented feedback (legacy "backed up"
-    # MAIN_REPORT.feedback into a local it never read again — the effective
+    # MAIN_REPORT.feedback into a local it never read again - the effective
     # behavior is a plain clear, on_eval.js:20-24); pedal-\`evaluate\` the
     # console expression inside the student's sandbox; exec the instructor's
     # on_eval script; re-resolve.
     from pedal.core.report import MAIN_REPORT
 
     del options_json  # reserved (parity with _studio_pedal_grade)
+    _studio_patch_pedal_traceback()
     try:
         MAIN_REPORT.feedback.clear()
         from pedal.sandbox.commands import evaluate, get_sandbox
@@ -625,10 +758,12 @@ def _studio_pedal_evaluate(evaluation, on_eval, options_json):
         return _studio_pedal_resolve()
     except BaseException:  # noqa: BLE001 - grading must fail soft
         return _studio_fail_soft()
-`;const We=["pedal","curriculum-sneks","bakery"];class B{constructor(e,n){this.grade_=e,this.evaluate_=n}static async install(e,n=We){await e.loadPackage("micropip"),await e.runPythonAsync(`import micropip
-await micropip.install(${JSON.stringify(n)})`),e.runPython(qe);const r=e.globals.get("_studio_pedal_grade"),s=e.globals.get("_studio_pedal_evaluate");return new B(r,s)}grade(e){const n=this.grade_(e.studentCode,e.onRun,JSON.stringify(e.files??{}),e.inputs??[],JSON.stringify({skip_tifa:e.skipTifa??!1,skip_run:e.skipRun??!1,seed:e.seed??null,student_files:e.studentFiles??{}})),r=n.toJs({dict_converter:Object.fromEntries});return n.destroy(),r}evaluateGrade(e){const n=this.evaluate_(e.evaluation,e.onEval,"{}"),r=n.toJs({dict_converter:Object.fromEntries});return n.destroy(),r}}const T=t=>{const e=t.toJs({dict_converter:Object.fromEntries});return t.destroy(),e};class q{constructor(e,n){E(this,"runtime");E(this,"pedalEnv",null);E(this,"realRequestsReady",!1);this.pyodide=e,this.runtime=n}static create(e){e.runPython(Be);const n=e.globals.get("_studio_runtime");return new q(e,n)}clearNamespace(){this.runtime.clear_namespace()}async ensureRealRequests(){if(this.realRequestsReady)return;const e=this.pyodide;await e.loadPackage("micropip"),await e.runPythonAsync(`import micropip
+`;const Je=["pedal","curriculum-sneks","bakery"];class q{constructor(e,t){this.grade_=e,this.evaluate_=t}static async install(e,t=Je){await e.loadPackage("micropip"),await e.runPythonAsync(`import micropip
+await micropip.install(${JSON.stringify(t)})`),e.runPython(qe);const s=e.globals.get("_studio_pedal_grade"),i=e.globals.get("_studio_pedal_evaluate");return new q(s,i)}grade(e){const t=this.grade_(e.studentCode,e.onRun,JSON.stringify(e.files??{}),e.inputs??[],JSON.stringify({skip_tifa:e.skipTifa??!1,skip_run:e.skipRun??!1,seed:e.seed??null,student_files:e.studentFiles??{}})),s=t.toJs({dict_converter:Object.fromEntries});return t.destroy(),s}evaluateGrade(e){const t=this.evaluate_(e.evaluation,e.onEval,"{}"),s=t.toJs({dict_converter:Object.fromEntries});return t.destroy(),s}}const We=()=>typeof WebAssembly.Suspending=="function",F=n=>{const e=n.toJs({dict_converter:Object.fromEntries});return n.destroy(),e};class J{constructor(e,t){y(this,"runtime");y(this,"pedalEnv",null);y(this,"realRequestsReady",!1);this.pyodide=e,this.runtime=t}static create(e){e.runPython(Be);const t=e.globals.get("_studio_runtime");return new J(e,t)}clearNamespace(){this.runtime.clear_namespace()}healthCheck(){try{return this.runtime.stack_canary(),!0}catch{return!1}}async ensureRealRequests(){if(this.realRequestsReady)return;const e=this.pyodide;await e.loadPackage("micropip"),await e.runPythonAsync(`import micropip
 await micropip.install(['requests', 'pyodide-http'])
 import pyodide_http
-pyodide_http.patch_all()`),this.realRequestsReady=!0}async ensurePedal(e){return this.pedalEnv===null&&(this.pedalEnv=await B.install(this.pyodide,e)),this.pedalEnv}async executePedal(e,n){const r=e.pedal;try{const s=await this.ensurePedal(r.packages),a=r.evaluation!==void 0?s.evaluateGrade({evaluation:r.evaluation,onEval:r.onRun}):s.grade({studentCode:e.code,onRun:r.onRun,files:e.files,inputs:r.inputs??e.inputsPrefill,studentFiles:r.studentFiles,skipTifa:r.skipTifa,skipRun:r.skipRun,seed:r.seed});return{jobId:e.id,success:!0,stdout:"",stderr:"",artifacts:{},feedback:a,durationMs:Date.now()-n}}catch(s){const a=s instanceof Error?s.message:String(s);return{jobId:e.id,success:!1,stdout:"",stderr:"",error:{type:"PedalEnvironmentError",message:a,line:null,studentLine:null,traceback:a+`
-`},artifacts:{},durationMs:Date.now()-n}}}async execute(e,n={}){var c,u,d,f;const r=Date.now();if(e.pedal)return this.executePedal(e,r);try{await((u=(c=this.pyodide).loadPackagesFromImports)==null?void 0:u.call(c,e.code))}catch{}if(e.allowRealRequests)try{await this.ensureRealRequests()}catch{}this.pyodide.runPython(`_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(JSON.stringify(e.files))}))`);const s=n.onStdout??null,a=n.onStderr??null,i=e.phase==="student.eval"||e.phase==="instructor.on_eval"?T(this.runtime.evaluate(e.code,s,a)):T(this.runtime.run(e.code,e.filename??"answer.py",e.answerPrefix??"",e.answerSuffix??"",e.inputsPrefill??[],"exec",e.phase==="quiz.preprocess",e.trace??!1,((d=e.limits)==null?void 0:d.traceSteps)??null,s,a,e.allowRealRequests??!1)),l=T(this.runtime.collect_artifacts());return{jobId:e.id,success:!i.error,stdout:i.stdout,stderr:i.stderr,error:i.error?{type:i.error.type,message:i.error.message,line:i.error.line,studentLine:i.error.student_line,traceback:i.error.traceback}:void 0,value:i.value??void 0,trace:i.trace?i.trace.map(p=>({event:p.event,line:p.line,studentLine:p.student_line,locals:p.locals})):void 0,images:(f=i.images)!=null&&f.length?i.images:void 0,artifacts:l,durationMs:Date.now()-r}}}class $e{constructor(e){E(this,"runner",null);E(this,"interrupted",new Set);this.options=e}async handle(e){switch(e.kind){case"init":{this.runner=await this.options.loadRunner(e.indexURL),this.options.post({kind:"ready",mode:this.options.mode});return}case"run":{if(!this.runner)throw new Error("Engine worker not initialized");const{job:n}=e;if(this.interrupted.delete(n.id)){this.options.post({kind:"result",result:{jobId:n.id,success:!1,stdout:"",stderr:"",error:{type:"KeyboardInterrupt",message:"Execution interrupted",line:null,studentLine:null,traceback:`KeyboardInterrupt: Execution interrupted
-`},artifacts:{},durationMs:0}});return}const r=await this.runner.execute(n,{onStdout:s=>this.options.post({kind:"stdout",jobId:n.id,chunk:s}),onStderr:s=>this.options.post({kind:"stderr",jobId:n.id,chunk:s})});this.options.post({kind:"result",result:r});return}case"interrupt":{this.interrupted.add(e.jobId);return}case"restart-kernel":{this.runner=await this.options.loadRunner(),this.options.post({kind:"ready",mode:this.options.mode});return}case"input-response":return}}}const Je=new $e({post:t=>self.postMessage(t),loadRunner:async t=>{const e=await Ne(t?{indexURL:t}:void 0);return q.create(e)},mode:je(self)});self.onmessage=t=>{Je.handle(t.data)}});export default Ge();
+pyodide_http.patch_all()`),this.realRequestsReady=!0}async ensurePedal(e){return this.pedalEnv===null&&(this.pedalEnv=await q.install(this.pyodide,e)),this.pedalEnv}async executePedal(e,t){const s=e.pedal;try{const i=await this.ensurePedal(s.packages),r=s.evaluation!==void 0?i.evaluateGrade({evaluation:s.evaluation,onEval:s.onRun}):i.grade({studentCode:e.code,onRun:s.onRun,files:e.files,inputs:s.inputs??e.inputsPrefill,studentFiles:s.studentFiles,skipTifa:s.skipTifa,skipRun:s.skipRun,seed:s.seed});return{jobId:e.id,success:!0,stdout:"",stderr:"",artifacts:{},feedback:r,durationMs:Date.now()-t}}catch(i){const r=i instanceof Error?i.message:String(i);return{jobId:e.id,success:!1,stdout:"",stderr:"",error:{type:"PedalEnvironmentError",message:r,line:null,studentLine:null,traceback:r+`
+`},artifacts:{},durationMs:Date.now()-t}}}async execute(e,t={}){var f,p,h,g;const s=Date.now();if(e.pedal)return this.executePedal(e,s);try{await((p=(f=this.pyodide).loadPackagesFromImports)==null?void 0:p.call(f,e.code))}catch{}if(e.allowRealRequests)try{await this.ensureRealRequests()}catch{}this.pyodide.runPython(`_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(JSON.stringify(e.files))}))`);const i=t.onStdout??null,r=t.onStderr??null,a=(e.interactiveInput?t.onInput:void 0)??null,l=[e.code,e.filename??"answer.py",e.answerPrefix??"",e.answerSuffix??"",e.inputsPrefill??[],"exec",e.phase==="quiz.preprocess",e.trace??!1,((h=e.limits)==null?void 0:h.traceSteps)??null,i,r,e.allowRealRequests??!1,a],u=this.runtime.run,c=e.phase==="student.eval"||e.phase==="instructor.on_eval"?F(this.runtime.evaluate(e.code,i,r)):F(a!==null&&We()&&typeof u.callPromising=="function"?await u.callPromising(...l):u(...l)),d=F(this.runtime.collect_artifacts());return{jobId:e.id,success:!c.error,stdout:c.stdout,stderr:c.stderr,error:c.error?{type:c.error.type,message:c.error.message,line:c.error.line,studentLine:c.error.student_line,traceback:c.error.traceback}:void 0,value:c.value??void 0,trace:c.trace?c.trace.map(E=>({event:E.event,line:E.line,studentLine:E.student_line,locals:E.locals})):void 0,images:(g=c.images)!=null&&g.length?c.images:void 0,artifacts:d,durationMs:Date.now()-s}}}const $e=/call stack|stack overflow|fatally failed/i,Ge="The Python engine crashed - this usually means unbounded recursion (a function calling itself forever). The engine has been restarted; check your code and run again.";class He{constructor(e){y(this,"runner",null);y(this,"interrupted",new Set);y(this,"pendingInputs",new Map);y(this,"indexURL");y(this,"chain",Promise.resolve());this.options=e}handle(e){switch(e.kind){case"interrupt":return this.interrupted.add(e.jobId),Promise.resolve();case"input-response":{const t=this.pendingInputs.get(e.jobId);return this.pendingInputs.delete(e.jobId),t==null||t(e.value),Promise.resolve()}default:return this.chain=this.chain.then(()=>this.process(e)),this.chain}}async process(e){switch(e.kind){case"init":{this.indexURL=e.indexURL,this.runner=await this.options.loadRunner(e.indexURL),this.options.post({kind:"ready",mode:this.options.mode});return}case"run":{await this.runJob(e.job);return}case"restart-kernel":{this.runner=await this.options.loadRunner(this.indexURL),this.options.post({kind:"ready",mode:this.options.mode});return}}}async reloadRunner(){try{this.runner=await this.options.loadRunner(this.indexURL)}catch{this.runner=null}this.options.post({kind:"runner-reloaded"})}async runJob(e){var s,i;if(!this.runner){this.options.post({kind:"result",result:{jobId:e.id,success:!1,stdout:"",stderr:"",error:{type:"EngineError",message:"Engine worker not initialized",line:null,studentLine:null,traceback:`Engine worker not initialized
+`},artifacts:{},durationMs:0}});return}if(this.interrupted.delete(e.id)){this.options.post({kind:"result",result:{jobId:e.id,success:!1,stdout:"",stderr:"",error:{type:"KeyboardInterrupt",message:"Execution interrupted",line:null,studentLine:null,traceback:`KeyboardInterrupt: Execution interrupted
+`},artifacts:{},durationMs:0}});return}let t;try{t=await this.runner.execute(e,{onStdout:r=>this.options.post({kind:"stdout",jobId:e.id,chunk:r}),onStderr:r=>this.options.post({kind:"stderr",jobId:e.id,chunk:r}),onInput:r=>new Promise(a=>{this.pendingInputs.set(e.id,a),this.options.post({kind:"input-request",jobId:e.id,prompt:r})})})}catch(r){this.pendingInputs.delete(e.id);const a=r instanceof Error?r.message:String(r);await this.reloadRunner();const l=$e.test(a);this.options.post({kind:"result",result:{jobId:e.id,success:!1,stdout:"",stderr:"",error:{type:l?"EngineCrash":"EngineError",message:l?Ge:a,line:null,studentLine:null,traceback:a+`
+`},artifacts:{},durationMs:0}});return}this.pendingInputs.delete(e.id),this.options.post({kind:"result",result:t}),((i=(s=this.runner).healthCheck)==null?void 0:i.call(s))===!1&&await this.reloadRunner()}}const ze=new He({post:n=>self.postMessage(n),loadRunner:async n=>{const e=await Ne(n?{indexURL:n}:void 0);return J.create(e)},mode:je(self)});self.onmessage=n=>{ze.handle(n.data)}});export default Ke();
