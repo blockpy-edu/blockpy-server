@@ -7125,7 +7125,10 @@ class SubmissionsFilter {
         if (!dateString) {
             return "";
         }
-        return (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_5__.prettyPrintDateTime)(dateString + (dateString.includes("Z") ? "" : "Z"));
+        // Timestamps with an explicit zone ("...Z" or "...+00:00") parse as-is;
+        // naive ones are UTC and need the Z suffix to be read that way.
+        const hasZone = /(Z|[+-]\d{2}:?\d{2})$/.test(dateString);
+        return (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_5__.prettyPrintDateTime)(hasZone ? dateString : dateString + "Z");
     }
     estimateDuration(row, event) {
         if (row.submission != null) {

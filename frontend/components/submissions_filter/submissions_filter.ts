@@ -795,7 +795,10 @@ export class SubmissionsFilter {
         if (!dateString) {
             return "";
         }
-        return prettyPrintDateTime(dateString + (dateString.includes("Z") ? "" : "Z"));
+        // Timestamps with an explicit zone ("...Z" or "...+00:00") parse as-is;
+        // naive ones are UTC and need the Z suffix to be read that way.
+        const hasZone = /(Z|[+-]\d{2}:?\d{2})$/.test(dateString);
+        return prettyPrintDateTime(hasZone ? dateString : dateString + "Z");
     }
 
     estimateDuration(row: SubmissionRow, event: Event) {
