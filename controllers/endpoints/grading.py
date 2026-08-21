@@ -65,6 +65,7 @@ def update_grading_status():
         else:
             return ajax_failure(result)
     else:
+        require_course_grader(user, submission.course_id)
         submission.update_grading_status(new_grading_status)
         return ajax_success({
             'submitted': False,

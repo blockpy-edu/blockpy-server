@@ -25,7 +25,7 @@ from models.course import Course
 
 from models import db
 from models.log_tables import SubmissionLog as Log, AssignmentLog
-from models.enums import SubmissionStatuses, AssignmentLogEvent, SubmissionLogEvent
+from models.enums import SubmissionStatuses, AssignmentLogEvent, SubmissionLogEvent, AssignmentTypes
 from models.submission import Submission, GradingStatuses
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
@@ -171,6 +171,28 @@ def serve_kettle_iframe():
     #return abort(500)
     return response
 
+def redact_unpublished_feedback(editor_information, assignment, scope):
+    """
+    Feedback assignments keep {"contents", "published"} as JSON in the submission's
+    code column. The editor's publish toggle is client-side only, so unpublished
+    drafts must be stripped before the payload leaves the server for non-graders.
+    History is always stripped for non-graders, since it replays every draft edit.
+    """
+    if assignment.type != AssignmentTypes.FEEDBACK or scope.can_grade:
+        return editor_information
+    submission = editor_information.get('submission')
+    if submission:
+        try:
+            feedback = json.loads(submission.get('code') or "{}")
+            published = bool(feedback.get('published'))
+        except (ValueError, AttributeError):
+            published = False
+        if not published:
+            submission['code'] = json.dumps({"contents": "", "published": False})
+    editor_information.pop('history', None)
+    return editor_information
+
+
 @blueprint_blockpy.route('/load_assignment/', methods=['GET', 'POST'])
 @blueprint_blockpy.route('/load_assignment', methods=['GET', 'POST'])
 @require_request_parameters('assignment_id')
@@ -217,6 +239,7 @@ def load_assignment():
             else:
                 make_log_entry(submission_id, submission_version, assignment_id, assignment.version, course_id,
                                user_id, 'Session.Start', message=browser_info)
+    editor_information = redact_unpublished_feedback(editor_information, assignment, scope)
     if force_download:
         student_filename = User.by_id(student_id).get_filename("")
         filename = assignment.get_filename("") + "_" + student_filename + '_submission.json'
@@ -253,6 +276,10 @@ def save_student_file(filename, course_id, user):
     scope, submission = g.safely.load_submission_by_id(submission_id)
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can save files for a submission.")
+    # Feedback submissions are authored by graders about the student; the student
+    # owning the submission must not be able to rewrite or self-publish it.
+    if submission.assignment.type == AssignmentTypes.FEEDBACK and not scope.can_grade:
+        return ajax_failure("Feedback submissions can only be modified by graders.")
     # Validate the maximum file size
     if current_app.config["MAXIMUM_CODE_SIZE"] < len(code):
         return ajax_failure(

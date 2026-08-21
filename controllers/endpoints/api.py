@@ -9,7 +9,8 @@ from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send
 from flask import current_app
 from controllers.auth import get_user
 from controllers.helpers import (get_course_id, check_resource_exists, require_request_parameters, maybe_int,
-                                 login_required, ajax_success, ajax_failure, make_log_entry)
+                                 login_required, ajax_success, ajax_failure, make_log_entry,
+                                 require_course_grader)
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.counters import SubmissionCounts
@@ -34,7 +35,10 @@ def test():
 @blueprint_api.route('/long_task/<course_id>/<user_id>/', methods=['GET'])
 @blueprint_api.route('/long_task/<course_id>/<user_id>', methods=['GET'])
 def long_task(course_id, user_id):
-    task = tasks.get_events(int(course_id), int(user_id))
+    user, _ = get_user()
+    course_id, user_id = maybe_int(course_id), maybe_int(user_id)
+    require_course_grader(user, course_id)
+    task = tasks.get_events(course_id, user_id)
     location = url_for('api.task_status', task_id=task.id)
     return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
 
@@ -64,8 +68,7 @@ def reports():
 def report(report_id):
     user, user_id = get_user()
     report: Report = Report.by_id(report_id)
-    # TODO: Check permissions
-
+    check_resource_exists(report, "Report", report_id)
     if report.owner_id != user_id:
         return abort(401, "User does not own report.")
     return send_from_directory(report.get_report_folder(), report.result)
@@ -75,7 +78,7 @@ def report(report_id):
 def report_static(report_id, path):
     user, user_id = get_user()
     report: Report = Report.by_id(report_id)
-    # TODO: Check permissions
+    check_resource_exists(report, "Report", report_id)
     if report.owner_id != user_id:
         return abort(401, "User does not own report.")
     return send_from_directory(report.get_report_folder(), path)
@@ -87,6 +90,8 @@ def check_similarity(assignment_id, course_id):
     user, user_id = get_user()
     assignment_id = maybe_int(assignment_id)
     course_id = maybe_int(course_id)
+    require_course_grader(user, course_id)
+    check_resource_exists(Assignment.by_id(assignment_id), "Assignment", assignment_id)
     task = tasks.check_similarity(user_id, assignment_id, [], course_id, "structure text exact", True, 50)
     location = url_for('api.task_status', task_id=task.id)
     return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
@@ -103,6 +108,8 @@ def check_similarity_simple(assignment_id, course_id):
     user, user_id = get_user()
     assignment_id = maybe_int(assignment_id)
     course_id = maybe_int(course_id)
+    require_course_grader(user, course_id)
+    check_resource_exists(Assignment.by_id(assignment_id), "Assignment", assignment_id)
     task = tasks.check_similarity_simple(user_id, assignment_id, exclude_courses, course_id,
                                          other_student_threshold=other_student_threshold,
                                          starter_change_threshold=starter_change_threshold,
@@ -210,6 +217,7 @@ def make_red_flag_report(course_id):
     max_backstep_threshold = maybe_int(request.args.get('max_backstep_threshold', 5))
     user, user_id = get_user()
     course_id = maybe_int(course_id)
+    require_course_grader(user, course_id)
 
     if request.method == 'POST':
         task = tasks.make_red_flag_report(user_id, course_id, short_threshold=short_threshold,
@@ -230,6 +238,19 @@ def make_red_flag_report(course_id):
                                  characters_per_second_threshold=characters_per_second_threshold,
                                     max_backstep_threshold=max_backstep_threshold,
                                existing_reports=existing_reports)
+
+
+def assignment_in_course(assignment, course_id):
+    """
+    An assignment counts as part of a course if the course owns it, one of the
+    course's assignment groups uses it, or the course already has submissions
+    for it (the LTI cross-course usage pattern).
+    """
+    if assignment.course_id == course_id:
+        return True
+    if any(group.course_id == course_id for group in AssignmentGroup.by_assignment(assignment.id)):
+        return True
+    return Submission.query.filter_by(assignment_id=assignment.id, course_id=course_id).first() is not None
 
 
 @blueprint_api.route('/bulk_update_submissions/', methods=['POST'])
@@ -300,8 +321,15 @@ def bulk_update_submissions():
             if not assignment:
                 fail("Assignment {} does not exist.".format(assignment_id))
                 continue
-            if not User.by_id(target_user_id):
+            if not assignment_in_course(assignment, course_id):
+                fail("Assignment {} is not part of course {}.".format(assignment_id, course_id))
+                continue
+            target_user = User.by_id(target_user_id)
+            if not target_user:
                 fail("User {} does not exist.".format(target_user_id))
+                continue
+            if not target_user.in_course(course_id):
+                fail("User {} is not enrolled in course {}.".format(target_user_id, course_id))
                 continue
             submission = Submission.load_or_new(assignment, target_user_id, course_id)
         # Perform the update, mirroring blockpy.save_student_file
