@@ -17,6 +17,19 @@
     visibility: hidden;
 }
 
+.assignment-manager .badge.content-badge {
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: normal;
+}
+
+.assignment-manager .assignment-flags .badge.status-badge {
+    background-color: transparent;
+    border: 1px solid #ced4da;
+    color: #868e96;
+    font-weight: normal;
+}
+
 div.overlay {
     height: 100%;
     width: 100%;
@@ -114,7 +127,37 @@ div.overlay {
                 </span>
             </td>
             <td style="width: 42%">
+                <!-- ko if: $component.isReading($data) -->
+                <!-- ko with: $component.readingSummary($data) -->
+                <div>
+                    <span data-bind="text: header"></span>
+                    <span class="badge content-badge" data-bind="visible: slides">slides</span>
+                    <span class="badge content-badge" data-bind="visible: video">video</span>
+                    <span class="badge content-badge" data-bind="visible: smallLayout">small layout</span>
+                </div>
+                <span data-bind="text: summary"></span>
+                <!-- /ko -->
+                <!-- /ko -->
+                <!-- ko if: $component.isQuiz($data) -->
+                <!-- ko with: $component.quizSummary($data) -->
+                <div>
+                    <span data-bind="text: questionCount"></span> questions:
+                    <!-- ko foreach: typeCounts -->
+                    <span class="badge content-badge" data-bind="text: $data"></span>
+                    <!-- /ko -->
+                </div>
+                <div class="small text-muted" data-bind="text: questionNames"></div>
+                <div>
+                    <span class="badge content-badge" data-bind="text: gradeMode"></span>
+                    <span class="badge content-badge" data-bind="text: feedbackType"></span>
+                    <span class="badge content-badge" data-bind="visible: readingId != null, text: 'reading: ' + readingId"></span>
+                    <span class="badge content-badge" data-bind="visible: feedbackId != null, text: 'feedback: ' + feedbackId"></span>
+                </div>
+                <!-- /ko -->
+                <!-- /ko -->
+                <!-- ko if: !$component.isReading($data) && !$component.isQuiz($data) -->
                 <span data-bind="text: $component.shortInstructions($data)"></span>
+                <!-- /ko -->
             </td>
             <td style="width: 16%">
                 <div class="mover-buttons btn-group">
@@ -147,6 +190,11 @@ div.overlay {
                         <a class="dropdown-item" target="_blank" data-bind="attr: {href: $component.exportAssignmentUrl($data)}">Export Assignment</a>
                         <a class="dropdown-item" target="_blank" data-bind="attr: {href: $component.submissionsUrl($data)}">View Submissions</a>
                     </div>
+                </div>
+                <div class="text-right mt-1 assignment-flags">
+                    <!-- ko foreach: $component.assignmentFlags($data) -->
+                    <span class="badge status-badge" data-bind="text: $data"></span>
+                    <!-- /ko -->
                 </div>
             </td>
         </tr>

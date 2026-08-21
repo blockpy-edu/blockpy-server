@@ -53,6 +53,38 @@ function stripHtmlTags(html: string): string {
     return new DOMParser().parseFromString(html, "text/html").body.textContent || "";
 }
 
+const DESCRIPTION_LENGTH = 255;
+
+function truncate(text: string, limit: number = DESCRIPTION_LENGTH): string {
+    return text.length > limit ? text.slice(0, limit) + "…" : text;
+}
+
+function parseJsonQuietly(raw: string): any {
+    try {
+        return JSON.parse(raw || "{}") || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+export interface ReadingSummary {
+    header: string;
+    summary: string;
+    slides: boolean;
+    video: boolean;
+    smallLayout: boolean;
+}
+
+export interface QuizSummary {
+    questionCount: number;
+    typeCounts: string[];
+    gradeMode: string;
+    feedbackType: string;
+    questionNames: string;
+    readingId: number | string | null;
+    feedbackId: number | string | null;
+}
+
 export interface DisplayGroup {
     group: AssignmentGroup | null;
     title: string;
@@ -220,8 +252,75 @@ export class AssignmentManager {
     }
 
     shortInstructions(assignment: Assignment): string {
-        const text = stripHtmlTags(assignment.instructions());
-        return text.length > 255 ? text.slice(0, 255) + "…" : text;
+        return truncate(stripHtmlTags(assignment.instructions()));
+    }
+
+    isReading(assignment: Assignment): boolean {
+        return (assignment.type() || "").toLowerCase() === "reading";
+    }
+
+    isQuiz(assignment: Assignment): boolean {
+        return (assignment.type() || "").toLowerCase() === "quiz";
+    }
+
+    /** Summarize a reading from its additional settings (header, summary, content badges). */
+    readingSummary(assignment: Assignment): ReadingSummary {
+        const settings = parseJsonQuietly(assignment.settings());
+        let summary = truncate(stripHtmlTags(settings.summary || ""));
+        if (!summary) {
+            summary = this.shortInstructions(assignment);
+        }
+        const video = settings.video instanceof Object
+            ? Object.keys(settings.video).length > 0 : !!settings.video;
+        return {
+            header: settings.header || "",
+            summary: summary,
+            slides: !!settings.slides,
+            video: video,
+            smallLayout: !!settings.small_layout
+        };
+    }
+
+    /** Summarize a quiz from its instructions JSON (question counts/types, modes, links). */
+    quizSummary(assignment: Assignment): QuizSummary {
+        const instructions = parseJsonQuietly(assignment.instructions());
+        const questions = instructions.questions || {};
+        const settings = instructions.settings || {};
+        const names = Object.keys(questions);
+        const countsByType: Record<string, number> = {};
+        names.forEach((name) => {
+            const type = ((questions[name] || {}).type || "unknown")
+                .replace(/_question$/, "").replace(/_/g, " ");
+            countsByType[type] = (countsByType[type] || 0) + 1;
+        });
+        return {
+            questionCount: names.length,
+            typeCounts: Object.keys(countsByType).sort().map(
+                (type) => `${countsByType[type]} ${type}`),
+            gradeMode: (settings.gradeMode || "QUIZ").toLowerCase() === "survey" ? "Survey" : "Quiz",
+            feedbackType: (settings.feedbackType || "IMMEDIATE").toLowerCase() + " feedback",
+            questionNames: truncate(names.join(", ")),
+            readingId: settings.readingId != null ? settings.readingId : null,
+            feedbackId: settings.feedbackId != null ? settings.feedbackId : null
+        };
+    }
+
+    /** Subtle status badges shown at the far right of each assignment row. */
+    assignmentFlags(assignment: Assignment): string[] {
+        const flags: string[] = [];
+        if (assignment.subordinate()) {
+            flags.push("subordinate");
+        }
+        if (assignment.hidden()) {
+            flags.push("hidden");
+        }
+        if (assignment.public()) {
+            flags.push("public");
+        }
+        if ((assignment.ipRanges() || "").trim()) {
+            flags.push("IP locked");
+        }
+        return flags;
     }
 
     /*
