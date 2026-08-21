@@ -8,9 +8,14 @@
  * regrade and bulk download tools, and the "show only learners" toggle.
  *
  * It also adopts the Watcher interface's selection features: instead of two plain
- * dropdowns, users and assignments are chosen through the set selectors (All /
- * Only / Set), so submissions can be filtered by saved user sets, and the
- * user display settings control how names are rendered and sorted.
+ * dropdowns, students and assignments are chosen through the set selectors (all /
+ * a specific one / a saved set), so submissions can be filtered by saved sets,
+ * and the user display settings control how names are rendered and sorted.
+ *
+ * The form is structured as three sequential questions - whose submissions
+ * (Students), which assignments (Assignments), and which submissions match
+ * additional conditions (Submission filters) - with a human-readable summary of
+ * the pending query and a single "View submissions" action.
  *
  * Data comes from the course-scoped `courses/submissions_filter/get` endpoint.
  */
@@ -117,6 +122,8 @@ export interface SearchFieldSpec {
     operators: SearchOperator[];
     options?: {value: string, label: string}[];
     placeholder?: string;
+    // Shown under the condition row while this field is selected
+    help?: string;
 }
 
 const NUMBER_OPERATORS: SearchOperator[] = [
@@ -141,14 +148,20 @@ const IS_OPERATOR: SearchOperator[] = [{key: "is", label: "is"}];
 
 export const SEARCH_FIELDS: SearchFieldSpec[] = [
     {key: "score", label: "Score (%)", type: "number", operators: NUMBER_OPERATORS,
-     placeholder: "0-100"},
+     placeholder: "0-100",
+     help: "The recorded percentage (0–100). A submission can score high without being " +
+           "flagged correct, so also filter on Correctness when in doubt."},
     {key: "correct", label: "Correctness", type: "select", operators: IS_OPERATOR,
      options: [{value: "true", label: "Correct (fully complete)"},
-               {value: "false", label: "Not correct"}]},
+               {value: "false", label: "Not correct"}],
+     help: "The completion flag, which is separate from the score — a submission " +
+           "can be flagged correct or not regardless of its score."},
     {key: "code", label: "Code contents", type: "text", operators: TEXT_OPERATORS,
-     placeholder: "text to look for in the code"},
+     placeholder: "text to look for in the code",
+     help: "Checked on the server against the submission's saved code."},
     {key: "feedback", label: "Feedback contents", type: "text", operators: TEXT_OPERATORS,
-     placeholder: "text to look for in the feedback"},
+     placeholder: "text to look for in the feedback",
+     help: "Checked on the server against the feedback the student was shown."},
     {key: "code_length", label: "Code length (characters)", type: "number",
      operators: NUMBER_OPERATORS, placeholder: "e.g. 20"},
     {key: "version", label: "Number of edits", type: "number", operators: NUMBER_OPERATORS,
@@ -169,11 +182,12 @@ export const SEARCH_FIELDS: SearchFieldSpec[] = [
     {key: "date_modified", label: "Last edited date", type: "date", operators: DATE_OPERATORS}
 ];
 
+// Labels complete the sentence "Match ___ of the following conditions"
 export const SEARCH_COMBINATORS = [
-    {key: "and", label: "ALL of the criteria (and)"},
-    {key: "or", label: "ANY of the criteria (or)"},
-    {key: "none", label: "NONE of the criteria (nor)"},
-    {key: "xor", label: "EXACTLY ONE criterion (xor)"}
+    {key: "and", label: "all"},
+    {key: "or", label: "any"},
+    {key: "none", label: "none"},
+    {key: "xor", label: "exactly one"}
 ];
 
 export class SearchCriterion {
@@ -270,6 +284,8 @@ export class SubmissionsFilter {
     groupHeaderColspan: ko.PureComputed<number>;
     singleAssignment: ko.PureComputed<Assignment | null>;
     singleUser: ko.PureComputed<User | null>;
+    // Human-readable interpretation of the pending selection, shown above the button
+    querySummary: ko.PureComputed<string>;
 
     constructor(params: SubmissionsFilterJson) {
         this.server = params.server;
@@ -409,6 +425,25 @@ export class SubmissionsFilter {
         this.groupHeaderColspan = ko.pureComputed(() => this.columns().length - 1);
         this.displayRows = ko.pureComputed<DisplayRow[]>(() => this.makeDisplayRows());
 
+        // "1 student • 2 assignments • No submission filters": what would be
+        // queried right now, so the form can be checked at a glance.
+        this.querySummary = ko.pureComputed<string>(() => {
+            const userIds = this.normalizeSelection(
+                this.userSet() != null ? this.userSet().getIds() : "", this.availableUsers());
+            const assignmentIds = this.normalizeSelection(
+                this.assignmentSet() != null ? this.assignmentSet().getIds() : "",
+                this.availableAssignments());
+            const students = this.describeSelection(userIds,
+                this.server.userStore, "All students", "students");
+            const assignments = this.describeSelection(assignmentIds,
+                this.server.assignmentStore, "All assignments", "assignments");
+            const filterCount = this.searchCriteria().length;
+            const filters = filterCount === 0 ? "No submission filters"
+                : filterCount === 1 ? "1 submission filter"
+                : `${filterCount} submission filters`;
+            return `${students} • ${assignments} • ${filters}`;
+        });
+
         if (autoLoad != null) {
             this.load(autoLoad.userIds, autoLoad.assignmentIds);
         }
@@ -539,12 +574,24 @@ export class SubmissionsFilter {
         STORAGE_SERVICE.set(this.historyKey(), JSON.stringify(this.history()));
     }
 
-    /** Human-readable name for a history entry, e.g. "Problem 2 — All users". */
+    /** Compact name for a history entry: the assignment side, unless the entry is
+     * really about who ("All assignments" for one student), then the student side.
+     * The full "assignments — students" description lives in the tooltip. */
     historyLabel(entry: HistoryEntry): string {
+        if (!this.parseIds(entry.assignmentIds).length && this.parseIds(entry.userIds).length) {
+            return this.describeSelection(entry.userIds,
+                this.server.userStore, "All students", "students");
+        }
+        return this.describeSelection(entry.assignmentIds,
+            this.server.assignmentStore, "All assignments", "assignments");
+    }
+
+    /** Full description of a history entry, e.g. "Problem 2 — All students". */
+    historyTitle(entry: HistoryEntry): string {
         const assignments = this.describeSelection(entry.assignmentIds,
             this.server.assignmentStore, "All assignments", "assignments");
         const users = this.describeSelection(entry.userIds,
-            this.server.userStore, "All users", "users");
+            this.server.userStore, "All students", "students");
         return `${assignments} — ${users}`;
     }
 

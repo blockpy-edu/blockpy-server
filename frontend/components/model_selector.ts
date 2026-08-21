@@ -216,6 +216,19 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
         this.selectedOptions(this.currentSet().ids());
     }
 
+    /** Remove one model from the current set (the chips' X buttons). Default sets
+     * must stay intact, so removing from one forks the remainder into a new custom
+     * set - the same rule the editor's multiselect applies on deselection. */
+    removeFromSet(model: T) {
+        const remaining = this.currentSet().ids().filter((id: number) => id !== model.id);
+        if (this.currentSet().default()) {
+            this.startAdding(remaining);
+        } else {
+            this.currentSet().ids(remaining);
+            this.saveToLocalStorage();
+        }
+    }
+
     startAdding(ids?: number[]): ModelSet {
         let newSet = new ModelSet({name: this.getNewGroupSetName(), default: false, ids: ids || []});
         this.sets.push(newSet);
@@ -306,74 +319,132 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
     }
 }
 
-export const MODEL_SET_SELECTOR_HTML = (setName: string) => `
+export interface ModelSelectorLabels {
+    // Unique key used for the radio group's name/ids ("User", "Assignment")
+    setName: string;
+    // The three selection modes, phrased as answers to "whose/which?"
+    allLabel: string;
+    singleLabel: string;
+    setLabel: string;
+    // Nouns for counts ("2 students selected") and the select2 placeholder
+    itemSingular: string;
+    itemPlural: string;
+    // The quiet link that opens the set editor
+    manageLabel: string;
+}
+
+export const MODEL_SET_SELECTOR_HTML = (labels: ModelSelectorLabels) => `
     <div>
-        <!-- Mode Select -->
-        <div class="form-check form-check-inline">
+        <!-- Mode Select: which kind of selection is being made -->
+        <div class="form-check">
             <input class="form-check-input"
                    data-bind="checked: selectMode, disable: isLoading"
-                   type="radio" name="${setName}" id="${setName}1" value="ALL">
-            <label class="form-check-label" for="${setName}1">
-                All
+                   type="radio" name="${labels.setName}" id="${labels.setName}1" value="ALL">
+            <label class="form-check-label" for="${labels.setName}1">
+                ${labels.allLabel}
             </label>
         </div>
-        <div class="form-check form-check-inline">
+        <div class="form-check">
             <input class="form-check-input"
                    data-bind="checked: selectMode, disable: isLoading"
-                   type="radio" name="${setName}" id="${setName}2" value="SINGLE">
-            <label class="form-check-label" for="${setName}2">
-                Only
+                   type="radio" name="${labels.setName}" id="${labels.setName}2" value="SINGLE">
+            <label class="form-check-label" for="${labels.setName}2">
+                ${labels.singleLabel}
             </label>
         </div>
-        <div class="form-check form-check-inline">
+        <div class="form-check">
             <input class="form-check-input"
                    data-bind="checked: selectMode, disable: isLoading"
-                   type="radio" name="${setName}" id="${setName}3" value="SET">
-            <label class="form-check-label" for="${setName}3">
-                ${setName} set
+                   type="radio" name="${labels.setName}" id="${labels.setName}3" value="SET">
+            <label class="form-check-label" for="${labels.setName}3">
+                ${labels.setLabel}
             </label>
         </div>
-        
-        <!-- Single Person -->
-        <div data-bind="if: selectMode()==='SINGLE'">
+
+        <div data-bind="if: isLoading">
+            <div class="spinner-loader" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+
+        <!-- All: nothing to configure, just confirm the scope -->
+        <!-- ko if: selectMode() === 'ALL' && !isLoading() -->
+        <div class="text-muted small mt-2">
+            Including all <span data-bind="text: available().length"></span> ${labels.itemPlural}.
+        </div>
+        <!-- /ko -->
+
+        <!-- Single: just the one dropdown -->
+        <!-- ko if: selectMode()==='SINGLE' -->
+        <div class="mt-2">
         <form class="form-inline">
-        <select data-bind="foreach: getItemGroups(), value: singleOption, optionsText: 'title', optionsValue: 'id'"
-                class="form-control custom-select ml-2 custom-select-sm">
+        <select aria-label="${labels.singleLabel}"
+                data-bind="foreach: getItemGroups(), value: singleOption, optionsText: 'title', optionsValue: 'id'"
+                class="form-control custom-select custom-select-sm">
             <optgroup data-bind="attr: {label: name}, foreach: children">
                 <option data-bind="text: $data.title(), option: $data.id"></option>
             </optgroup>
         </select>
         </form>
         </div>
-        
-        <!-- Subset -->
-        <div data-bind="if: selectMode()==='SET'">
+        <!-- /ko -->
+
+        <!-- Saved set: the set dropdown, then a count + chips as confirmation -->
+        <!-- ko if: selectMode()==='SET' -->
+        <div class="mt-2">
         <form class="form-inline">
-            Show ${setName} set:
-            <select data-bind="options: sets,
+            <select aria-label="${labels.setLabel}"
+                    data-bind="options: sets,
                                optionsText: 'name',
                                valueAllowUnset: true,
                                value: currentSet"
-                    class="form-control custom-select ml-2 custom-select-sm">
+                    class="form-control custom-select custom-select-sm">
             </select>
-            <button type="button" class="btn btn-sm btn-outline-secondary ml-2"
-                    data-bind="click: startEditing, visible: !editorVisible()">
-                    <span class="fas fa-edit"></span>
-                    Edit this ${setName} set</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary ml-2"
-                    data-bind="click: () => startAdding(), visible: !editorVisible()">
-                    <span class="fas fa-plus"></span>
-                    Add new ${setName} set</button>
-                                             
         </form>
-        <div data-bind="if: editorVisible">
-            <label>Current ${setName} set name:
-                <input type="text" data-bind="value: currentSet().name, disable: currentSet().default">
-            </label><br>
+        <div data-bind="ifnot: editorVisible">
+            <div class="text-muted small mt-2"
+                 data-bind="text: currentSet().ids().length === 1
+                                ? '1 ${labels.itemSingular} selected'
+                                : currentSet().ids().length + ' ${labels.itemPlural} selected'"></div>
+            <div class="mt-1">
+                <!-- ko foreach: prettyResult -->
+                <span class="badge badge-light border mr-1 mb-1" style="font-weight: normal">
+                    <span data-bind="text: title"></span>
+                    <button type="button" class="border-0 bg-transparent p-0 ml-1"
+                            style="line-height: 1; cursor: pointer"
+                            data-bind="click: (model) => $parent.removeFromSet(model),
+                                       attr: {'aria-label': 'Remove ' + title(), title: 'Remove ' + title()}">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </span>
+                <!-- /ko -->
+                <!-- ko if: currentSet().ids().length > showAllThreshold -->
+                <button type="button" class="btn btn-outline-secondary btn-sm mb-1"
+                        data-bind="click: () => showAll(!showAll())">
+                    <span data-bind="if: showAll">
+                        Show fewer
+                    </span>
+                    <span data-bind="ifnot: showAll">
+                        Show all <span class="badge badge-light" data-bind="text: currentSet().ids().length - showAllThreshold"></span> more
+                    </span>
+                </button>
+                <!-- /ko -->
+            </div>
+            <button type="button" class="btn btn-link btn-sm px-0"
+                    data-bind="click: startEditing">${labels.manageLabel}</button>
+        </div>
+        <!-- ko if: editorVisible -->
+        <div class="card card-body mt-2 p-3">
+            <div class="form-group mb-2">
+                <label class="mb-0">Set name:
+                    <input type="text" class="form-control form-control-sm d-inline-block w-auto ml-1"
+                           data-bind="value: currentSet().name, disable: currentSet().default">
+                </label>
+            </div>
            <select multiple=multiple style="width: 100%"
                  data-bind="selectedOptions: selectedOptions, valueAllowUnset: true,
-                              options: available, optionsText: 'title', optionsValue: 'id', 
-                              select2: { placeholder: '${setName}', allowClear: true }"></select>
+                              options: available, optionsText: 'title', optionsValue: 'id',
+                              select2: { placeholder: '${labels.itemPlural}', allowClear: true }"></select>
 
             <!-- Incomplete
             <label style="min-width: 100%">Bulk Editor (separated by commas):
@@ -384,37 +455,21 @@ export const MODEL_SET_SELECTOR_HTML = (setName: string) => `
                                      disable: currentSet().default"
                  style="min-width: 100%"></textarea></label><br>
              -->
-            <button type="button" class="btn btn-danger btn-sm float-right mt-2"
-                    data-bind="click: deleteSet">Delete current ${setName} set</button>
-            <button type="button" class="btn btn-success btn-sm mt-2"
-                    data-bind="click: saveSet">Save ${setName} set</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2 ml-4"
-                    data-bind="click: cancelEdit">Cancel changes</button>
-        </div>
-        </div>
-        <div data-bind="ifnot: editorVisible">
-            <div data-bind="if: isLoading">
-                <div class="spinner-loader" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-            </div>
-            <div data-bind="ifnot: isLoading">
-                Included ${setName}(s): 
-                <span data-bind="foreach: prettyResult">
-                    <span data-bind="text: title"></span>, 
-                </span>
-                <!-- ko if: currentSet().ids().length > showAllThreshold -->
-                <button type="button" class="btn btn-primary btn-sm" data-bind="click: () => showAll(!showAll())">
-                    <span data-bind="if: showAll">
-                        Hide all
-                    </span>
-                    <span data-bind="ifnot: showAll">
-                        Show more <span class="badge badge-light" data-bind="text: currentSet().ids().length - showAllThreshold"></span>
-                    </span>
-                </button>
-                <!-- /ko -->
+            <div class="mt-2">
+                <button type="button" class="btn btn-success btn-sm"
+                        data-bind="click: saveSet">Save set</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm ml-2"
+                        data-bind="click: () => startAdding()">
+                        <span class="fas fa-plus"></span> New set</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm ml-2"
+                        data-bind="click: cancelEdit">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm float-right"
+                        data-bind="click: deleteSet">Delete set</button>
             </div>
         </div>
+        <!-- /ko -->
+        </div>
+        <!-- /ko -->
     </div>`
 
 export class UserSetSelector extends ModelSetSelector<UserJson, User> {
@@ -503,9 +558,25 @@ export class AssignmentSetSelector extends ModelSetSelector<AssignmentJson, Assi
 
 ko.components.register("user-set-selector", {
     viewModel: UserSetSelector,
-    template: MODEL_SET_SELECTOR_HTML("User")
+    template: MODEL_SET_SELECTOR_HTML({
+        setName: "User",
+        allLabel: "All students",
+        singleLabel: "A specific student",
+        setLabel: "Saved student set",
+        itemSingular: "student",
+        itemPlural: "students",
+        manageLabel: "Manage student sets"
+    })
 });
 ko.components.register("assignment-set-selector", {
     viewModel: AssignmentSetSelector,
-    template: MODEL_SET_SELECTOR_HTML("Assignment")
+    template: MODEL_SET_SELECTOR_HTML({
+        setName: "Assignment",
+        allLabel: "All assignments",
+        singleLabel: "A specific assignment",
+        setLabel: "Saved assignment set",
+        itemSingular: "assignment",
+        itemPlural: "assignments",
+        manageLabel: "Manage assignment sets"
+    })
 });

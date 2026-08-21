@@ -652,11 +652,11 @@ export class Watcher {
 export const WatcherTemplate = `
     <div>
     <user-display-settings-editor params="options: server.userStore.displayOptions, sortMode: server.userStore.sortMode, displayMode: server.userStore.displayMode"></user-display-settings-editor>
-    User(s):
+    Students:
         <user-set-selector params="store: server.userStore, modelSet: userSet, default: userIds"></user-set-selector>
     </div>
     <div class="mt-4 mb-4">
-    Assignment(s):
+    Assignments:
         <assignment-set-selector params="store: server.assignmentStore, modelSet: assignmentSet, default: assignmentIds"></assignment-set-selector>
     </div>
     <div class="mb-4 mt-4">

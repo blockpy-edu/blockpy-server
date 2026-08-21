@@ -40,7 +40,7 @@ Submissions: {{ course.name }}
 
 <h1>View Submissions</h1>
 
-<p>Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">Course: <code>{{ course.name }}</code></a></p>
+<p class="text-muted small">Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">{{ course.name }}</a></p>
 
 <submissions-filter params="server: server,
                             course: course,
