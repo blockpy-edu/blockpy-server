@@ -347,10 +347,10 @@ class User(Base, UserMixin):
         ).join(models.Assignment, models.Assignment.course_id == models.Course.id, isouter=True))
         final_query = db.session.query(models.SubmissionLog)
         if threshold is not None:
-            final_query = final_query.filter(models.Log.date_modified > threshold)
+            final_query = final_query.filter(models.SubmissionLog.date_modified > threshold)
         return (final_query
-                .filter(models.Log.subject_id == self.id)
-                .filter(tuple_(models.Log.course_id, models.Log.assignment_id).in_(course_assignments_subquery))
+                .filter(models.SubmissionLog.subject_id == self.id)
+                .filter(tuple_(models.SubmissionLog.course_id, models.SubmissionLog.assignment_id).in_(course_assignments_subquery))
                 )
 
     def has_activity(self, threshold_days: int):
