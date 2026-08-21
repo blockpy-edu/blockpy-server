@@ -1,7 +1,5 @@
 {% extends 'helpers/layout.html' %}
 
-{% from 'helpers/selectors.html' import select_student, select_assignment %}
-
 {% block title %}
 Submissions: {{ course.name }}
 {% endblock %}
@@ -13,26 +11,27 @@ Submissions: {{ course.name }}
 
 <script type='text/javascript'>
 
-function MainModel() {
-    var self = this;
-}
-mainModel = new MainModel();
-$().ready(function() {
-    ko.applyBindings(mainModel);
-    
-    $("#search-assignments").change(function(i, v) {
-        if (i.target.value != "") {
-            window.location.href = {{ url_for('courses.submissions_filter', course_id=course_id)|tojson }}+"?criteria=assignment&search_key="+i.target.value;
+    $().ready(function() {
+        let loggedInUser = {{ user.encode_json()|tojson }};
+        let course = {{ course.encode_json()|tojson }};
+        server = new frontend.Server(course.id, {}, {
+            users: [loggedInUser],
+            courses: [course]
+        });
+        // Preload the course's users and assignments so the selectors populate instantly
+        server.userStore.preload({{ users|tojson }});
+        server.assignmentStore.preloadWithGroups({{ assignments|tojson }}, {{ groups|tojson }});
+        mainModel = {
+            course: server.courseStore.getInstance(course.id),
+            server: server,
+            user: server.userStore.getInstance(loggedInUser.id),
+            criteria: {{ criteria|tojson }},
+            searchKey: {{ search_key|tojson }},
+            userIds: {{ request.values.get('user_ids', '')|tojson }},
+            assignmentIds: {{ request.values.get('assignment_ids', '')|tojson }}
         }
+        ko.applyBindings(mainModel);
     });
-    
-    $("#search-students").change(function(i, v) {
-        if (i.target.value != "") {
-            window.location.href = {{ url_for('courses.submissions_filter', course_id=course_id)|tojson }}+"?criteria=student&search_key="+i.target.value;
-        }
-    });
-});
-
 
 </script>
 {% endblock %}
@@ -43,14 +42,12 @@ $().ready(function() {
 
 <p>Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">Course: <code>{{ course.name }}</code></a></p>
 
-    {{ select_student(students, criteria, search_key) }}
-    <br><br>
-
-
-    {{ select_assignment(assignments_by_group, criteria, search_key) }}
-    <br><br>
-
-{% include "helpers/submission_table.html" %}
-
+<submissions-filter params="server: server,
+                            course: course,
+                            user: user,
+                            criteria: criteria,
+                            searchKey: searchKey,
+                            userIds: userIds,
+                            assignmentIds: assignmentIds"></submissions-filter>
 
 {% endblock %}

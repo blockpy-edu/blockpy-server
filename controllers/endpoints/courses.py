@@ -5,6 +5,7 @@ from pprint import pprint
 from collections import defaultdict
 import json
 from natsort import natsorted
+from sqlalchemy.orm import defer, undefer
 
 from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
@@ -13,14 +14,14 @@ from flask import Blueprint, send_from_directory
 from flask import Flask, redirect, url_for, session, request, jsonify, g, \
     make_response, Response, render_template, flash, abort, current_app
 
-from common.dates import epoch_to_datetime
+from common.dates import epoch_to_datetime, datetime_to_string
 from common.highlighters import strip_tags
 from controllers.auth import get_user
 from controllers.helpers import (get_lti_property, require_request_parameters, login_required,
                                  require_course_instructor, require_course_grader, get_select_menu_link,
                                  check_resource_exists, get_course_id, ajax_success, ajax_failure, maybe_int,
                                  maybe_bool, require_admin, check_course_unlocked,
-                                 get_assignments_in_groups, make_log_entry)
+                                 make_log_entry)
 from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership
 from models.data_formats.portation import export_bundle
@@ -574,37 +575,94 @@ def submissions_user(course_id, owner_id):
 @courses.route('/submissions_filter/<course_id>', methods=['GET', 'POST'])
 @login_required
 def submissions_filter(course_id):
-    ''' List all the users in the course '''
+    ''' Interface for filtering a course's submissions by user set and/or assignment set.
+    The submission data comes from the `submissions_filter/get` endpoint below; the
+    course's users and assignments are embedded here so the selectors populate instantly. '''
     is_grader = g.user.is_grader(int(course_id))
     if not is_grader:
         return "You are not an instructor or TA in this course!"
     course_id = int(course_id)
     course = Course.by_id(course_id)
-    students = natsorted(course.get_students(), key=lambda r: r.name())
-    grouped_assignments, assignments_by_group, group_headers, groups = get_assignments_in_groups(course)
     criteria = request.values.get("criteria", "none")
-    search_key = int(request.values.get("search_key", "-1"))
-    submissions = []
-    if criteria == "student":
-        all_subs = Submission.by_student(search_key, course_id)
-        all_subs = {s[0].assignment_id: s for s in all_subs}
-        submissions = [all_subs.get(row.Assignment.id, (None, None, row.Assignment))
-                       for row in grouped_assignments]
-    elif criteria == "assignment":
-        all_subs = Submission.by_assignment(search_key, course_id)
-        all_subs = {s[0].user_id: s for s in all_subs}
-        submissions = [all_subs.get(student.id, (None, student, None))
-                       for student in students]
+    search_key = maybe_int(request.values.get("search_key", "-1"))
+    # Users with their course roles, in the same shape as `courses/users`
+    user_data = {}
+    for role, user in course.get_users():
+        if user.id not in user_data:
+            user_data[user.id] = user.encode_json()
+            user_data[user.id]['roles'] = []
+        user_data[user.id]['roles'].append(role.encode_json())
+    # Assignments with index-aligned groups, in the same shape as `assignments/get_ids`
+    grouped_assignments, scopes, _ = g.safely.load_submitted_assignments_grouped(
+        course_id, abort_on_error=False)
+    grouped_assignments = [ga for ga, scope in zip(grouped_assignments, scopes)
+                           if scope.can_grade]
     return render_template('courses/submissions_filter.html',
                            course_id=course_id,
                            course=course,
-                           assignments_by_group=assignments_by_group,
-                           group_headers=group_headers,
-                           students=students,
-                           submissions=submissions,
+                           user=g.user,
                            criteria=criteria,
-                           search_key=search_key,
+                           search_key=search_key if search_key is not None else -1,
+                           users=list(user_data.values()),
+                           assignments=[ga.Assignment.encode_json() for ga in grouped_assignments],
+                           groups=[ga.AssignmentGroup.encode_json() if ga.AssignmentGroup is not None else None
+                                   for ga in grouped_assignments],
                            is_instructor=is_grader)
+
+
+def encode_submission_for_filter(submission):
+    """ A lightweight encoding of a submission for the submissions filter table:
+    skips the heavyweight text fields (code, feedback) but includes the
+    server-computed human-readable statuses. """
+    return {
+        "id": submission.id,
+        "user_id": submission.user_id,
+        "assignment_id": submission.assignment_id,
+        "assignment_group_id": submission.assignment_group_id,
+        "course_id": submission.course_id,
+        "score": submission.as_float_score(submission.score),
+        "correct": submission.correct,
+        "submission_status": submission.submission_status,
+        "grading_status": submission.grading_status,
+        "version": submission.version,
+        "date_created": datetime_to_string(submission.date_created),
+        "date_modified": datetime_to_string(submission.date_modified),
+        "human_submission_status": submission.human_submission_status(),
+        "human_grading_status": submission.human_grading_status(),
+    }
+
+
+@courses.route('/submissions_filter/get/', methods=['GET', 'POST'])
+@courses.route('/submissions_filter/get', methods=['GET', 'POST'])
+@login_required
+def submissions_filter_data():
+    ''' JSON feed of this course's submissions, optionally narrowed down to
+    specific assignments and/or users. '''
+    course_id = get_course_id()
+    require_course_grader(g.user, course_id)
+    assignment_ids = [int(aid) for aid in request.values.get('assignment_ids', "").split(",")
+                      if aid.strip().isdigit()]
+    user_ids = [int(uid) for uid in request.values.get('user_ids', "").split(",")
+                if uid.strip().isdigit()]
+    query = (Submission.query
+             .filter(Submission.course_id == course_id)
+             .options(defer(Submission.code), defer(Submission.extra_files),
+                      defer(Submission.feedback)))
+    if assignment_ids:
+        query = query.filter(Submission.assignment_id.in_(assignment_ids))
+    if user_ids:
+        query = query.filter(Submission.user_id.in_(user_ids))
+    submissions = query.all()
+    # Batch-prefetch the assignments (for human statuses) and quiz submission code
+    # (for quiz attempt status), holding them in locals so the identity map keeps them.
+    _assignments = Assignment.query.filter(
+        Assignment.id.in_({s.assignment_id for s in submissions})).all() if submissions else []
+    quiz_submission_ids = [s.id for s in submissions
+                           if s.assignment is not None and s.assignment.type == "quiz"]
+    _quiz_code = (Submission.query.filter(Submission.id.in_(quiz_submission_ids))
+                  .options(undefer(Submission.code)).all()) if quiz_submission_ids else []
+    return ajax_success(dict(submissions=[
+        encode_submission_for_filter(submission) for submission in submissions]))
 
 
 @courses.route('/feedback_editor/<course_id>/', methods=['GET'])

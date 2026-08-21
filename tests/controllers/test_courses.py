@@ -477,7 +477,60 @@ class TestSubmissionsAndGrading:
         assert response.status_code == 200
         # Should not contain error message
         assert b'not an instructor' not in response.data.lower()
-    
+
+    def test_submissions_filter_data_student_blocked(self, client, test_data, act_as):
+        """Students cannot fetch the submissions filter JSON data."""
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/courses/submissions_filter/get', query_string={'course_id': 6})
+        assert response.status_code == 200
+        assert response.is_json
+        assert response.json['success'] is False
+
+    def test_submissions_filter_data_instructor_allowed(self, client, test_data, act_as):
+        """Instructors get lightweight submission records with human statuses."""
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/submissions_filter/get', query_string={'course_id': 6})
+        assert response.status_code == 200, response.data
+        assert response.json['success'] is True, response.json
+        submissions = response.json['submissions']
+        assert isinstance(submissions, list)
+        if submissions:
+            first = submissions[0]
+            for field in ('id', 'user_id', 'assignment_id', 'assignment_group_id',
+                          'score', 'correct', 'version', 'date_created', 'date_modified',
+                          'human_submission_status', 'human_grading_status'):
+                assert field in first, f"Missing {field}"
+
+    def test_submissions_filter_data_accepts_post(self, client, test_data, act_as):
+        """The frontend component POSTs its filters; that must not fall through
+        to the /submissions_filter/<course_id> page route."""
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/courses/submissions_filter/get',
+                               data={'course_id': 6, 'user_ids': '', 'assignment_ids': ''})
+        assert response.status_code == 200, response.data
+        assert response.is_json
+        assert response.json['success'] is True, response.json
+
+    def test_submissions_filter_data_filtering(self, client, test_data, act_as):
+        """The user_ids/assignment_ids parameters narrow down the submissions."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = client.get('/courses/submissions_filter/get',
+                                query_string={'course_id': 6}).json['submissions']
+        if not everything:
+            return
+        some_user_id = everything[0]['user_id']
+        filtered = client.get('/courses/submissions_filter/get',
+                              query_string={'course_id': 6,
+                                            'user_ids': str(some_user_id)}).json['submissions']
+        assert filtered
+        assert all(sub['user_id'] == some_user_id for sub in filtered)
+        some_assignment_id = everything[0]['assignment_id']
+        filtered = client.get('/courses/submissions_filter/get',
+                              query_string={'course_id': 6,
+                                            'assignment_ids': str(some_assignment_id)}).json['submissions']
+        assert filtered
+        assert all(sub['assignment_id'] == some_assignment_id for sub in filtered)
+
     def test_edit_points_requires_proper_context(self, client, test_data, act_as):
         """edit_points requires proper course context via bulk_assignment_editor_setup."""
         # Lulu (100) is a student

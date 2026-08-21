@@ -302,13 +302,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   AssignmentManager: () => (/* binding */ AssignmentManager),
 /* harmony export */   SORT_OPTIONS: () => (/* binding */ SORT_OPTIONS),
-/* harmony export */   naturalCompare: () => (/* binding */ naturalCompare)
+/* harmony export */   naturalCompare: () => (/* reexport safe */ _services_plugins__WEBPACK_IMPORTED_MODULE_4__.naturalCompare)
 /* harmony export */ });
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
 /* harmony import */ var _assignment_manager_html__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./assignment_manager.html */ "./components/assignment_manager/assignment_manager.html");
 /* harmony import */ var _modals_html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./modals.html */ "./components/assignment_manager/modals.html");
+/* harmony import */ var _services_plugins__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../services/plugins */ "./services/plugins.ts");
 /**
  * The Assignment Manager is the instructor-facing interface for organizing a course's
  * assignments and assignment groups. It replaces the old server-rendered
@@ -330,9 +331,8 @@ const SORT_OPTIONS = [
     { key: "date_created", label: "Date Created" },
     { key: "date_modified", label: "Date Modified" }
 ];
-function naturalCompare(left, right) {
-    return (left || "").localeCompare(right || "", undefined, { numeric: true, sensitivity: "base" });
-}
+
+
 /** Strip HTML from instructions without loading any of its resources. */
 function stripHtmlTags(html) {
     if (!html) {
@@ -390,10 +390,10 @@ class AssignmentManager {
             const key = this.sortBy();
             const sorted = this.groups().slice().sort((left, right) => {
                 switch (key) {
-                    case "url": return naturalCompare(left.url(), right.url());
+                    case "url": return (0,_services_plugins__WEBPACK_IMPORTED_MODULE_4__.naturalCompare)(left.url(), right.url());
                     case "date_created": return (left.dateCreated() || "").localeCompare(right.dateCreated() || "");
                     case "date_modified": return (left.dateModified() || "").localeCompare(right.dateModified() || "");
-                    default: return naturalCompare(left.name(), right.name());
+                    default: return (0,_services_plugins__WEBPACK_IMPORTED_MODULE_4__.naturalCompare)(left.name(), right.name());
                 }
             });
             return this.sortDescending() ? sorted.reverse() : sorted;
@@ -451,7 +451,7 @@ class AssignmentManager {
     }
     /** Assignments are always presented in the order students see them: alphabetically by title. */
     sortAssignmentsByTitle(assignments) {
-        return assignments.slice().sort((left, right) => naturalCompare(left.title(), right.title()));
+        return assignments.slice().sort((left, right) => (0,_services_plugins__WEBPACK_IMPORTED_MODULE_4__.naturalCompare)(left.title(), right.title()));
     }
     makeDisplayGroups() {
         const filtered = this.filteredAssignments();
@@ -3322,8 +3322,12 @@ class ModelSetSelector {
             }
         });
         this.singleOption.subscribe(() => {
-            this.singleSet().ids([this.singleOption()]);
-            this.currentSet(this.singleSet());
+            // The dropdown can transiently write null while (re)rendering; a null
+            // id must never become part of the set (it would look like a real model).
+            if (this.singleOption() != null) {
+                this.singleSet().ids([this.singleOption()]);
+                this.currentSet(this.singleSet());
+            }
         });
         this.selectMode.subscribe(() => {
             switch (this.selectMode()) {
@@ -3351,6 +3355,28 @@ class ModelSetSelector {
             }
             return ids.map((id) => this.store.getInstance(id));
         }, this);
+        if (params.mode != null) {
+            const externalMode = params.mode;
+            externalMode(this.selectMode());
+            this.selectMode.subscribe((mode) => {
+                if (externalMode() !== mode) {
+                    externalMode(mode);
+                }
+            });
+            externalMode.subscribe((mode) => {
+                if (mode != null && mode !== this.selectMode()) {
+                    this.selectMode(mode);
+                }
+            });
+        }
+        if (params.applySelection != null) {
+            params.applySelection.subscribe((value) => {
+                if (value != null) {
+                    this.loadDefault(value);
+                    params.applySelection(null);
+                }
+            });
+        }
     }
     getDefaultGroupSetName() {
         return "Everything";
@@ -3387,7 +3413,9 @@ class ModelSetSelector {
     loadDefault(value) {
         if (value === "first") {
             this.selectMode(SelectMode.SINGLE);
-            this.singleOption(this.available()[0].id);
+            if (this.available().length) {
+                this.singleOption(this.available()[0].id);
+            }
         }
         else if (value === "all" || value.trim() === "") {
             this.selectMode(SelectMode.ALL);
@@ -3617,7 +3645,14 @@ class AssignmentSetSelector extends ModelSetSelector {
                 }
                 groups[id].children.push(a);
             });
-            return Object.values(groups);
+            // Object.values iterates integer keys (the group ids) in numeric order,
+            // scrambling the natural ordering - sort by name, ungrouped last.
+            return Object.values(groups).sort((left, right) => {
+                if ((left.model == null) !== (right.model == null)) {
+                    return left.model == null ? 1 : -1;
+                }
+                return (0,_services_plugins__WEBPACK_IMPORTED_MODULE_1__.naturalCompare)(left.name, right.name);
+            });
         }, this);
     }
     getDefaultGroupSetName() {
@@ -6456,6 +6491,591 @@ knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("submission-review-int
 
 /***/ }),
 
+/***/ "./components/submissions_filter/submissions_filter.html":
+/*!***************************************************************!*\
+  !*** ./components/submissions_filter/submissions_filter.html ***!
+  \***************************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<style>\n#submission-table thead tr {\n    cursor: pointer;\n}\n</style>\n\n<div class=\"submissions-filter\">\n    <div>\n        <user-display-settings-editor params=\"options: server.userStore.displayOptions,\n                                              sortMode: server.userStore.sortMode,\n                                              displayMode: server.userStore.displayMode\"></user-display-settings-editor>\n        User(s):\n        <user-set-selector params=\"store: server.userStore, modelSet: userSet, default: userDefault,\n                                   mode: userSelectMode, applySelection: userApply\"></user-set-selector>\n    </div>\n    <div class=\"mt-4 mb-4\">\n        Assignment(s):\n        <assignment-set-selector params=\"store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,\n                                         mode: assignmentSelectMode, applySelection: assignmentApply\"></assignment-set-selector>\n    </div>\n    <!-- ko if: history().length -->\n    <div class=\"mt-2\">\n        Recent:\n        <!-- ko foreach: history -->\n        <button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-1 mb-1\"\n                data-bind=\"click: (entry) => $component.applyHistoryEntry(entry),\n                           text: $component.historyLabel($data)\"></button>\n        <!-- /ko -->\n    </div>\n    <!-- /ko -->\n    <div class=\"mb-4 mt-2\">\n        <button class=\"btn btn-primary\" data-bind=\"click: viewSubmissions\">View Submissions</button>\n    </div>\n\n    <div data-bind=\"if: isLoading\">\n        <div class=\"spinner-loader\" role=\"status\">\n            <span class=\"sr-only\">Loading...</span>\n        </div>\n    </div>\n    <!-- ko if: hasFailed -->\n    <div class=\"alert alert-danger\" role=\"alert\">\n        Loading these submissions has failed; more details in JS console.\n    </div>\n    <!-- /ko -->\n\n    <div data-bind=\"if: hasLoaded() && !isLoading()\">\n        <div class=\"float-right\">\n            <span id=\"bulk-regrade-status\" data-bind=\"text: bulkRegradeStatus\"></span>\n            <div class=\"btn-group mt-2\">\n                <button\n                        data-as-human=\"false\"\n                        class=\"bulk-regrade btn btn-outline-secondary\"\n                        data-bind=\"click: () => bulkRegrade(false)\"\n                        title=\"Simulate clicking on all of the regrade buttons, forcing the grades to sync with Canvas\">\n                    Bulk regrade</button>\n                <!-- Dropdown -->\n                <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\"\n                        data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                    <span class=\"caret\"></span>\n                    <span class=\"sr-only\">Toggle Dropdown</span>\n                </button>\n                <div class=\"dropdown-menu dropdown-menu-right\">\n                    <button\n                        data-as-human=\"true\"\n                        class=\"bulk-regrade btn btn-outline-secondary\"\n                        data-bind=\"click: () => bulkRegrade(true)\"\n                        title=\"Simulate clicking on all of the regrade as human buttons, forcing the grades to sync with Canvas. This resubmits the grades with your instructor account, not the autograder. You probably don't want to use this one unless you know what you are doing.\">\n                    Bulk regrade (as human)</button>\n                </div>\n            </div>\n        </div>\n\n        <!-- ko if: isAssignmentMode -->\n        <div class=\"btn-group mt-2\">\n            <a data-bind=\"attr: {href: exportSubmissionsUrl(false)}\" target=\"_blank\"\n               class=\"btn btn-outline-secondary\">Bulk download all submissions for assignment</a>\n            <!-- Dropdown -->\n            <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                <span class=\"caret\"></span>\n                <span class=\"sr-only\">Toggle Dropdown</span>\n            </button>\n            <!-- Extended buttons -->\n            <div class=\"dropdown-menu dropdown-menu-right\">\n                <a data-bind=\"attr: {href: exportSubmissionsUrl(true)}\"\n                   class=\"dropdown-item\" target=\"_blank\">Download with history</a>\n            </div>\n        </div><br>\n\n        <a data-bind=\"attr: {href: openAssignmentUrl()}\"\n           target=\"_blank\" class=\"btn btn-outline-secondary mt-2 mb-2 \">Open assignment</a><br>\n        <input type=\"checkbox\" name=\"show-only-learners\" id=\"show-only-learners\"\n               data-bind=\"checked: showOnlyLearners\" />\n        <label for=\"show-only-learners\">Show only learners</label>\n        <!-- /ko -->\n        <!-- ko if: isStudentMode -->\n        <a data-bind=\"attr: {href: bulkDownloadEventsUrl()}\" target=\"_blank\"\n           class=\"btn btn-outline-secondary mt-2 mb-2 \">Bulk download all events</a>\n        <!-- /ko -->\n\n        <table class=\"table table-condensed table-hover table-striped table-bordered\" id=\"submission-table\">\n        <caption>Student's submissions for course's assignments.</caption>\n        <thead class=\"thead-dark\">\n            <tr data-bind=\"foreach: columns\">\n                <th data-bind=\"click: () => $component.sortColumn($index()), attr: {'data-type': type}\">\n                    <span data-bind=\"text: label\"></span><i class=\"ml-2 fas\"\n                        data-bind=\"visible: $component.sortIndex() === $index(),\n                                   css: $component.appliedSortDirection() === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down'\"></i>\n                </th>\n            </tr>\n        </thead>\n\n        <tbody data-bind=\"foreach: displayRows\">\n            <!-- ko if: $data.isGroupHeader -->\n            <tr class=\"table-secondary table-groups\">\n                <td data-bind=\"attr: {colspan: $component.groupHeaderColspan()}\">\n                    <strong>Group: <span data-bind=\"text: groupName\"></span></strong></td>\n                <td>\n                    <!-- ko if: viewGroupUrl -->\n                    <a data-bind=\"attr: {href: viewGroupUrl}\"\n                       class=\"btn btn-primary btn-sm\" target=\"_blank\">View Group</a>\n                    <!-- /ko -->\n                </td>\n            </tr>\n            <!-- /ko -->\n            <!-- ko ifnot: $data.isGroupHeader -->\n            <!-- Row Color based on Assignment status -->\n            <tr data-bind=\"css: $component.rowClass($data)\">\n                <!-- Assignment Mode -->\n                <!-- ko if: $component.showAssignmentColumn -->\n                <td>\n                    <a data-bind=\"attr: {href: $component.filterByAssignmentUrl(assignment)}\"\n                       ><i class=\"fas fa-eye\"></i></a> <span data-bind=\"text: assignment != null ? assignment.title() : ''\"></span>\n                </td>\n                <!-- /ko -->\n\n                <!-- Student Mode -->\n                <!-- ko if: $component.showStudentColumns -->\n                <td>\n                    <a data-bind=\"attr: {href: $component.filterByStudentUrl(user)}\"\n                       ><i class=\"fas fa-eye\"></i></a>\n                    <span data-bind=\"text: user != null ? user.title() : ''\"></span>\n                </td>\n                <td>\n                    <span data-bind=\"text: $component.rolesList(user)\"></span>\n                </td>\n                <!-- /ko -->\n\n                <td data-bind=\"text: $component.scoreText($data)\"></td>\n                <td data-bind=\"text: submission != null ? submission.human_submission_status : ''\"></td>\n                <td>\n                    <span data-bind=\"html: $component.gradingIcon($data)\"></span>\n                    <span data-bind=\"text: submission != null ? submission.human_grading_status : ''\"></span>\n                </td>\n                <td>\n                    <!-- ko if: submission -->\n                    <span style=\"cursor: pointer\"\n                          data-bind=\"click: (row, event) => $component.estimateDuration(row, event),\n                                     text: submission.version || '0'\"></span>\n                    <!-- /ko -->\n                    <!-- ko ifnot: submission -->\n                    <span>0</span>\n                    <!-- /ko -->\n                </td>\n\n                <td>\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_created : ''},\n                                     text: submission != null ? $component.prettyDate(submission.date_created) : ''\"></span>\n                </td>\n                <td>\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_modified : ''},\n                                     text: submission != null ? $component.prettyDate(submission.date_modified) : ''\"></span>\n                </td>\n\n                <td>\n                    <!-- ko if: submission -->\n                    <div class=\"btn-group\">\n                        <a data-bind=\"attr: {href: $component.viewSubmissionUrl($data)}\"\n                            target=\"_blank\" class=\"btn btn-primary btn-sm\"\n                        >View</a>\n                        <!-- Dropdown -->\n                        <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                            <span class=\"caret\"></span>\n                            <span class=\"sr-only\">Toggle Dropdown</span>\n                        </button>\n                        <!-- Extended buttons -->\n                        <div class=\"dropdown-menu dropdown-menu-right\">\n                            <!-- ko if: submission.assignment_group_id != null -->\n                            <a data-bind=\"attr: {href: $component.viewGroupUrl($data)}\"\n                                 class=\"dropdown-item\" target=\"_blank\">View Group</a>\n                            <!-- /ko -->\n                            <!---------------------------------------------------------------------->\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, false)}\"\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission</a>\n                            <!---------------------------------------------------------------------->\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, true)}\"\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission+History</a>\n                            <!---------------------------------------------------------------------->\n                            <a data-bind=\"attr: {href: $component.historyLogUrl($data)}\"\n                               target=\"_blank\" class=\"dropdown-item\">History Log</a>\n                            <!---------------------------------------------------------------------->\n                            <a data-bind=\"attr: {href: $component.transferCourseUrl($data)}\"\n                                target=\"_blank\" class=\"dropdown-item\"\n                               title=\"Launches a new window to help you transfer this submission to another course, if the student transfers\"\n                            >Copy to Course</a>\n                            <!---------------------------------------------------------------------->\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\n                                    data-as-human=\"false\"\n                                    style=\"cursor: pointer\"\n                                    title=\"Force a regrade of the submission, but do so as the autograder. Forces resync with canvas.\"\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, false, event),\n                                               attr: {'data-submission-id': submission.id,\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\n                                                      'data-user-name': user != null ? user.name() : ''}\"\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\n                                Regrade\n                            </button>\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\n                                    data-as-human=\"true\"\n                                    style=\"cursor: pointer\"\n                                    title=\"Force a regrade of the submission, but do so as a human instead of the autograder.\"\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, true, event),\n                                               attr: {'data-submission-id': submission.id,\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\n                                                      'data-user-name': user != null ? user.name() : ''}\"\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\n                                Regrade as human\n                            </button>\n                            <!---------------------------------------------------------------------->\n                        </div>\n                    </div>\n                    <!-- /ko -->\n                </td>\n            </tr>\n            <!-- /ko -->\n        </tbody>\n        </table>\n    </div>\n</div>\n";
+
+/***/ }),
+
+/***/ "./components/submissions_filter/submissions_filter.ts":
+/*!*************************************************************!*\
+  !*** ./components/submissions_filter/submissions_filter.ts ***!
+  \*************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SubmissionsFilter: () => (/* binding */ SubmissionsFilter),
+/* harmony export */   roundScore: () => (/* binding */ roundScore)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _models_user__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../models/user */ "./models/user.ts");
+/* harmony import */ var _models_assignment__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../models/assignment */ "./models/assignment.ts");
+/* harmony import */ var _model_selector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../model_selector */ "./components/model_selector.ts");
+/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _utilities_dates__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utilities/dates */ "./utilities/dates.ts");
+/* harmony import */ var _utilities_safe_local_storage__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utilities/safe_local_storage */ "./utilities/safe_local_storage.ts");
+/* harmony import */ var _submissions_filter_html__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./submissions_filter.html */ "./components/submissions_filter/submissions_filter.html");
+/**
+ * The Submissions Filter is the instructor-facing interface for reviewing a course's
+ * submissions, filtered by user and/or assignment. It replaces the server-rendered
+ * logic that used to live in `templates/courses/submissions_filter.html` (and its
+ * `helpers/submission_table.html` include), keeping all of the same behavior and
+ * layout: the submissions table with its row coloring, group headers, sortable
+ * columns, per-row actions (view, downloads, history, copy, regrades), the bulk
+ * regrade and bulk download tools, and the "show only learners" toggle.
+ *
+ * It also adopts the Watcher interface's selection features: instead of two plain
+ * dropdowns, users and assignments are chosen through the set selectors (All /
+ * Only / Set), so submissions can be filtered by saved user sets, and the
+ * user display settings control how names are rendered and sorted.
+ *
+ * Data comes from the course-scoped `courses/submissions_filter/get` endpoint.
+ */
+
+
+
+
+
+
+
+
+
+/** Mirrors Jinja's score|round(1), used everywhere a score is shown or compared. */
+function roundScore(score) {
+    return Math.round(score * 10) / 10;
+}
+const HISTORY_LIMIT = 6;
+const BULK_REGRADE_WAIT = 200;
+class SubmissionsFilter {
+    constructor(params) {
+        this.server = params.server;
+        this.course = params.course;
+        this.user = params.user;
+        this.userSet = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.assignmentSet = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.userSelectMode = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.assignmentSelectMode = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.userApply = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.assignmentApply = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.history = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(this.loadHistory());
+        // Never allow "All users" x "All assignments": switching one side to All
+        // flips the other side to Only (which picks its first entry).
+        this.userSelectMode.subscribe((mode) => {
+            if (mode === _model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.ALL && this.assignmentSelectMode() === _model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.ALL) {
+                this.assignmentSelectMode(_model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.SINGLE);
+            }
+        });
+        this.assignmentSelectMode.subscribe((mode) => {
+            if (mode === _model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.ALL && this.userSelectMode() === _model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.ALL) {
+                this.userSelectMode(_model_selector__WEBPACK_IMPORTED_MODULE_3__.SelectMode.SINGLE);
+            }
+        });
+        const criteria = params.criteria || "none";
+        const searchKey = params.searchKey;
+        // Initial selection: URL criteria/search_key or user_ids/assignment_ids
+        // (deep links), then the most recently viewed selection, then the default
+        // of all users on the first assignment.
+        let autoLoad = null;
+        let loadFirstAssignment = false;
+        if (criteria === "assignment" && searchKey > 0) {
+            this.userDefault = params.userIds || "";
+            this.assignmentDefault = String(searchKey);
+            autoLoad = { userIds: this.userDefault, assignmentIds: this.assignmentDefault };
+        }
+        else if (criteria === "student" && searchKey > 0) {
+            this.userDefault = String(searchKey);
+            this.assignmentDefault = params.assignmentIds || "";
+            autoLoad = { userIds: this.userDefault, assignmentIds: this.assignmentDefault };
+        }
+        else if (params.userIds || params.assignmentIds) {
+            this.userDefault = params.userIds || "";
+            this.assignmentDefault = params.assignmentIds || "";
+            autoLoad = { userIds: this.userDefault, assignmentIds: this.assignmentDefault };
+        }
+        else if (this.history().length) {
+            const recent = this.history()[0];
+            this.userDefault = recent.userIds;
+            this.assignmentDefault = recent.assignmentIds;
+            autoLoad = { userIds: recent.userIds, assignmentIds: recent.assignmentIds };
+        }
+        else {
+            this.userDefault = "";
+            this.assignmentDefault = "first";
+            loadFirstAssignment = true;
+        }
+        this.availableUsers = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.availableAssignments = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.loadedUserIds = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.loadedAssignmentIds = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.submissions = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.hasLoaded = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.isLoading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.hasFailed = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.showOnlyLearners = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.sortIndex = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.appliedSortDirection = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("asc");
+        this.sortDirections = {};
+        this.bulkRegradeStatus = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        // Load the full rosters (instant when the page preloaded them into the
+        // stores); the set selectors share the same stores/data.
+        this.server.userStore.getAllAvailable().then((users) => {
+            this.availableUsers(users);
+        });
+        this.server.assignmentStore.getAllAvailable().then((assignments) => {
+            this.availableAssignments(assignments);
+            if (loadFirstAssignment && assignments.length) {
+                this.load("", String(assignments[0].id));
+            }
+        });
+        this.effectiveUsers = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const chosen = this.loadedUserIds();
+            const users = chosen.length
+                ? chosen.map((id) => this.server.userStore.getInstance(id))
+                : this.availableUsers().slice();
+            return users.sort(this.server.userStore.sortMethod.bind(this.server.userStore));
+        });
+        this.effectiveAssignments = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const chosen = this.loadedAssignmentIds();
+            const assignments = chosen.length
+                ? chosen.map((id) => this.server.assignmentStore.getInstance(id))
+                : this.availableAssignments().slice();
+            return assignments.sort(_models_assignment__WEBPACK_IMPORTED_MODULE_2__.compareAssignmentsByGroup);
+        });
+        // Which layout the old page would have used: filtering to one assignment
+        // shows the student columns; filtering to one student shows the assignment
+        // column (with group headers); anything else (a new capability) shows both.
+        this.mode = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const userCount = this.effectiveUsers().length;
+            const assignmentCount = this.effectiveAssignments().length;
+            if (assignmentCount === 1 && userCount !== 1) {
+                return "assignment";
+            }
+            else if (userCount === 1 && assignmentCount !== 1) {
+                return "student";
+            }
+            else {
+                return "both";
+            }
+        });
+        this.isAssignmentMode = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.mode() === "assignment");
+        this.isStudentMode = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.mode() === "student");
+        this.showAssignmentColumn = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.mode() !== "assignment");
+        this.showStudentColumns = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.mode() !== "student");
+        this.singleAssignment = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.effectiveAssignments().length === 1 ? this.effectiveAssignments()[0] : null);
+        this.singleUser = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.effectiveUsers().length === 1 ? this.effectiveUsers()[0] : null);
+        this.columns = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.makeColumns());
+        this.groupHeaderColspan = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.columns().length - 1);
+        this.displayRows = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.makeDisplayRows());
+        if (autoLoad != null) {
+            this.load(autoLoad.userIds, autoLoad.assignmentIds);
+        }
+    }
+    /** Load submissions from the "View Submissions" button, using the current sets. */
+    viewSubmissions() {
+        const userIds = this.userSet() != null ? this.userSet().getIds() : this.userDefault;
+        const assignmentIds = this.assignmentSet() != null ? this.assignmentSet().getIds() : this.assignmentDefault;
+        this.load(userIds, assignmentIds);
+    }
+    load(userIds, assignmentIds) {
+        assignmentIds = this.normalizeSelection(assignmentIds, this.availableAssignments());
+        const normalizedUserIds = this.normalizeSelection(userIds, this.availableUsers());
+        // Everything x everything is not a real selection; keep the explicit list
+        // rather than collapsing both sides to "all".
+        if (!(normalizedUserIds === "" && assignmentIds === "")) {
+            userIds = normalizedUserIds;
+        }
+        this.isLoading(true);
+        this.hasFailed(false);
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_4__.ajax_post)("courses/submissions_filter/get", {
+            course_id: this.course.id,
+            user_ids: userIds,
+            assignment_ids: assignmentIds
+        }).then((data) => {
+            this.isLoading(false);
+            this.hasFailed(!data.success);
+            if (data.success) {
+                this.loadedUserIds(this.parseIds(userIds));
+                this.loadedAssignmentIds(this.parseIds(assignmentIds));
+                this.submissions(data.submissions);
+                this.sortIndex(null);
+                this.sortDirections = {};
+                this.hasLoaded(true);
+                this.updateUrl();
+                this.pushHistory(userIds, assignmentIds);
+            }
+            else {
+                console.error("Loading submissions failed!", data);
+            }
+        }).fail((error) => {
+            console.error("Loading submissions failed to get data!", error);
+            this.hasFailed(true);
+            this.isLoading(false);
+        });
+    }
+    /** Collapse a selection that covers every available model down to "" (all),
+     * so equivalent selections share one URL and one history entry. */
+    normalizeSelection(ids, available) {
+        const list = this.parseIds(ids);
+        if (!list.length) {
+            return "";
+        }
+        if (available.length && list.length === available.length) {
+            const availableIds = {};
+            available.forEach((model) => availableIds[model.id] = true);
+            if (list.every((id) => availableIds[id])) {
+                return "";
+            }
+        }
+        return list.join(",");
+    }
+    /*
+     * Selection history (persisted per course in localStorage)
+     */
+    historyKey() {
+        return `SUBMISSIONS_FILTER_${this.course.id}_HISTORY`;
+    }
+    loadHistory() {
+        try {
+            const raw = _utilities_safe_local_storage__WEBPACK_IMPORTED_MODULE_6__.STORAGE_SERVICE.get(this.historyKey());
+            const parsed = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            return parsed.filter((entry) => entry != null &&
+                typeof entry.userIds === "string" && typeof entry.assignmentIds === "string");
+        }
+        catch (e) {
+            return [];
+        }
+    }
+    pushHistory(userIds, assignmentIds) {
+        const entries = this.history().filter((entry) => entry.userIds !== userIds || entry.assignmentIds !== assignmentIds);
+        entries.unshift({ userIds, assignmentIds });
+        this.history(entries.slice(0, HISTORY_LIMIT));
+        _utilities_safe_local_storage__WEBPACK_IMPORTED_MODULE_6__.STORAGE_SERVICE.set(this.historyKey(), JSON.stringify(this.history()));
+    }
+    /** Human-readable name for a history entry, e.g. "Problem 2 — All users". */
+    historyLabel(entry) {
+        const assignments = this.describeSelection(entry.assignmentIds, this.server.assignmentStore, "All assignments", "assignments");
+        const users = this.describeSelection(entry.userIds, this.server.userStore, "All users", "users");
+        return `${assignments} — ${users}`;
+    }
+    describeSelection(ids, store, allLabel, plural) {
+        const list = this.parseIds(ids);
+        if (!list.length) {
+            return allLabel;
+        }
+        if (list.length === 1) {
+            return store.getInstance(list[0]).title();
+        }
+        return `${list.length} ${plural}`;
+    }
+    /** Re-view a remembered selection, syncing the selectors to match. */
+    applyHistoryEntry(entry) {
+        this.userApply(entry.userIds);
+        this.assignmentApply(entry.assignmentIds);
+        this.load(entry.userIds, entry.assignmentIds);
+    }
+    parseIds(ids) {
+        return ids.split(",")
+            .filter((id) => id.trim() !== "" && !isNaN(parseInt(id, 10)))
+            .map((id) => parseInt(id, 10));
+    }
+    /** Keep the address bar shareable, using the same URLs the old page produced. */
+    updateUrl() {
+        if (!window.history || !window.history.replaceState) {
+            return;
+        }
+        const base = window.location.pathname;
+        let search = "";
+        if (this.loadedAssignmentIds().length === 1 && this.loadedUserIds().length !== 1) {
+            search = `?criteria=assignment&search_key=${this.loadedAssignmentIds()[0]}`;
+        }
+        else if (this.loadedUserIds().length === 1 && this.loadedAssignmentIds().length !== 1) {
+            search = `?criteria=student&search_key=${this.loadedUserIds()[0]}`;
+        }
+        else {
+            const parts = [];
+            if (this.loadedUserIds().length) {
+                parts.push(`user_ids=${this.loadedUserIds().join(",")}`);
+            }
+            if (this.loadedAssignmentIds().length) {
+                parts.push(`assignment_ids=${this.loadedAssignmentIds().join(",")}`);
+            }
+            search = parts.length ? "?" + parts.join("&") : "";
+        }
+        window.history.replaceState(null, "", base + search);
+    }
+    /*
+     * Row construction
+     */
+    rolesList(user) {
+        if (user == null) {
+            return "";
+        }
+        return user.roles().map((role) => (0,_models_user__WEBPACK_IMPORTED_MODULE_1__.cleanRole)(role.name())).join(", ");
+    }
+    isLearner(user) {
+        return this.rolesList(user).includes("Learner");
+    }
+    submissionsByKey() {
+        const map = {};
+        this.submissions().forEach((submission) => {
+            map[submission.user_id + "," + submission.assignment_id] = submission;
+        });
+        return map;
+    }
+    makeRow(submission, user, assignment) {
+        return { isGroupHeader: false, submission, user, assignment };
+    }
+    makeDisplayRows() {
+        if (!this.hasLoaded()) {
+            return [];
+        }
+        let rows;
+        const byKey = this.submissionsByKey();
+        switch (this.mode()) {
+            case "assignment": {
+                // One row per user in the chosen set, like the old one-per-student table
+                const assignment = this.singleAssignment();
+                rows = this.effectiveUsers().map((user) => this.makeRow(byKey[user.id + "," + assignment.id] || null, user, assignment));
+                break;
+            }
+            case "student": {
+                // One row per assignment, in (group, title) order
+                const user = this.singleUser();
+                rows = this.effectiveAssignments().map((assignment) => this.makeRow(byKey[user.id + "," + assignment.id] || null, user, assignment));
+                break;
+            }
+            default: {
+                // Sets on both sides: only actual submissions, users then assignments
+                rows = this.submissions().map((submission) => this.makeRow(submission, this.server.userStore.getInstance(submission.user_id), this.server.assignmentStore.getInstance(submission.assignment_id)));
+                rows.sort((left, right) => this.server.userStore.sortMethod(left.user, right.user) ||
+                    (0,_models_assignment__WEBPACK_IMPORTED_MODULE_2__.compareAssignmentsByGroup)(left.assignment, right.assignment));
+            }
+        }
+        if (this.showOnlyLearners() && this.isAssignmentMode()) {
+            rows = rows.filter((row) => this.isLearner(row.user));
+        }
+        if (this.sortIndex() != null) {
+            // Sorting removes the group headers, matching the old table
+            return this.sortRows(rows);
+        }
+        if (this.isStudentMode()) {
+            return this.insertGroupHeaders(rows);
+        }
+        return rows;
+    }
+    insertGroupHeaders(rows) {
+        const result = [];
+        let lastGroupId = undefined;
+        rows.forEach((row) => {
+            const group = row.assignment != null ? row.assignment.group() : null;
+            const groupId = group != null ? group.id : null;
+            if (groupId !== lastGroupId) {
+                result.push({
+                    isGroupHeader: true,
+                    groupName: group != null ? group.name() : "Ungrouped Assignments",
+                    viewGroupUrl: row.submission != null && row.submission.assignment_group_id != null
+                        ? this.viewGroupUrl(row) : null
+                });
+                lastGroupId = groupId;
+            }
+            result.push(row);
+        });
+        return result;
+    }
+    /*
+     * Column definitions and sorting
+     */
+    makeColumns() {
+        const columns = [];
+        if (this.showAssignmentColumn()) {
+            columns.push({ label: "Assignment", type: "string",
+                sortKey: (row) => row.assignment != null ? row.assignment.title() : "" });
+        }
+        if (this.showStudentColumns()) {
+            columns.push({ label: "Student", type: "string",
+                sortKey: (row) => row.user != null ? row.user.title() : "" });
+            columns.push({ label: "Role", type: "string", sortKey: (row) => this.rolesList(row.user) });
+        }
+        columns.push({ label: "Correct/Score", type: "string", sortKey: (row) => this.scoreText(row) });
+        columns.push({ label: "Submission Status", type: "string",
+            sortKey: (row) => row.submission != null ? row.submission.human_submission_status : "" });
+        columns.push({ label: "Grading Status", type: "string",
+            sortKey: (row) => row.submission != null ? row.submission.human_grading_status : "" });
+        columns.push({ label: "Edits", type: "number",
+            sortKey: (row) => row.submission != null ? (row.submission.version || 0) : 0 });
+        columns.push({ label: "Created", type: "string",
+            sortKey: (row) => row.submission != null ? row.submission.date_created : "" });
+        columns.push({ label: "Last Edited", type: "string",
+            sortKey: (row) => row.submission != null ? row.submission.date_modified : "" });
+        columns.push({ label: "Actions", type: "string", sortKey: null });
+        return columns;
+    }
+    sortColumn(index) {
+        const column = this.columns()[index];
+        if (column == null || column.sortKey == null) {
+            return;
+        }
+        const direction = this.sortDirections[index] || "asc";
+        this.appliedSortDirection(direction);
+        this.sortDirections[index] = direction === "asc" ? "desc" : "asc";
+        this.sortIndex(index);
+        // Poke displayRows to re-sort even if the same column is clicked again
+        this.sortIndex.valueHasMutated();
+    }
+    sortRows(rows) {
+        const column = this.columns()[this.sortIndex()];
+        if (column == null || column.sortKey == null) {
+            return rows;
+        }
+        const multiplier = this.appliedSortDirection() === "asc" ? 1 : -1;
+        return rows.slice().sort((left, right) => {
+            const a = column.sortKey(left);
+            const b = column.sortKey(right);
+            return multiplier * (a > b ? 1 : a < b ? -1 : 0);
+        });
+    }
+    /*
+     * Cell helpers (all bound in the template)
+     */
+    rowClass(row) {
+        const submission = row.submission;
+        const assignmentType = row.assignment != null ? row.assignment.type() : "";
+        // Reading/feedback assignments count as complete, but (like the old table)
+        // not for placeholder rows in the one-per-student layout, where the old
+        // data rows had no assignment attached.
+        const alwaysComplete = (assignmentType === "reading" || assignmentType === "feedback")
+            && (submission != null || !this.isAssignmentMode());
+        let color = "";
+        if ((submission != null && (submission.correct || roundScore(submission.score) >= 100))
+            || alwaysComplete) {
+            color = "table-success";
+        }
+        else if (submission != null && roundScore(submission.score) > 0) {
+            color = "table-warning";
+        }
+        const learner = row.user != null && !this.isLearner(row.user) ? " non-learner-row" : "";
+        return color + learner;
+    }
+    scoreText(row) {
+        if (row.submission == null) {
+            return "No";
+        }
+        const correct = row.submission.correct ? "Yes" : "No";
+        return `${correct} (${roundScore(row.submission.score).toFixed(1)}%)`;
+    }
+    gradingIcon(row) {
+        return row.submission != null ? this.gradingStatusIcon(row.submission.grading_status) : "";
+    }
+    gradingStatusIcon(gradingStatus) {
+        if (gradingStatus === "FullyGraded") {
+            return `<span class="green-check-mark">&#10004;</span>`;
+        }
+        else if (gradingStatus === "Failed") {
+            return `<span class="red-x">&#10060;</span>`;
+        }
+        else if (gradingStatus === "Pending") {
+            return `<span style="color: transparent">*</span>`;
+        }
+        else {
+            return `<span style="color: transparent">.</span>`;
+        }
+    }
+    prettyDate(dateString) {
+        if (!dateString) {
+            return "";
+        }
+        return (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_5__.prettyPrintDateTime)(dateString + (dateString.includes("Z") ? "" : "Z"));
+    }
+    estimateDuration(row, event) {
+        if (row.submission != null) {
+            window["estimateDuration"](event.currentTarget, row.submission.id);
+        }
+    }
+    /** Individual regrade, delegating to the sitewide regrade() helper so the
+     * behavior (endpoints, status icon updates, error reporting) is identical. */
+    regradeSubmission(row, asHuman, event) {
+        window["regrade"](event.currentTarget, row.submission.id, !asHuman);
+    }
+    /** Simulate clicking every regrade button of the given flavor, spaced out
+     * exactly like the old bulk regrade. */
+    bulkRegrade(asHuman) {
+        const regradeButtons = document.querySelectorAll(`button.re-autograde-btn[data-as-human="${asHuman}"]`);
+        $(".overlay").show();
+        let finished = 0;
+        this.bulkRegradeStatus(`Bulk regrading... (${finished}/${regradeButtons.length})`);
+        regradeButtons.forEach((button, index) => {
+            setTimeout(() => {
+                button.click();
+                finished += 1;
+                if (finished === regradeButtons.length) {
+                    $(".overlay").hide();
+                    this.bulkRegradeStatus(`Bulk regrading complete (${finished}/${regradeButtons.length})`);
+                }
+                else {
+                    this.bulkRegradeStatus(`Bulk regrading... (${finished}/${regradeButtons.length})`);
+                }
+            }, BULK_REGRADE_WAIT * index);
+        });
+    }
+    /*
+     * URL builders (all bound in the template), mirroring the old url_for() links
+     */
+    base() {
+        return window["$URL_ROOT"];
+    }
+    filterByAssignmentUrl(assignment) {
+        return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=assignment&search_key=${assignment.id}`;
+    }
+    filterByStudentUrl(user) {
+        return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=student&search_key=${user.id}`;
+    }
+    viewSubmissionUrl(row) {
+        return `${this.base()}blockpy/view_submission?submission_id=${row.submission.id}&embed=True`;
+    }
+    viewGroupUrl(row) {
+        return `${this.base()}blockpy/view_submissions/${this.course.id}/${row.submission.user_id}/${row.submission.assignment_group_id}?embed=True`;
+    }
+    downloadSubmissionUrl(row, withHistory) {
+        return `${this.base()}blockpy/load_assignment?assignment_id=${row.assignment.id}&user_id=${row.user.id}`
+            + `&course_id=${this.course.id}&force_download=True${withHistory ? "&with_history=True" : ""}&embed=True`;
+    }
+    historyLogUrl(row) {
+        return `${this.base()}blockpy/browse_history?assignment_id=${row.submission.assignment_id}`
+            + `&user_id=${row.submission.user_id}&course_id=${this.course.id}`;
+    }
+    transferCourseUrl(row) {
+        return `${this.base()}assignments/transfer_course?submission_id=${row.submission.id}`;
+    }
+    exportSubmissionsUrl(withHistory) {
+        return `${this.base()}assignments/export_submissions?assignment_id=${this.singleAssignment().id}`
+            + `&course_id=${this.course.id}${withHistory ? "&history=True" : ""}`;
+    }
+    openAssignmentUrl() {
+        return `${this.base()}assignments/load?assignment_id=${this.singleAssignment().id}&course_id=${this.course.id}`;
+    }
+    bulkDownloadEventsUrl() {
+        return `${this.base()}blockpy/load_history?user_id=${this.singleUser().id}&course_id=${this.course.id}`;
+    }
+}
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("submissions-filter", {
+    viewModel: SubmissionsFilter,
+    template: _submissions_filter_html__WEBPACK_IMPORTED_MODULE_7__
+});
+
+
+/***/ }),
+
 /***/ "./components/watcher/watcher.ts":
 /*!***************************************!*\
   !*** ./components/watcher/watcher.ts ***!
@@ -7407,7 +8027,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   Assignment: () => (/* binding */ Assignment),
 /* harmony export */   AssignmentShortTemplate: () => (/* binding */ AssignmentShortTemplate),
 /* harmony export */   AssignmentStore: () => (/* binding */ AssignmentStore),
-/* harmony export */   AssignmentTemplate: () => (/* binding */ AssignmentTemplate)
+/* harmony export */   AssignmentTemplate: () => (/* binding */ AssignmentTemplate),
+/* harmony export */   compareAssignmentsByGroup: () => (/* binding */ compareAssignmentsByGroup)
 /* harmony export */ });
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
@@ -7467,6 +8088,16 @@ class Assignment extends _model__WEBPACK_IMPORTED_MODULE_1__.Model {
             }
         }, this);
     }
+}
+/** Natural (group name, assignment title) ordering, with ungrouped assignments
+ * forced to the end -- the same order the server's natsorted listings use. */
+function compareAssignmentsByGroup(left, right) {
+    const leftGroup = left.group() != null ? left.group().name() : null;
+    const rightGroup = right.group() != null ? right.group().name() : null;
+    if ((leftGroup == null) !== (rightGroup == null)) {
+        return leftGroup == null ? 1 : -1;
+    }
+    return (0,_services_plugins__WEBPACK_IMPORTED_MODULE_2__.naturalCompare)(leftGroup || "", rightGroup || "") || (0,_services_plugins__WEBPACK_IMPORTED_MODULE_2__.naturalCompare)(left.title(), right.title());
 }
 class AssignmentStore extends _model__WEBPACK_IMPORTED_MODULE_1__.ModelStore {
     constructor() {
@@ -7539,7 +8170,23 @@ class AssignmentStore extends _model__WEBPACK_IMPORTED_MODULE_1__.ModelStore {
             });
         });
     }
+    /** Preload the full course listing (with each assignment's group, aligned by
+     * index like assignments/get_ids) so selectors don't need to fetch it. */
+    preloadWithGroups(assignments, groups) {
+        const created = assignments.map((assignmentJson, index) => {
+            const assignment = this.newInstance(assignmentJson);
+            if (groups[index] != null) {
+                assignment.group(this.server.assignmentGroupStore.newInstance(groups[index]));
+            }
+            return assignment;
+        });
+        this.allAvailable = created.sort(compareAssignmentsByGroup);
+        return this.allAvailable;
+    }
     getAllAvailable(payload) {
+        if (this.allAvailable !== null) {
+            return Promise.resolve(this.allAvailable);
+        }
         payload = payload || this.getPayload();
         let url = this.getUrl();
         return new Promise((resolve, reject) => {
@@ -7556,7 +8203,7 @@ class AssignmentStore extends _model__WEBPACK_IMPORTED_MODULE_1__.ModelStore {
                         }
                         created.push(assignment);
                     }
-                    resolve(created);
+                    resolve(created.sort(compareAssignmentsByGroup));
                 }
                 else {
                     reject(data);
@@ -7962,6 +8609,8 @@ function dateCreatedSorter(left, right) {
 }
 class ModelStore {
     constructor(server, courseId, initialIds, initialData) {
+        // When set, getAllAvailable() resolves immediately instead of hitting the server
+        this.allAvailable = null;
         this.data = {};
         this.server = server;
         this.courseId = courseId;
@@ -7983,8 +8632,13 @@ class ModelStore {
         }
         else {
             let delayedInstance = this.makeEmptyInstance(id);
-            this.delayLoadInstance(delayedInstance);
             this.data[id] = delayedInstance;
+            // A preloaded store already holds everything available, so an unknown
+            // id is simply unknown - never re-fetch. Invalid ids (null/NaN from
+            // half-initialized selections) must also never reach the server.
+            if (id != null && !isNaN(id) && this.allAvailable === null) {
+                this.delayLoadInstance(delayedInstance);
+            }
             return delayedInstance;
         }
     }
@@ -8008,7 +8662,20 @@ class ModelStore {
         // @ts-ignore
         return Object.keys(this.data).map((key) => this.data[key]);
     }
+    /**
+     * Seed this store with the complete list of available models (e.g., data
+     * embedded in the page at render time), so getAllAvailable() resolves
+     * instantly instead of making a request.
+     */
+    preload(initialData) {
+        const created = initialData.map((modelJson) => this.newInstance(modelJson));
+        this.allAvailable = this.cleanData(created);
+        return this.allAvailable;
+    }
     getAllAvailable(payload) {
+        if (this.allAvailable !== null) {
+            return Promise.resolve(this.allAvailable);
+        }
         if (payload === undefined) {
             payload = this.getPayload();
         }
@@ -8054,19 +8721,24 @@ class ModelStore {
     finishDelayedLoads() {
         let payload = this.getPayload();
         let url = this.getUrl();
-        //this.delayedData().length= 0;
+        const requested = this.getDelayedIds();
         return (0,_services_ajax__WEBPACK_IMPORTED_MODULE_2__.ajax_get)(url, payload).then((data) => {
             if (data.success) {
                 let results = data[this.GET_FIELD];
-                let created = results.map((modelJson) => {
-                    this.data[modelJson.id].fromJson(modelJson);
-                    return modelJson.id;
+                results.forEach((modelJson) => {
+                    if (this.data[modelJson.id] !== undefined) {
+                        this.data[modelJson.id].fromJson(modelJson);
+                    }
                 });
-                this.removeDelayedInstances(created);
             }
             else {
                 console.error(data);
             }
+            // Clear everything that was asked about, including ids the server did
+            // not recognize - otherwise they would be re-requested every second.
+            this.removeDelayedInstances(requested);
+        }, () => {
+            this.removeDelayedInstances(requested);
         });
     }
     getDelayedIds() {
@@ -196110,6 +196782,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   capitalize: () => (/* binding */ capitalize),
 /* harmony export */   last: () => (/* binding */ last),
 /* harmony export */   md: () => (/* binding */ md),
+/* harmony export */   naturalCompare: () => (/* binding */ naturalCompare),
 /* harmony export */   pushObservableArray: () => (/* binding */ pushObservableArray)
 /* harmony export */ });
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
@@ -196599,6 +197272,10 @@ knockout__WEBPACK_IMPORTED_MODULE_0__.bindingHandlers.multiselect = {
         $(element).multiSelect("refresh");
     }
 };
+/** Natural-order string comparison ("2" before "10"), the JS equivalent of natsorted. */
+function naturalCompare(left, right) {
+    return (left || "").localeCompare(right || "", undefined, { numeric: true, sensitivity: "base" });
+}
 /** assumes array elements are primitive types
  * check whether 2 arrays are equal sets.
  * @param  {} a1 is an array
@@ -197825,14 +198502,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_editor__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./services/editor */ "./services/editor.ts");
 /* harmony import */ var _components_course_list__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./components/course_list */ "./components/course_list.ts");
 /* harmony import */ var _components_assignment_manager_assignment_manager__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./components/assignment_manager/assignment_manager */ "./components/assignment_manager/assignment_manager.ts");
-/* harmony import */ var _components_quizzes_quizzer__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./components/quizzes/quizzer */ "./components/quizzes/quizzer.ts");
-/* harmony import */ var _components_reader_reader__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./components/reader/reader */ "./components/reader/reader.ts");
-/* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
-/* harmony import */ var _components_kettle_kettle__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./components/kettle/kettle */ "./components/kettle/kettle.ts");
-/* harmony import */ var _components_explanations_explain__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./components/explanations/explain */ "./components/explanations/explain.ts");
-/* harmony import */ var _components_review_interface__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./components/review_interface */ "./components/review_interface.ts");
-/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
-/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
+/* harmony import */ var _components_submissions_filter_submissions_filter__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./components/submissions_filter/submissions_filter */ "./components/submissions_filter/submissions_filter.ts");
+/* harmony import */ var _components_quizzes_quizzer__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./components/quizzes/quizzer */ "./components/quizzes/quizzer.ts");
+/* harmony import */ var _components_reader_reader__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./components/reader/reader */ "./components/reader/reader.ts");
+/* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
+/* harmony import */ var _components_kettle_kettle__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./components/kettle/kettle */ "./components/kettle/kettle.ts");
+/* harmony import */ var _components_explanations_explain__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./components/explanations/explain */ "./components/explanations/explain.ts");
+/* harmony import */ var _components_review_interface__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./components/review_interface */ "./components/review_interface.ts");
+/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
+/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
 
 
 
@@ -197852,6 +198530,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // These interfaces are just new tags
+
 
 
 

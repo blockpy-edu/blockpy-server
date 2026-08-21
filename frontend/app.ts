@@ -24,6 +24,7 @@ export {launchEditor} from "./services/editor";
 // These interfaces are just new tags
 import "./components/course_list";
 import "./components/assignment_manager/assignment_manager";
+import "./components/submissions_filter/submissions_filter";
 import "./components/quizzes/quizzer";
 import "./components/reader/reader";
 import "./components/feedback/feedback";

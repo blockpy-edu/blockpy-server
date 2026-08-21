@@ -1,0 +1,238 @@
+<style>
+#submission-table thead tr {
+    cursor: pointer;
+}
+</style>
+
+<div class="submissions-filter">
+    <div>
+        <user-display-settings-editor params="options: server.userStore.displayOptions,
+                                              sortMode: server.userStore.sortMode,
+                                              displayMode: server.userStore.displayMode"></user-display-settings-editor>
+        User(s):
+        <user-set-selector params="store: server.userStore, modelSet: userSet, default: userDefault,
+                                   mode: userSelectMode, applySelection: userApply"></user-set-selector>
+    </div>
+    <div class="mt-4 mb-4">
+        Assignment(s):
+        <assignment-set-selector params="store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,
+                                         mode: assignmentSelectMode, applySelection: assignmentApply"></assignment-set-selector>
+    </div>
+    <!-- ko if: history().length -->
+    <div class="mt-2">
+        Recent:
+        <!-- ko foreach: history -->
+        <button type="button" class="btn btn-sm btn-outline-secondary mr-1 mb-1"
+                data-bind="click: (entry) => $component.applyHistoryEntry(entry),
+                           text: $component.historyLabel($data)"></button>
+        <!-- /ko -->
+    </div>
+    <!-- /ko -->
+    <div class="mb-4 mt-2">
+        <button class="btn btn-primary" data-bind="click: viewSubmissions">View Submissions</button>
+    </div>
+
+    <div data-bind="if: isLoading">
+        <div class="spinner-loader" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- ko if: hasFailed -->
+    <div class="alert alert-danger" role="alert">
+        Loading these submissions has failed; more details in JS console.
+    </div>
+    <!-- /ko -->
+
+    <div data-bind="if: hasLoaded() && !isLoading()">
+        <div class="float-right">
+            <span id="bulk-regrade-status" data-bind="text: bulkRegradeStatus"></span>
+            <div class="btn-group mt-2">
+                <button
+                        data-as-human="false"
+                        class="bulk-regrade btn btn-outline-secondary"
+                        data-bind="click: () => bulkRegrade(false)"
+                        title="Simulate clicking on all of the regrade buttons, forcing the grades to sync with Canvas">
+                    Bulk regrade</button>
+                <!-- Dropdown -->
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <button
+                        data-as-human="true"
+                        class="bulk-regrade btn btn-outline-secondary"
+                        data-bind="click: () => bulkRegrade(true)"
+                        title="Simulate clicking on all of the regrade as human buttons, forcing the grades to sync with Canvas. This resubmits the grades with your instructor account, not the autograder. You probably don't want to use this one unless you know what you are doing.">
+                    Bulk regrade (as human)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ko if: isAssignmentMode -->
+        <div class="btn-group mt-2">
+            <a data-bind="attr: {href: exportSubmissionsUrl(false)}" target="_blank"
+               class="btn btn-outline-secondary">Bulk download all submissions for assignment</a>
+            <!-- Dropdown -->
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
+            <!-- Extended buttons -->
+            <div class="dropdown-menu dropdown-menu-right">
+                <a data-bind="attr: {href: exportSubmissionsUrl(true)}"
+                   class="dropdown-item" target="_blank">Download with history</a>
+            </div>
+        </div><br>
+
+        <a data-bind="attr: {href: openAssignmentUrl()}"
+           target="_blank" class="btn btn-outline-secondary mt-2 mb-2 ">Open assignment</a><br>
+        <input type="checkbox" name="show-only-learners" id="show-only-learners"
+               data-bind="checked: showOnlyLearners" />
+        <label for="show-only-learners">Show only learners</label>
+        <!-- /ko -->
+        <!-- ko if: isStudentMode -->
+        <a data-bind="attr: {href: bulkDownloadEventsUrl()}" target="_blank"
+           class="btn btn-outline-secondary mt-2 mb-2 ">Bulk download all events</a>
+        <!-- /ko -->
+
+        <table class="table table-condensed table-hover table-striped table-bordered" id="submission-table">
+        <caption>Student's submissions for course's assignments.</caption>
+        <thead class="thead-dark">
+            <tr data-bind="foreach: columns">
+                <th data-bind="click: () => $component.sortColumn($index()), attr: {'data-type': type}">
+                    <span data-bind="text: label"></span><i class="ml-2 fas"
+                        data-bind="visible: $component.sortIndex() === $index(),
+                                   css: $component.appliedSortDirection() === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+                </th>
+            </tr>
+        </thead>
+
+        <tbody data-bind="foreach: displayRows">
+            <!-- ko if: $data.isGroupHeader -->
+            <tr class="table-secondary table-groups">
+                <td data-bind="attr: {colspan: $component.groupHeaderColspan()}">
+                    <strong>Group: <span data-bind="text: groupName"></span></strong></td>
+                <td>
+                    <!-- ko if: viewGroupUrl -->
+                    <a data-bind="attr: {href: viewGroupUrl}"
+                       class="btn btn-primary btn-sm" target="_blank">View Group</a>
+                    <!-- /ko -->
+                </td>
+            </tr>
+            <!-- /ko -->
+            <!-- ko ifnot: $data.isGroupHeader -->
+            <!-- Row Color based on Assignment status -->
+            <tr data-bind="css: $component.rowClass($data)">
+                <!-- Assignment Mode -->
+                <!-- ko if: $component.showAssignmentColumn -->
+                <td>
+                    <a data-bind="attr: {href: $component.filterByAssignmentUrl(assignment)}"
+                       ><i class="fas fa-eye"></i></a> <span data-bind="text: assignment != null ? assignment.title() : ''"></span>
+                </td>
+                <!-- /ko -->
+
+                <!-- Student Mode -->
+                <!-- ko if: $component.showStudentColumns -->
+                <td>
+                    <a data-bind="attr: {href: $component.filterByStudentUrl(user)}"
+                       ><i class="fas fa-eye"></i></a>
+                    <span data-bind="text: user != null ? user.title() : ''"></span>
+                </td>
+                <td>
+                    <span data-bind="text: $component.rolesList(user)"></span>
+                </td>
+                <!-- /ko -->
+
+                <td data-bind="text: $component.scoreText($data)"></td>
+                <td data-bind="text: submission != null ? submission.human_submission_status : ''"></td>
+                <td>
+                    <span data-bind="html: $component.gradingIcon($data)"></span>
+                    <span data-bind="text: submission != null ? submission.human_grading_status : ''"></span>
+                </td>
+                <td>
+                    <!-- ko if: submission -->
+                    <span style="cursor: pointer"
+                          data-bind="click: (row, event) => $component.estimateDuration(row, event),
+                                     text: submission.version || '0'"></span>
+                    <!-- /ko -->
+                    <!-- ko ifnot: submission -->
+                    <span>0</span>
+                    <!-- /ko -->
+                </td>
+
+                <td>
+                    <span data-bind="attr: {title: submission != null ? submission.date_created : ''},
+                                     text: submission != null ? $component.prettyDate(submission.date_created) : ''"></span>
+                </td>
+                <td>
+                    <span data-bind="attr: {title: submission != null ? submission.date_modified : ''},
+                                     text: submission != null ? $component.prettyDate(submission.date_modified) : ''"></span>
+                </td>
+
+                <td>
+                    <!-- ko if: submission -->
+                    <div class="btn-group">
+                        <a data-bind="attr: {href: $component.viewSubmissionUrl($data)}"
+                            target="_blank" class="btn btn-primary btn-sm"
+                        >View</a>
+                        <!-- Dropdown -->
+                        <button type="button" class="btn btn-primary dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <!-- Extended buttons -->
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <!-- ko if: submission.assignment_group_id != null -->
+                            <a data-bind="attr: {href: $component.viewGroupUrl($data)}"
+                                 class="dropdown-item" target="_blank">View Group</a>
+                            <!-- /ko -->
+                            <!---------------------------------------------------------------------->
+                            <a data-bind="attr: {href: $component.downloadSubmissionUrl($data, false)}"
+                                target="_blank" class="dropdown-item">Download Submission</a>
+                            <!---------------------------------------------------------------------->
+                            <a data-bind="attr: {href: $component.downloadSubmissionUrl($data, true)}"
+                                target="_blank" class="dropdown-item">Download Submission+History</a>
+                            <!---------------------------------------------------------------------->
+                            <a data-bind="attr: {href: $component.historyLogUrl($data)}"
+                               target="_blank" class="dropdown-item">History Log</a>
+                            <!---------------------------------------------------------------------->
+                            <a data-bind="attr: {href: $component.transferCourseUrl($data)}"
+                                target="_blank" class="dropdown-item"
+                               title="Launches a new window to help you transfer this submission to another course, if the student transfers"
+                            >Copy to Course</a>
+                            <!---------------------------------------------------------------------->
+                            <button class="dropdown-item re-autograde-btn" type="button"
+                                    data-as-human="false"
+                                    style="cursor: pointer"
+                                    title="Force a regrade of the submission, but do so as the autograder. Forces resync with canvas."
+                                    data-bind="click: (row, event) => $component.regradeSubmission(row, false, event),
+                                               attr: {'data-submission-id': submission.id,
+                                                      'data-assignment-name': assignment != null ? assignment.title() : '',
+                                                      'data-user-name': user != null ? user.name() : ''}"
+                            ><span data-bind="html: $component.gradingIcon($data)"></span>
+                                Regrade
+                            </button>
+                            <button class="dropdown-item re-autograde-btn" type="button"
+                                    data-as-human="true"
+                                    style="cursor: pointer"
+                                    title="Force a regrade of the submission, but do so as a human instead of the autograder."
+                                    data-bind="click: (row, event) => $component.regradeSubmission(row, true, event),
+                                               attr: {'data-submission-id': submission.id,
+                                                      'data-assignment-name': assignment != null ? assignment.title() : '',
+                                                      'data-user-name': user != null ? user.name() : ''}"
+                            ><span data-bind="html: $component.gradingIcon($data)"></span>
+                                Regrade as human
+                            </button>
+                            <!---------------------------------------------------------------------->
+                        </div>
+                    </div>
+                    <!-- /ko -->
+                </td>
+            </tr>
+            <!-- /ko -->
+        </tbody>
+        </table>
+    </div>
+</div>

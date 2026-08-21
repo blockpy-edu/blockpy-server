@@ -519,6 +519,11 @@ ko.bindingHandlers.multiselect = {
     }
 };
 
+/** Natural-order string comparison ("2" before "10"), the JS equivalent of natsorted. */
+export function naturalCompare(left: string, right: string): number {
+    return (left || "").localeCompare(right || "", undefined, {numeric: true, sensitivity: "base"});
+}
+
 /** assumes array elements are primitive types
  * check whether 2 arrays are equal sets.
  * @param  {} a1 is an array

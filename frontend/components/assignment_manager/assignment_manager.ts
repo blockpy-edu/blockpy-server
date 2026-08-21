@@ -41,9 +41,8 @@ export const SORT_OPTIONS: { key: GroupSortCriteria, label: string }[] = [
     {key: "date_modified", label: "Date Modified"}
 ];
 
-export function naturalCompare(left: string, right: string): number {
-    return (left || "").localeCompare(right || "", undefined, {numeric: true, sensitivity: "base"});
-}
+import {naturalCompare} from "../../services/plugins";
+export {naturalCompare};
 
 /** Strip HTML from instructions without loading any of its resources. */
 function stripHtmlTags(html: string): string {

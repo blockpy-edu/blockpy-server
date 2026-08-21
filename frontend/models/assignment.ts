@@ -1,6 +1,6 @@
 import * as ko from 'knockout';
 import {Model, ModelJson, ModelStore} from "./model";
-import {capitalize, TwoWayReadonlyMap} from "../services/plugins";
+import {capitalize, naturalCompare, TwoWayReadonlyMap} from "../services/plugins";
 import {ajax_get} from "../services/ajax";
 import {AssignmentGroup, AssignmentGroupJson} from "./assignment_group";
 
@@ -113,6 +113,17 @@ export class Assignment extends Model<AssignmentJson> {
     }
 }
 
+/** Natural (group name, assignment title) ordering, with ungrouped assignments
+ * forced to the end -- the same order the server's natsorted listings use. */
+export function compareAssignmentsByGroup(left: Assignment, right: Assignment): number {
+    const leftGroup = left.group() != null ? left.group().name() : null;
+    const rightGroup = right.group() != null ? right.group().name() : null;
+    if ((leftGroup == null) !== (rightGroup == null)) {
+        return leftGroup == null ? 1 : -1;
+    }
+    return naturalCompare(leftGroup || "", rightGroup || "") || naturalCompare(left.title(), right.title());
+}
+
 export class AssignmentStore extends ModelStore<AssignmentJson, Assignment> {
     GET_FIELD: string = "assignments";
 
@@ -186,7 +197,24 @@ export class AssignmentStore extends ModelStore<AssignmentJson, Assignment> {
         });
     }
 
+    /** Preload the full course listing (with each assignment's group, aligned by
+     * index like assignments/get_ids) so selectors don't need to fetch it. */
+    preloadWithGroups(assignments: AssignmentJson[], groups: (AssignmentGroupJson | null)[]): Assignment[] {
+        const created = assignments.map((assignmentJson: AssignmentJson, index: number) => {
+            const assignment = this.newInstance(assignmentJson);
+            if (groups[index] != null) {
+                assignment.group(this.server.assignmentGroupStore.newInstance(groups[index]));
+            }
+            return assignment;
+        });
+        this.allAvailable = created.sort(compareAssignmentsByGroup);
+        return this.allAvailable;
+    }
+
     getAllAvailable(payload?: any) {
+        if (this.allAvailable !== null) {
+            return Promise.resolve(this.allAvailable);
+        }
         payload = payload || this.getPayload();
         let url = this.getUrl();
         return new Promise((resolve, reject) => {
@@ -203,7 +231,7 @@ export class AssignmentStore extends ModelStore<AssignmentJson, Assignment> {
                         }
                         created.push(assignment);
                     }
-                    resolve(created);
+                    resolve(created.sort(compareAssignmentsByGroup));
                 } else {
                     reject(data);
                 }

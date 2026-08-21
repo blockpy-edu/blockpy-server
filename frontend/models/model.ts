@@ -65,6 +65,8 @@ export function dateCreatedSorter<J extends ModelJson, L extends Model<J>>(left:
 export abstract class ModelStore<J extends ModelJson, T extends Model<J>> {
     protected readonly data: Record<number, T>;
     protected courseId: number|null;
+    // When set, getAllAvailable() resolves immediately instead of hitting the server
+    protected allAvailable: T[] = null;
 
     private timer: number;
     private readonly delayedData: ko.ObservableArray<T>;
@@ -95,8 +97,13 @@ export abstract class ModelStore<J extends ModelJson, T extends Model<J>> {
             return this.data[id];
         } else {
             let delayedInstance = this.makeEmptyInstance(id);
-            this.delayLoadInstance(delayedInstance);
             this.data[id] = delayedInstance;
+            // A preloaded store already holds everything available, so an unknown
+            // id is simply unknown - never re-fetch. Invalid ids (null/NaN from
+            // half-initialized selections) must also never reach the server.
+            if (id != null && !isNaN(id) && this.allAvailable === null) {
+                this.delayLoadInstance(delayedInstance);
+            }
             return delayedInstance;
         }
     }
@@ -124,7 +131,21 @@ export abstract class ModelStore<J extends ModelJson, T extends Model<J>> {
         return Object.keys(this.data).map((key: number) => this.data[key]);
     }
 
+    /**
+     * Seed this store with the complete list of available models (e.g., data
+     * embedded in the page at render time), so getAllAvailable() resolves
+     * instantly instead of making a request.
+     */
+    preload(initialData: J[]): T[] {
+        const created = initialData.map((modelJson: J) => this.newInstance(modelJson));
+        this.allAvailable = this.cleanData(created);
+        return this.allAvailable;
+    }
+
     getAllAvailable(payload?: object) {
+        if (this.allAvailable !== null) {
+            return Promise.resolve(this.allAvailable);
+        }
         if (payload === undefined) {
             payload = this.getPayload();
         }
@@ -180,18 +201,23 @@ export abstract class ModelStore<J extends ModelJson, T extends Model<J>> {
     finishDelayedLoads() {
         let payload = this.getPayload();
         let url = this.getUrl();
-        //this.delayedData().length= 0;
+        const requested = this.getDelayedIds();
         return ajax_get(url, payload).then((data) => {
            if (data.success) {
                let results = data[this.GET_FIELD];
-               let created = results.map( (modelJson: J) => {
-                   this.data[modelJson.id].fromJson(modelJson);
-                   return modelJson.id;
+               results.forEach((modelJson: J) => {
+                   if (this.data[modelJson.id] !== undefined) {
+                       this.data[modelJson.id].fromJson(modelJson);
+                   }
                });
-               this.removeDelayedInstances(created);
            } else {
                console.error(data);
            }
+           // Clear everything that was asked about, including ids the server did
+           // not recognize - otherwise they would be re-requested every second.
+           this.removeDelayedInstances(requested);
+        }, () => {
+           this.removeDelayedInstances(requested);
         });
     }
 

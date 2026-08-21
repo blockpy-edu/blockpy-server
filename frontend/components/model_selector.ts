@@ -1,7 +1,7 @@
 import * as ko from 'knockout';
 import {Model, ModelJson, ModelStore} from "../models/model";
 import {User, UserJson, UserStore} from "../models/user";
-import {areArraysEqualSets, pushObservableArray} from "../services/plugins";
+import {areArraysEqualSets, naturalCompare, pushObservableArray} from "../services/plugins";
 import {Assignment, AssignmentJson} from "../models/assignment";
 import {STORAGE_SERVICE} from "../utilities/safe_local_storage";
 
@@ -51,6 +51,12 @@ interface ModelSetSelectorJson<J extends ModelJson, T extends Model<J>> {
     store: ModelStore<J, T>;
     modelSet: KnockoutObservable<ModelSet>;
     default: string;
+    // Optional two-way channel exposing/controlling this selector's ALL/SINGLE/SET mode,
+    // so a parent can coordinate multiple selectors (e.g., "not both ALL at once").
+    mode?: KnockoutObservable<SelectMode>;
+    // Optional channel for a parent to re-apply a selection later (same format as
+    // `default`: "", "first", a single id, or a comma-separated id list).
+    applySelection?: KnockoutObservable<string>;
 }
 
 export enum SelectMode {
@@ -120,8 +126,12 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
         });
 
         this.singleOption.subscribe(() => {
-            this.singleSet().ids([this.singleOption()]);
-            this.currentSet(this.singleSet());
+            // The dropdown can transiently write null while (re)rendering; a null
+            // id must never become part of the set (it would look like a real model).
+            if (this.singleOption() != null) {
+                this.singleSet().ids([this.singleOption()]);
+                this.currentSet(this.singleSet());
+            }
         });
 
         this.selectMode.subscribe(() => {
@@ -151,6 +161,29 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
             }
             return ids.map((id: number) => this.store.getInstance(id));
         }, this);
+
+        if (params.mode != null) {
+            const externalMode = params.mode;
+            externalMode(this.selectMode());
+            this.selectMode.subscribe((mode: SelectMode) => {
+                if (externalMode() !== mode) {
+                    externalMode(mode);
+                }
+            });
+            externalMode.subscribe((mode: SelectMode) => {
+                if (mode != null && mode !== this.selectMode()) {
+                    this.selectMode(mode);
+                }
+            });
+        }
+        if (params.applySelection != null) {
+            params.applySelection.subscribe((value: string) => {
+                if (value != null) {
+                    this.loadDefault(value);
+                    params.applySelection(null);
+                }
+            });
+        }
     }
 
     getDefaultGroupSetName(): string {
@@ -193,7 +226,9 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
     loadDefault(value: string) {
         if (value === "first") {
             this.selectMode(SelectMode.SINGLE);
-            this.singleOption(this.available()[0].id);
+            if (this.available().length) {
+                this.singleOption(this.available()[0].id);
+            }
         } else if (value === "all" || value.trim() === "") {
             this.selectMode(SelectMode.ALL);
             this.currentSet(this.sets()[0]);
@@ -437,7 +472,14 @@ export class AssignmentSetSelector extends ModelSetSelector<AssignmentJson, Assi
                 }
                 groups[id].children.push(a);
             });
-            return Object.values(groups);
+            // Object.values iterates integer keys (the group ids) in numeric order,
+            // scrambling the natural ordering - sort by name, ungrouped last.
+            return Object.values(groups).sort((left, right) => {
+                if ((left.model == null) !== (right.model == null)) {
+                    return left.model == null ? 1 : -1;
+                }
+                return naturalCompare(left.name, right.name);
+            });
         }, this);
     }
 
