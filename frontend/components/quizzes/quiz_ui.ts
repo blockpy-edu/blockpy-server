@@ -192,6 +192,22 @@ export const QUIZZER_HTML = `
             </div>
         </div>
         
+        <!-- Feedback Preamble -->
+        <div data-bind="if: quiz()?.feedbackId() && ['SUBMISSION', 'QUIZ_EDITOR'].includes(editorMode()) && asStudent()">
+            <feedback-viewer params="server: server,
+                            courseId: courseId,
+                            currentAssignmentId: quiz().feedbackId(),
+                            assignmentGroupId: assignmentGroupId,
+                            isInstructor: isInstructor,
+                            markCorrect: ()=>{},
+                            asPreamble: true,
+                            user: user"></feedback-viewer>
+        </div>
+        <div data-bind="if: quiz()?.feedbackId() && ['SUBMISSION', 'QUIZ_EDITOR'].includes(editorMode()) && !asStudent()">
+            <strong>Feedback is hidden; Click "View as Student" to preview the Feedback.</strong>
+            <hr>
+        </div>
+
         <!-- Reading Preamble -->
         <div data-bind="if: quiz()?.readingId() && ['SUBMISSION', 'QUIZ_EDITOR'].includes(editorMode()) && asStudent()">
             <reader params="server: server,

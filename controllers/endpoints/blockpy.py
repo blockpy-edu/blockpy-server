@@ -136,7 +136,8 @@ ASSIGNMENT_TYPES = {
     'javas': ('java', ),
     'kettles': ('kettle', 'typescript'),
     'explains': ('explanation', 'explain'),
-    'blockpys': ('blockpy',)
+    'blockpys': ('blockpy',),
+    'feedbacks': ('feedback',)
 }
 
 def load_editor(editor_information):

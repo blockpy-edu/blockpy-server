@@ -1,0 +1,171 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Feedback Editor: {{ course.name }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .feedback-contents {
+        width: 100%;
+        min-height: 8em;
+        font-family: monospace;
+    }
+    .feedback-row-dirty {
+        background-color: #fff3cd;
+    }
+</style>
+<script type='text/javascript'>
+$().ready(function() {
+    $("#feedback-assignment-selector").change(function(event) {
+        if (event.target.value != "") {
+            window.location.href = {{ url_for('courses.feedback_editor', course_id=course_id)|tojson }}+"?assignment_id="+event.target.value;
+        }
+    });
+
+    function markDirty() {
+        $(this).closest("tr").addClass("feedback-row-dirty");
+        $(".feedback-save-changes").prop("disabled", false);
+    }
+    $(".feedback-contents").on("input", markDirty);
+    $(".feedback-published").on("change", markDirty);
+
+    $(".feedback-save-changes").click(function() {
+        const updates = [];
+        $("tr.feedback-row-dirty").each(function() {
+            const row = $(this);
+            updates.push({
+                "course_id": {{ course_id|tojson }},
+                "user_id": parseInt(row.attr("data-user-id"), 10),
+                "assignment_id": {{ (assignment.id if assignment else None)|tojson }},
+                "code": JSON.stringify({
+                    "contents": row.find(".feedback-contents").val(),
+                    "published": row.find(".feedback-published").prop("checked")
+                }, null, 2)
+            });
+        });
+        if (!updates.length) {
+            $(".feedback-save-status").text("No changes to save.");
+            return;
+        }
+        $(".feedback-save-changes").prop("disabled", true);
+        $(".feedback-save-status").text("Saving "+updates.length+" change(s)...");
+        $.ajax({
+            url: {{ url_for('api.bulk_update_submissions')|tojson }},
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({"updates": updates}),
+            success: function(response) {
+                if (response.success) {
+                    const errors = response.errors || [];
+                    if (errors.length) {
+                        console.error(errors);
+                        $(".feedback-save-status").text(
+                            "Saved "+response.updated.length+" change(s), but "+errors.length+
+                            " failed: "+errors.map((e) => e.message).join("; "));
+                        $(".feedback-save-changes").prop("disabled", false);
+                    } else {
+                        $(".feedback-save-status").text("Saved "+response.updated.length+" change(s).");
+                        $("tr.feedback-row-dirty").removeClass("feedback-row-dirty");
+                    }
+                } else {
+                    console.error(response);
+                    $(".feedback-save-status").text("Failed to save: "+response.message);
+                    $(".feedback-save-changes").prop("disabled", false);
+                }
+            },
+            error: function(e, textStatus, errorThrown) {
+                console.error(e, textStatus, errorThrown);
+                $(".feedback-save-status").text("Failed to save (HTTP error): "+textStatus);
+                $(".feedback-save-changes").prop("disabled", false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block body %}
+
+<h1>Feedback Editor</h1>
+
+<p>Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">Course: <code>{{ course.name }}</code></a></p>
+
+<p>
+    Review and edit the personalized feedback for every student on a Feedback assignment.
+    Students will only see feedback that has been <strong>published</strong>; until then,
+    they are told that their feedback is not yet ready.
+    Changes are not saved until you click "Save Changes".
+</p>
+
+{% if feedback_assignments %}
+<div class="form-group">
+    <label for="feedback-assignment-selector">Feedback Assignment:
+        <select id="feedback-assignment-selector" class="form-control custom-select">
+            <option value="" {{ "selected" if not assignment else "" }}>Choose an assignment</option>
+            {% for feedback_assignment in feedback_assignments %}
+                <option value="{{ feedback_assignment.id }}"
+                    {{ "selected" if assignment and assignment.id == feedback_assignment.id else "" }}>
+                    {{ feedback_assignment.title() }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</div>
+{% else %}
+<p>This course does not have any Feedback assignments yet.
+    You can create one from the
+    <a href="{{ url_for('courses.assignments', course_id=course_id) }}">Manage Assignments</a> page
+    by choosing the "Feedback" type.</p>
+{% endif %}
+
+{% if assignment %}
+
+    <button class="btn btn-success feedback-save-changes" disabled>Save Changes</button>
+    <span class="feedback-save-status"></span>
+
+    <table class="table table-condensed table-striped">
+        <thead>
+        <tr>
+            <th>Student</th>
+            <th style="width: 60%">Feedback Contents (Markdown)</th>
+            <th>Published</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+        <tr data-user-id="{{ row.student.id }}"
+            {% if row.submission %}data-submission-id="{{ row.submission.id }}"{% endif %}>
+            <td>
+                {{ row.student.name() }}<br>
+                <small>{{ row.student.email }}</small><br>
+                {% if row.submission %}
+                    <small>Last edited: {{ row.submission.date_modified|date_description }}</small>
+                {% else %}
+                    <small>(No submission yet; saving will create one)</small>
+                {% endif %}
+            </td>
+            <td>
+                <textarea class="feedback-contents">{{ row.contents }}</textarea>
+            </td>
+            <td>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input feedback-published"
+                           id="feedback-published-{{ row.student.id }}"
+                           {{ "checked" if row.published else "" }}>
+                    <label class="form-check-label" for="feedback-published-{{ row.student.id }}">Published</label>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <button class="btn btn-success feedback-save-changes" disabled>Save Changes</button>
+    <span class="feedback-save-status"></span>
+
+{% endif %}
+
+{% endblock %}

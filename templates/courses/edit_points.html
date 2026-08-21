@@ -39,7 +39,7 @@ Edit Assignment Points
             <div class="col-sm-10">
                 <input type=number name="assignment-points-{{ assignment.id }}"
                        id="assignment-points-{{ assignment.id }}" class="form-control"
-                   value="{{ assignment.points or (0 if assignment.type == 'reading' else 1) }}">
+                   value="{{ assignment.points or (0 if assignment.type in ('reading', 'feedback') else 1) }}">
             </div>
         </div>
         {% endfor %}

@@ -183,6 +183,16 @@
                         markCorrect: markCorrect,
                         user: user"></explain>
         <!-- /ko -->
+        <!-- ko if: assignmentType() == 'feedback' -->
+        <feedback-viewer params="server: server,
+                        courseId: courseId,
+                        currentAssignmentId: currentFeedbackAssignmentId,
+                        assignmentGroupId: assignmentGroupId,
+                        isInstructor: isInstructor,
+                        markCorrect: markCorrect,
+                        asPreamble: false,
+                        user: user"></feedback-viewer>
+        <!-- /ko -->
     </div>
 
     {% if group and group|length > 1 %}
@@ -197,6 +207,7 @@
         const KETTLES = {{ kettles|tojson }};
         const EXPLAINS = {{ explains|tojson }};
         const BLOCKPYS = {{ blockpys|tojson }};
+        const FEEDBACKS = {{ feedbacks|tojson }};
         window.$blocklyMediaPath = {{ url_for('static', filename='blockly/media/')|tojson }};
         window.$blockPyUrls = {
             "importDatasets": {{ config['CORGIS_URL']|tojson }},
@@ -250,6 +261,7 @@
                 currentJavaAssignmentId: ko.observable(null),
                 currentKettleAssignmentId: ko.observable(null),
                 currentExplainAssignmentId: ko.observable(null),
+                currentFeedbackAssignmentId: ko.observable(null),
                 currentBlockPyAssignmentId: ko.observable(null),
                 assignmentType: ko.observable(null),
                 assignmentGroupId: {{ (assignment_group_id or None)|tojson }},
@@ -302,12 +314,12 @@
 
             // System for switching assignments
             function loadAssignmentWrapper(id) {
-                const [isQuiz, isReading, isTextbook, isJava, isKettle, isExplain, isBlockPy] = [
-                    QUIZZES, READINGS, TEXTBOOKS, JAVAS, KETTLES, EXPLAINS, BLOCKPYS
+                const [isQuiz, isReading, isTextbook, isJava, isKettle, isExplain, isBlockPy, isFeedback] = [
+                    QUIZZES, READINGS, TEXTBOOKS, JAVAS, KETTLES, EXPLAINS, BLOCKPYS, FEEDBACKS
                 ].map((list) => list.includes(id));
 
                 id = parseInt(id, 10);
-                if ([isQuiz, isReading, isTextbook, isJava, isKettle, isExplain].some(Boolean)) {
+                if ([isQuiz, isReading, isTextbook, isJava, isKettle, isExplain, isFeedback].some(Boolean)) {
                     editor.hide();
                     mainModel.assignmentType(
                         isQuiz ? 'quiz' :
@@ -316,8 +328,9 @@
                                     isJava ? 'java' :
                                         isKettle ? 'typescript' :
                                             isExplain ? 'explain' :
-                                                isBlockPy ? 'blockpy' :
-                                                    null);
+                                                isFeedback ? 'feedback' :
+                                                    isBlockPy ? 'blockpy' :
+                                                        null);
                 } else {
                     editor.show();
                     const whenDone = editor.loadAssignment(id);
@@ -335,6 +348,7 @@
                 mainModel.currentJavaAssignmentId(isJava ? id : null);
                 mainModel.currentKettleAssignmentId(isKettle ? id : null);
                 mainModel.currentExplainAssignmentId(isExplain ? id : null);
+                mainModel.currentFeedbackAssignmentId(isFeedback ? id : null);
             }
 
             // And/Or load assignment data explicitly passed in

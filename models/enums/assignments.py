@@ -12,6 +12,7 @@ class AssignmentTypes(StrEnum):
     EXPLANATION = 'explanation'
     EXPLAIN = 'explain'
     BLOCKPY = 'blockpy'
+    FEEDBACK = 'feedback'
 
 
 class AssignmentStatus(StrEnum):

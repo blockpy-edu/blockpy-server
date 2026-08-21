@@ -617,6 +617,60 @@ def submissions_filter(course_id):
                            is_instructor=is_grader)
 
 
+@courses.route('/feedback_editor/<course_id>/', methods=['GET'])
+@courses.route('/feedback_editor/<course_id>', methods=['GET'])
+@login_required
+def feedback_editor(course_id):
+    """ Review and edit every student's feedback submission for a FEEDBACK assignment. """
+    course_id = int(course_id)
+    is_grader = g.user.is_grader(course_id)
+    if not is_grader:
+        return "You are not an instructor or TA in this course!"
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    # Feedback assignments owned by this course, plus any others already submitted to in it
+    feedback_assignments = {a.id: a for a in
+                            Assignment.query.filter_by(course_id=course_id, type='feedback').all()}
+    for row in course.get_submitted_assignments_grouped(by_type='feedback'):
+        feedback_assignments.setdefault(row.Assignment.id, row.Assignment)
+    feedback_assignments = natsorted(feedback_assignments.values(), key=lambda a: a.title())
+    assignment_id = maybe_int(request.values.get("assignment_id"))
+    assignment = None
+    rows = []
+    if assignment_id is not None:
+        assignment = Assignment.by_id(assignment_id)
+        check_resource_exists(assignment, "Assignment", assignment_id)
+        if assignment.type != 'feedback':
+            return "That assignment is not a Feedback assignment!"
+        students = natsorted(course.get_students(), key=lambda r: r.name())
+        all_subs = {s[0].user_id: s[0] for s in Submission.by_assignment(assignment_id, course_id)}
+        for student in students:
+            submission = all_subs.get(student.id)
+            contents, published = "", False
+            if submission and submission.code:
+                try:
+                    data = json.loads(submission.code)
+                    contents = data.get("contents", "") or ""
+                    published = bool(data.get("published", False))
+                except (ValueError, AttributeError):
+                    # Not JSON (or not an object); surface the raw code for repair
+                    contents = submission.code
+            rows.append({
+                "student": student,
+                "submission": submission,
+                "contents": contents,
+                "published": published,
+            })
+    return render_template('courses/feedback_editor.html',
+                           course_id=course_id,
+                           course=course,
+                           feedback_assignments=feedback_assignments,
+                           assignment=assignment,
+                           assignment_id=assignment_id,
+                           rows=rows,
+                           is_instructor=is_grader)
+
+
 @courses.route('/submissions_specific/<submission_id>/', methods=['GET', 'POST'])
 @courses.route('/submissions_specific/<submission_id>', methods=['GET', 'POST'])
 @login_required

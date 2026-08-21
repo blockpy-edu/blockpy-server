@@ -58,6 +58,7 @@ const NEW_ASSIGNMENT_MODAL = `<div class="modal fade" id="assignment-create" tab
                 <option>TypeScript</option>
                 <option>Textbook</option>
                 <option value="explain">Code Explanation</option>
+                <option value="feedback">Feedback</option>
             </select></label>
         </div>
         <div class="form-group" data-bind="visible: createAssignmentType() != 'Maze'">

@@ -8,11 +8,15 @@ from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send
 
 from flask import current_app
 from controllers.auth import get_user
-from controllers.helpers import get_course_id, check_resource_exists, require_request_parameters, maybe_int
+from controllers.helpers import (get_course_id, check_resource_exists, require_request_parameters, maybe_int,
+                                 login_required, ajax_success, ajax_failure, make_log_entry)
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
+from models.counters import SubmissionCounts
 from models.course import Course
+from models.enums import SubmissionLogEvent
 from models.report import Report
+from models.submission import Submission
 from models.data_formats.portation import export_bundle, import_bundle
 from models.user import User
 from huey.exceptions import TaskException
@@ -226,3 +230,93 @@ def make_red_flag_report(course_id):
                                  characters_per_second_threshold=characters_per_second_threshold,
                                     max_backstep_threshold=max_backstep_threshold,
                                existing_reports=existing_reports)
+
+
+@blueprint_api.route('/bulk_update_submissions/', methods=['POST'])
+@blueprint_api.route('/bulk_update_submissions', methods=['POST'])
+@login_required
+def bulk_update_submissions():
+    """
+    Bulk update the code of multiple users' submissions, potentially across
+    courses, users, and assignments. The requester must be a grader in each
+    affected submission's course.
+
+    Expects a JSON body of the form:
+        {"updates": [
+            {"submission_id": 123, "code": "..."},
+            {"course_id": 1, "user_id": 2, "assignment_id": 3, "code": "..."}
+        ]}
+
+    Each update either identifies an existing submission by `submission_id`, or
+    by the (`course_id`, `user_id`, `assignment_id`) triple; in the latter case
+    the submission is created if it does not exist yet (so instructors can
+    author feedback before the student ever opens the assignment).
+
+    Follows the same semantics as `blockpy.save_file` for student files: the
+    code replaces the submission's `answer.py` (its `code` column), bumping the
+    submission version and logging a File.Edit event.
+
+    Individual failures do not abort the rest of the batch; they are reported
+    in the `errors` list of the response.
+    """
+    user, user_id = get_user()
+    if not request.json or not isinstance(request.json.get('updates'), list):
+        return ajax_failure("Expected a JSON body with an 'updates' list.")
+    updates = request.json['updates']
+    maximum_code_size = current_app.config["MAXIMUM_CODE_SIZE"]
+    now = str(round(time.time() * 1000))
+    updated, errors = [], []
+    for index, update in enumerate(updates):
+        def fail(message, index=index):
+            errors.append({"index": index, "message": message})
+        if not isinstance(update, dict) or not isinstance(update.get('code'), str):
+            fail("Each update must be an object with a string 'code' field.")
+            continue
+        code = update['code']
+        if maximum_code_size < len(code):
+            fail("Maximum size of code exceeded. Current limit is {}, you uploaded {} characters.".format(
+                maximum_code_size, len(code)))
+            continue
+        if update.get('submission_id') is not None:
+            submission = Submission.by_id(maybe_int(update['submission_id']))
+            if not submission:
+                fail("Submission {} does not exist.".format(update['submission_id']))
+                continue
+            if not user.is_grader(submission.course_id):
+                fail("You are not a grader in course {}.".format(submission.course_id))
+                continue
+        else:
+            course_id = maybe_int(update.get('course_id'))
+            target_user_id = maybe_int(update.get('user_id'))
+            assignment_id = maybe_int(update.get('assignment_id'))
+            if course_id is None or target_user_id is None or assignment_id is None:
+                fail("Each update must provide either a 'submission_id' or all of "
+                     "'course_id', 'user_id', and 'assignment_id'.")
+                continue
+            if not user.is_grader(course_id):
+                fail("You are not a grader in course {}.".format(course_id))
+                continue
+            assignment = Assignment.by_id(assignment_id)
+            if not assignment:
+                fail("Assignment {} does not exist.".format(assignment_id))
+                continue
+            if not User.by_id(target_user_id):
+                fail("User {} does not exist.".format(target_user_id))
+                continue
+            submission = Submission.load_or_new(assignment, target_user_id, course_id)
+        # Perform the update, mirroring blockpy.save_student_file
+        submission_last_updated = submission.date_modified
+        new_code = submission.save_code('answer.py', code)
+        SubmissionCounts.track_event(submission.id, SubmissionLogEvent.BLOCKPY_FILE_EDIT, {
+            "code": code,
+            "file_path": 'answer.py',
+        }, submission_last_updated=submission_last_updated)
+        make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
+                       submission.course_id, submission.user_id,
+                       SubmissionLogEvent.BLOCKPY_FILE_EDIT,
+                       'answer.py', message=new_code, timestamp=now, timezone="0")
+        updated.append({"index": index, "submission_id": submission.id,
+                        "course_id": submission.course_id, "user_id": submission.user_id,
+                        "assignment_id": submission.assignment_id,
+                        "version": submission.version})
+    return ajax_success({"updated": updated, "errors": errors})

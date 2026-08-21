@@ -45,7 +45,9 @@ export interface QuizInstructionsSettings {
     /** What to use when choose the pool, for consistency */
     poolRandomness?: QuizPoolRandomness
     /** The URL or ID of the reading to use as preamble, if there is one */
-    readingId?: number|null
+    readingId?: number|string|null
+    /** The URL or ID of the feedback assignment to use as preamble, if there is one */
+    feedbackId?: number|string|null
 }
 
 export interface QuizInstructions {
@@ -82,7 +84,8 @@ export const EMPTY_QUIZ_INSTRUCTIONS_STRING = JSON.stringify({
         gradeMode: QuizGradeMode.QUIZ,
         questionsPerPage: -1,
         poolRandomness: QuizPoolRandomness.SEED,
-        readingId: null
+        readingId: null,
+        feedbackId: null
     },
     pools: []
 });
@@ -118,6 +121,7 @@ export function fillInMissingQuizInstructionFields(quizInstructions: QuizInstruc
     quizInstructions.settings.questionsPerPage ??= -1;
     quizInstructions.settings.poolRandomness ??= QuizPoolRandomness.ATTEMPT;
     quizInstructions.settings.readingId ??= null;
+    quizInstructions.settings.feedbackId ??= null;
     quizInstructions.settings.gradeMode ??= QuizGradeMode.QUIZ;
 }
 
@@ -143,6 +147,7 @@ export class Quiz {
     kindTitle: ko.PureComputed<string>;
 
     readingId: ko.Observable<number|null>;
+    feedbackId: ko.Observable<number|null>;
     attemptLimit: ko.Observable<number>;
     attemptsLeft: ko.PureComputed<string>;
     canAttempt: ko.PureComputed<boolean>;
@@ -159,6 +164,7 @@ export class Quiz {
         this.attemptMulligans = ko.observable(0);
         this.attemptLimit = ko.observable<number>(-1);
         this.readingId = ko.observable<number|null>(null);
+        this.feedbackId = ko.observable<number|null>(null);
         this.feedbackType = ko.observable<QuizFeedbackType>(QuizFeedbackType.IMMEDIATE);
         this.gradeMode = ko.observable<QuizGradeMode>(QuizGradeMode.QUIZ);
         this.lookupReading = lookupReading;
@@ -253,6 +259,16 @@ export class Quiz {
             );
         } else {
             this.readingId(instructions.settings.readingId);
+        }
+        if (typeof instructions.settings.feedbackId === 'string') {
+            this.lookupReading(instructions.settings.feedbackId).then((id) => this.feedbackId(id)).catch(
+                () => {
+                    this.feedbackId(null);
+                    console.error(`Failed to look up feedback ID for ${instructions.settings.feedbackId}`);
+                }
+            );
+        } else {
+            this.feedbackId(instructions.settings.feedbackId);
         }
         //console.log(instructions.settings);
         this.feedbackType(instructions.settings.feedbackType);

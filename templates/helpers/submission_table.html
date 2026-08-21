@@ -104,7 +104,7 @@
     {% set viewer_role = g.user.determine_role([submission[2]], [submission[0]]) if g.user and submission[0] else 'anonymous'%}
 <tr
     class='{%
-        if submission[0].correct or (submission[0].score is defined and submission[0].score|round(1) >= 100) or submission[2].type == 'reading'
+        if submission[0].correct or (submission[0].score is defined and submission[0].score|round(1) >= 100) or submission[2].type in ('reading', 'feedback')
     %}table-success{%
         elif (submission[0].score is defined and submission[0].score|round(1) > 0)
     %}table-warning{% endif %} {{ 'non-learner-row' if 'Learner' not in roles_list else ''  }}'>

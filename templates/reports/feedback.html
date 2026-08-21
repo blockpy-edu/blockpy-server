@@ -1,0 +1,48 @@
+{% import 'helpers/report_tools.html' as report_tools %}
+
+{% set hiding = assignment.hidden or assignment.get_setting('hide_submission', False) %}
+{% set feedback_data = submission.code|json_load if submission.code else {} %}
+{% set feedback_contents = feedback_data.get('contents', '') if feedback_data is mapping else '' %}
+{% set feedback_published = feedback_data.get('published', False) if feedback_data is mapping else False %}
+
+<div xml:lang="en">
+    <h2 id='{{ assignment.slug() }}'>Feedback {{ assignment.name }}</h2>
+
+{{ report_tools.render_submission_details(submission, is_grader, hiding) }}
+
+{% if is_grader %}
+    <div>
+        Published:
+        {% if feedback_published %}
+            <span class="badge badge-success">Yes</span>
+        {% else %}
+            <span class="badge badge-secondary">No</span>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% if is_grader or (not hiding and feedback_published) %}
+    {% if feedback_contents %}
+    <div id="reviewable-code-area-{{ submission.id }}" class="p-2 border rounded">
+        {{ feedback_contents|markdown|safe }}
+    </div>
+    {% else %}
+    <div>No feedback has been written yet.</div>
+    {% endif %}
+{% elif not feedback_published %}
+    <div>Feedback is not yet ready.</div>
+{% endif %}
+
+{% if is_grader %}
+    <div>
+    {{ report_tools.render_metrics(submission, True, False) }}
+    </div>
+
+    <div><small>
+        Submission: {{ submission.id }},
+        Assignment: {{ submission.assignment_id }} ({{ submission.assignment.name }}),
+        User: {{ submission.user_id }} ({{ submission.user.name() }}),
+        Course: {{ submission.course_id }} ({{ submission.course.name }})
+    </small></div>
+{% endif %}
+</div>

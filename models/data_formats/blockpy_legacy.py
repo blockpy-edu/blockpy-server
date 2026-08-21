@@ -62,5 +62,6 @@ DEFAULT_FILENAMES_BY_TYPE = {
     'java': 'answer.java',
     'quiz': 'answer.json',
     'typescript': 'answer.ts',
-    'kettle': 'answer.ts'
+    'kettle': 'answer.ts',
+    'feedback': 'answer.json'
 }

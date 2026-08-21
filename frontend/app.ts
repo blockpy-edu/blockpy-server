@@ -26,6 +26,7 @@ import "./components/course_list";
 import "./components/assignment_manager";
 import "./components/quizzes/quizzer";
 import "./components/reader/reader";
+import "./components/feedback/feedback";
 //import "./components/java";
 import './components/kettle/kettle';
 import './components/explanations/explain';

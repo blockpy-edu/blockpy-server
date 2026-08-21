@@ -88,31 +88,40 @@ export class QuizEditorSettings {
     coolDown: ko.Observable<number>;
     poolRandomness: ko.Observable<string>;
     readingId: ko.Observable<string>;
+    feedbackId: ko.Observable<string>;
 
     constructor(settings: QuizInstructionsSettings) {
         this.feedbackType = ko.observable(settings.feedbackType || QuizFeedbackType.IMMEDIATE);
         this.attemptLimit = ko.observable(settings.attemptLimit ?? -1);
         this.coolDown = ko.observable(settings.coolDown ?? -1);
         this.poolRandomness = ko.observable(settings.poolRandomness || QuizPoolRandomness.SEED);
-        // readingId can be a number or a URL string; keep as string for the input
+        // readingId/feedbackId can be a number or a URL string; keep as string for the input
         this.readingId = ko.observable(
             settings.readingId != null ? String(settings.readingId) : ''
         );
+        this.feedbackId = ko.observable(
+            settings.feedbackId != null ? String(settings.feedbackId) : ''
+        );
+    }
+
+    /** Parse an ID input: empty → null, numeric → number, otherwise the URL string. */
+    private static parseIdField(raw: string): number | string | null {
+        const trimmed = raw.trim();
+        if (trimmed === '') {
+            return null;
+        }
+        const n = Number(trimmed);
+        return isNaN(n) ? trimmed : n;
     }
 
     toJson(): QuizInstructionsSettings {
-        const rid = this.readingId().trim();
-        let readingId: number | string | null = null;
-        if (rid !== '') {
-            const n = Number(rid);
-            readingId = isNaN(n) ? rid : n;
-        }
         return {
             feedbackType: this.feedbackType() as QuizFeedbackType,
             attemptLimit: Number(this.attemptLimit()),
             coolDown: Number(this.coolDown()),
             poolRandomness: this.poolRandomness() as QuizPoolRandomness,
-            readingId: +readingId || null,
+            readingId: QuizEditorSettings.parseIdField(this.readingId()),
+            feedbackId: QuizEditorSettings.parseIdField(this.feedbackId()),
         };
     }
 }

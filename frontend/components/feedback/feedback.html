@@ -1,0 +1,17 @@
+<!-- Body -->
+    <div style="background: #FBFAF7" class="pt-4">
+        <!-- ko if: assignment().instructions() -->
+        <div data-bind="markdowned: {value: assignment().instructions(), assignment: assignment, submission: submission}"
+            class="p-4"></div>
+        <!-- /ko -->
+        <!-- ko if: published() -->
+        <div data-bind="markdowned: {value: contents(), assignment: assignment, submission: submission}"
+            class="p-4"></div>
+        <!-- /ko -->
+        <!-- ko ifnot: published() -->
+        <div class="p-4">
+            <em>Feedback is not yet ready.</em>
+        </div>
+        <!-- /ko -->
+        <hr>
+    </div>

@@ -1,0 +1,88 @@
+<!-- Errors -->
+<div class="alert alert-warning p-1 border rounded float-right" data-bind="text: errorMessage, visible: errorMessage().length"></div>
+
+<!-- Instructor Editor Mode Selector -->
+<div data-bind="if: isInstructor() && !asPreamble()">
+    <!-- Instructor Editor Mode Selector -->
+    <div class="btn-group-toggle mt-2 mb-2">
+        <label class="btn btn-outline-secondary mr-4" for="feedback-editor-mode-radio-raw"
+            data-bind="css: { active: editorMode()=='RAW'}">
+            <input data-bind="checked: editorMode"
+                   id="feedback-editor-mode-radio-raw" name="feedback-editor-mode-radio"
+                   class="btn-check" type="radio" value="RAW" autocomplete="off">
+            Raw Editor
+        </label>
+        <label class="btn btn-outline-secondary mr-4" for="feedback-editor-mode-radio-form"
+            data-bind="css: { active: editorMode()=='FORM'}">
+            <input data-bind="checked: editorMode"
+                       id="feedback-editor-mode-radio-form" name="feedback-editor-mode-radio"
+                       class="btn-check" type="radio" value="FORM" autocomplete="off">
+            Form Editor
+        </label>
+        <label class="btn btn-outline-secondary" for="feedback-editor-mode-radio-submission"
+            data-bind="css: { active: editorMode()=='SUBMISSION'}">
+            <input data-bind="checked: editorMode"
+               id="feedback-editor-mode-radio-submission" name="feedback-editor-mode-radio"
+               class="btn-check" type="radio" value="SUBMISSION" autocomplete="off">
+            Actual Feedback
+        </label>
+        <br><hr>
+    </div>
+
+    <!-- Raw Instructor Editor -->
+    <div data-bind="if: editorMode() === 'RAW'">
+        <button data-bind="click: saveAssignment">Save Assignment</button><br>
+        <h6>Instructions</h6>
+        <textarea data-bind="textInput: assignment().instructions" style="width: 100%; height: 300px"></textarea><br>
+        <h6>Settings</h6>
+        <textarea data-bind="textInput: assignment().settings" style="width: 100%; height: 300px"></textarea><br>
+        <!-- ko if: submission -->
+            <h6>Your Submission</h6>
+            <textarea data-bind="textInput: submission().code" style="width: 100%; height: 300px"></textarea><br>
+            <button data-bind="click: saveSubmissionRaw">Save submission changes</button><br>
+        <!-- /ko -->
+    </div>
+
+    <!-- Form Instructor Editor -->
+    <div data-bind="if: editorMode() === 'FORM'" class="feedback-editor">
+        <button data-bind="click: saveAssignment">Save Assignment</button><br>
+        <!-- Actual Contents -->
+        <h6>Instructions (Optional Preamble)</h6>
+        <textarea data-bind="markdowneditor: {value: assignment().instructions}" style="width: 100%; height: 300px"></textarea><br>
+        <!-- Other settings -->
+        <div class="form-group">
+            <label for="feedback-points-editor">
+                Points:
+                <input type="number" id="feedback-points-editor" name="feedback-points-editor"
+                    class="form-control" data-bind="value: assignment().points">
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="feedback-name-editor">
+                Name:
+                <input type="text" id="feedback-name-editor" name="feedback-name-editor"
+                    class="form-control" data-bind="value: assignment().name">
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="feedback-url-editor">
+                URL:
+                <input type="text" id="feedback-url-editor" name="feedback-url-editor"
+                    class="form-control" data-bind="value: assignment().url">
+            </label>
+        </div>
+        <h6>Additional Settings</h6>
+        <div data-bind="jsoneditor: {value: assignment().settings}" style="width: 100%; height: 300px"></div><br>
+        <!-- ko if: submission -->
+            <h6>Your Submission's Feedback Contents</h6>
+            <textarea data-bind="markdowneditor: {value: contents}" style="width: 100%; height: 300px"></textarea><br>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input"
+                    id="feedback-published-editor" name="feedback-published-editor"
+                    data-bind="checked: published">
+                <label class="form-check-label" for="feedback-published-editor">Published</label>
+            </div>
+            <button data-bind="click: saveSubmission">Save submission changes</button><br>
+        <!-- /ko -->
+    </div>
+</div>

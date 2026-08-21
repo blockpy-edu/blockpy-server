@@ -134,6 +134,8 @@
             {% include "reports/typescript.html" with context %}
         {% elif assignment.type.lower() == "explain" %}
             {% include "reports/explains.html" with context %}
+        {% elif assignment.type.lower() == "feedback" %}
+            {% include "reports/feedback.html" with context %}
         {% else %}
             Unknown assignment type.
         {% endif %}

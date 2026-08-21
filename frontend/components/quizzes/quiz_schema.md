@@ -40,6 +40,7 @@ The settings are fairly straightforward, so let's start with them.
   * `"SEED"`: Each student will get a different random sample of questions, but the questions will be consistent across every attempt. This is useful if you want to have a quiz that students can take multiple times, but you want to make sure they get the same questions each time.
   * `"NONE"`: I... I don't know why I have this, but you can use this to make the pool exactly the same every time. Everyone gets the same random sample of questions, every time.
 * `readingId`: The ID of the reading that this quiz is associated with. This is used to have the reading appear right before the quiz on the same page, which is the preferred style in the book now. This is optional, and if it's not present, the reading won't appear. It can be the BlockPy ID number, or the string url of the assignment (which is not the full HTTP url, just the last part like `bakery_for_loop_syntax_reading`).
+* `feedbackId`: The ID of a `feedback` type assignment associated with this quiz. Works just like `readingId` (ID number or url string), but renders the student's personalized feedback (from their submission to that assignment) at the top of the page, above any reading. Optional; if absent, no feedback preamble appears.
 
 ### Question Pools
 

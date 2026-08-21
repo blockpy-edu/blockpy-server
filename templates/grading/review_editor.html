@@ -156,6 +156,8 @@ $(function() {
         {% include "reports/textbook.html" with context %}
     {% elif assignment.type.lower() == "typescript" %}
             {% include "reports/typescript.html" with context %}
+    {% elif assignment.type.lower() == "feedback" %}
+        {% include "reports/feedback.html" with context %}
     {% else %}
         Unknown assignment type
     {% endif %}
