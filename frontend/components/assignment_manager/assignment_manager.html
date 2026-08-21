@@ -17,6 +17,28 @@
     visibility: hidden;
 }
 
+/* Per-type accent colors: the icon takes the color as text, the badge as background */
+.assignment-manager .fas.assignment-type-blockpy { color: #0069d9; }
+.assignment-manager .badge.assignment-type-blockpy { background-color: #0069d9; }
+.assignment-manager .fas.assignment-type-reading { color: #28a745; }
+.assignment-manager .badge.assignment-type-reading { background-color: #28a745; }
+.assignment-manager .fas.assignment-type-textbook { color: #1a9c75; }
+.assignment-manager .badge.assignment-type-textbook { background-color: #1a9c75; }
+.assignment-manager .fas.assignment-type-quiz { color: #6f42c1; }
+.assignment-manager .badge.assignment-type-quiz { background-color: #6f42c1; }
+.assignment-manager .fas.assignment-type-typescript { color: #17a2b8; }
+.assignment-manager .badge.assignment-type-typescript { background-color: #17a2b8; }
+.assignment-manager .fas.assignment-type-java { color: #8d5524; }
+.assignment-manager .badge.assignment-type-java { background-color: #8d5524; }
+.assignment-manager .fas.assignment-type-explain { color: #e83e8c; }
+.assignment-manager .badge.assignment-type-explain { background-color: #e83e8c; }
+.assignment-manager .fas.assignment-type-feedback { color: #e8590c; }
+.assignment-manager .badge.assignment-type-feedback { background-color: #e8590c; }
+.assignment-manager .fas.assignment-type-maze { color: #dc3545; }
+.assignment-manager .badge.assignment-type-maze { background-color: #dc3545; }
+.assignment-manager .fas.assignment-type-default { color: #6c757d; }
+.assignment-manager .badge.assignment-type-default { background-color: #6c757d; }
+
 .assignment-manager .badge.content-badge {
     background-color: #e9ecef;
     color: #495057;
@@ -117,7 +139,9 @@ div.overlay {
         <tr class="hover-movers-rows">
             <td style="width: 25%">
                 <strong data-bind="text: title"></strong><br>
-                <span class="badge bg-secondary text-light" data-bind="text: type"></span>
+                <span class="fas" aria-hidden="true"
+                      data-bind="css: $component.typeIcon($data) + ' ' + $component.typeColorClass($data), attr: {title: type}"></span>
+                <span class="badge text-light" data-bind="text: type, css: $component.typeColorClass($data)"></span>
                 <code data-bind="text: url" style="color: #333"></code>
                 <a href="" data-bind="attr: {href: $component.openAssignmentUrl($data)}" target="_blank"><small class="fas fa-external-link-alt"></small></a>
                 <br>

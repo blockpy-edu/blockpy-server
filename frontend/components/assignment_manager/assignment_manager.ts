@@ -53,6 +53,20 @@ function stripHtmlTags(html: string): string {
     return new DOMParser().parseFromString(html, "text/html").body.textContent || "";
 }
 
+/** Font Awesome icon for each assignment type, to make types recognizable at a glance. */
+const TYPE_ICONS: Record<string, string> = {
+    blockpy: "fa-puzzle-piece",
+    reading: "fa-book-open",
+    textbook: "fa-book",
+    quiz: "fa-question-circle",
+    typescript: "fa-code",
+    java: "fa-coffee",
+    explain: "fa-chalkboard-teacher",
+    feedback: "fa-comment-dots",
+    maze: "fa-gamepad"
+};
+const DEFAULT_TYPE_ICON = "fa-file-alt";
+
 const DESCRIPTION_LENGTH = 255;
 
 function truncate(text: string, limit: number = DESCRIPTION_LENGTH): string {
@@ -253,6 +267,16 @@ export class AssignmentManager {
 
     shortInstructions(assignment: Assignment): string {
         return truncate(stripHtmlTags(assignment.instructions()));
+    }
+
+    typeIcon(assignment: Assignment): string {
+        return TYPE_ICONS[(assignment.type() || "").toLowerCase()] || DEFAULT_TYPE_ICON;
+    }
+
+    /** CSS class that colors the type icon and badge per assignment type. */
+    typeColorClass(assignment: Assignment): string {
+        const type = (assignment.type() || "").toLowerCase();
+        return "assignment-type-" + (TYPE_ICONS[type] ? type : "default");
     }
 
     isReading(assignment: Assignment): boolean {
