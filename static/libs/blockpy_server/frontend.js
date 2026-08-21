@@ -49,7 +49,7 @@ class AssignmentInterface {
     constructor(params) {
         this.assignmentSubscriptions = {
             windowBlur: null,
-            windowFocus: null
+            windowFocus: null,
         };
         this.server = params.server;
         this.courseId = params.courseId;
@@ -89,7 +89,7 @@ class AssignmentInterface {
         this.trackWindowFocus();
     }
     dispose() {
-        window.removeEventListener('visibilitychange', this.assignmentSubscriptions.windowFocus);
+        window.removeEventListener("visibilitychange", this.assignmentSubscriptions.windowFocus);
     }
     trackWindowFocus() {
         /*this.subscriptions.windowFocus = (event) => {
@@ -586,20 +586,32 @@ class CourseListInterface {
             return (+this.getPin(right.id) || 0) - (+this.getPin(left.id) || 0);
         }
         if (sortMethod === "date_created_desc") {
-            return left.dateCreated() === right.dateCreated() ? 0
-                : left.dateCreated() < right.dateCreated() ? 1 : -1;
+            return left.dateCreated() === right.dateCreated()
+                ? 0
+                : left.dateCreated() < right.dateCreated()
+                    ? 1
+                    : -1;
         }
         else if (sortMethod === "date_created_asc") {
-            return left.dateCreated() === right.dateCreated() ? 0
-                : left.dateCreated() < right.dateCreated() ? -1 : 1;
+            return left.dateCreated() === right.dateCreated()
+                ? 0
+                : left.dateCreated() < right.dateCreated()
+                    ? -1
+                    : 1;
         }
         else if (sortMethod === "name_asc") {
-            return left.name() === right.name() ? 0
-                : left.name() < right.name() ? -1 : 1;
+            return left.name() === right.name()
+                ? 0
+                : left.name() < right.name()
+                    ? -1
+                    : 1;
         }
         else if (sortMethod === "name_desc") {
-            return left.name() === right.name() ? 0
-                : left.name() < right.name() ? 1 : -1;
+            return left.name() === right.name()
+                ? 0
+                : left.name() < right.name()
+                    ? 1
+                    : -1;
         }
         else {
             return 0;
@@ -664,7 +676,7 @@ const COURSE_LIST_HTML = `
 `;
 knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("course-list", {
     viewModel: CourseListInterface,
-    template: COURSE_LIST_HTML
+    template: COURSE_LIST_HTML,
 });
 
 

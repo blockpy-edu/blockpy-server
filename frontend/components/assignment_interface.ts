@@ -19,7 +19,7 @@ export interface AssignmentInterfaceJson {
 
 function parseTimeLimit(
     timeLimit: string,
-    studentLimit: string | null
+    studentLimit: string | null,
 ): number {
     let modifier = 1;
     if (studentLimit) {
@@ -59,15 +59,15 @@ export class AssignmentInterface {
     timeChecker: NodeJS.Timeout | null;
 
     assignmentSubscriptions: {
-        windowBlur: (event: Event) => void,
-        windowFocus: (event: Event) => void,
-    }
+        windowBlur: (event: Event) => void;
+        windowFocus: (event: Event) => void;
+    };
 
     constructor(params: AssignmentInterfaceJson) {
         this.assignmentSubscriptions = {
             windowBlur: null,
-            windowFocus: null
-        }
+            windowFocus: null,
+        };
         this.server = params.server;
         this.courseId = params.courseId;
         this.user = params.user;
@@ -87,7 +87,10 @@ export class AssignmentInterface {
 
         if (window["$TIME_CHECKER_ID"]) {
             clearInterval(window["$TIME_CHECKER_ID"]);
-            console.log("Killing old time checker during load", window["$TIME_CHECKER_ID"]);
+            console.log(
+                "Killing old time checker during load",
+                window["$TIME_CHECKER_ID"],
+            );
         }
         this.timeChecker = setInterval(() => {
             try {
@@ -103,7 +106,7 @@ export class AssignmentInterface {
                         stack: e.stack,
                     }),
                     this.assignment() ? this.assignment().url() : "",
-                    () => {}
+                    () => {},
                 );
                 $(".assignment-selector-countdown").html("Error with timer");
             }
@@ -115,7 +118,10 @@ export class AssignmentInterface {
     }
 
     dispose() {
-        window.removeEventListener('visibilitychange', this.assignmentSubscriptions.windowFocus);
+        window.removeEventListener(
+            "visibilitychange",
+            this.assignmentSubscriptions.windowFocus,
+        );
     }
 
     trackWindowFocus() {
@@ -132,10 +138,19 @@ export class AssignmentInterface {
         window.addEventListener("focus", this.subscriptions.windowFocus);
         window.addEventListener("blur", this.subscriptions.windowBlur);*/
         this.assignmentSubscriptions.windowFocus = (event) => {
-            this.logEvent("Resource.View", "reading", "visibility",
-                document.visibilityState, this.assignment().url(), undefined);
+            this.logEvent(
+                "Resource.View",
+                "reading",
+                "visibility",
+                document.visibilityState,
+                this.assignment().url(),
+                undefined,
+            );
         };
-        window.addEventListener("visibilitychange", this.assignmentSubscriptions.windowFocus);
+        window.addEventListener(
+            "visibilitychange",
+            this.assignmentSubscriptions.windowFocus,
+        );
     }
 
     getSettings() {
@@ -150,7 +165,7 @@ export class AssignmentInterface {
             console.error(
                 "Failed to parse assignment settings",
                 rawSettings,
-                e
+                e,
             );
             return;
         }
@@ -171,7 +186,7 @@ export class AssignmentInterface {
                     "time_clear",
                     "",
                     this.assignment().url(),
-                    () => {}
+                    () => {},
                 );
             }
             return;
@@ -188,14 +203,14 @@ export class AssignmentInterface {
             }
             const timeLimit = parseTimeLimit(
                 settings.time_limit,
-                this.submission().timeLimit()
+                this.submission().timeLimit(),
             );
             const startTime = this.submission().dateStarted();
             if (startTime) {
                 const startDate = new Date(startTime);
                 // console.log(startTime, startDate, now.getTime());
                 const elapsed = Math.floor(
-                    (now.getTime() - startDate.getTime()) / 1000
+                    (now.getTime() - startDate.getTime()) / 1000,
                 );
                 const remaining = timeLimit - elapsed;
                 if (remaining <= 0) {
@@ -211,11 +226,11 @@ export class AssignmentInterface {
                     // TODO: We need to allow instructors to remove the box if it appears for them!
                     // Add a box in the center of the overlay that explains
                     const box = $(
-                        '<div class="end-assignment-timer-box"> </div>'
+                        '<div class="end-assignment-timer-box"> </div>',
                     );
                     box.appendTo(document.body);
                     box.html(
-                        "Time is up! Your assignment will be automatically submitted now. You may not continue working on it. Please log out. Thanks for taking the exam, and best of luck!"
+                        "Time is up! Your assignment will be automatically submitted now. You may not continue working on it. Please log out. Thanks for taking the exam, and best of luck!",
                     );
                     box.css({
                         position: "fixed",
@@ -241,14 +256,14 @@ export class AssignmentInterface {
                             start_time: startTime,
                         }),
                         this.assignment().url(),
-                        () => {}
+                        () => {},
                     );
                 }
 
                 $(".assignment-selector-countdown").html(
                     formatAmount(elapsed, " elapsed", true) +
                         "; " +
-                        formatAmount(remaining, " left", true)
+                        formatAmount(remaining, " left", true),
                 );
                 $(".assignment-selector-clock").hide();
             }
@@ -261,7 +276,7 @@ export class AssignmentInterface {
         label: string,
         message: string,
         file_path: string,
-        callback: any
+        callback: any,
     ) {
         let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
@@ -289,7 +304,7 @@ export class AssignmentInterface {
         contents: string,
         block: boolean,
         onSuccess: (response: any) => void,
-        onError?: any
+        onError?: any,
     ) {
         let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
@@ -312,7 +327,7 @@ export class AssignmentInterface {
                     "Failed to load (HTTP LEVEL)",
                     e,
                     textStatus,
-                    errorThrown
+                    errorThrown,
                 );
             };
         }
@@ -326,7 +341,7 @@ export class AssignmentInterface {
                 3,
                 () => 0,
                 onSuccess,
-                onError
+                onError,
             );
         } else {
             return BlockPyServer._postLatestRetry(
@@ -335,7 +350,7 @@ export class AssignmentInterface {
                 "saveFile",
                 300,
                 onError,
-                onSuccess
+                onSuccess,
             );
         }
     }
@@ -375,7 +390,7 @@ export class AssignmentInterface {
                 "Failed to load (HTTP LEVEL)",
                 e,
                 textStatus,
-                errorThrown
+                errorThrown,
             );
         };
         const onSuccess = (response: any) =>
@@ -386,7 +401,7 @@ export class AssignmentInterface {
             3,
             () => 0,
             onSuccess,
-            onError
+            onError,
         );
     }
 }

@@ -1,11 +1,11 @@
-import {Server} from "../services/server";
-import {Course} from "../models/course";
-import {User} from "../models/user";
-import * as ko from 'knockout';
-import {Watcher, WatcherTemplate} from "./watcher/watcher";
-import {prettyPrintDateTime} from "../utilities/dates";
-import {STORAGE_SERVICE} from "../utilities/safe_local_storage";
-import {ajax_post, hideOverlay, showOverlay} from "../services/ajax";
+import { Server } from "../services/server";
+import { Course } from "../models/course";
+import { User } from "../models/user";
+import * as ko from "knockout";
+import { Watcher, WatcherTemplate } from "./watcher/watcher";
+import { prettyPrintDateTime } from "../utilities/dates";
+import { STORAGE_SERVICE } from "../utilities/safe_local_storage";
+import { ajax_post, hideOverlay, showOverlay } from "../services/ajax";
 
 export interface CourseListInterfaceJson {
     server: Server;
@@ -28,17 +28,24 @@ export class CourseListInterface {
         this.courses = ko.observableArray<Course>(params.courses);
         this.user = params.user;
         this.label = params.label;
-        this.sortMethod = ko.observable(STORAGE_SERVICE.get("COURSE_SORT_METHOD_"+this.label,
-            "date_created_desc"));
+        this.sortMethod = ko.observable(
+            STORAGE_SERVICE.get(
+                "COURSE_SORT_METHOD_" + this.label,
+                "date_created_desc",
+            ),
+        );
         this.sorter = this._sorter.bind(this);
         this.sortMethod.subscribe(() => {
-            STORAGE_SERVICE.set("COURSE_SORT_METHOD_"+this.label, this.sortMethod());
+            STORAGE_SERVICE.set(
+                "COURSE_SORT_METHOD_" + this.label,
+                this.sortMethod(),
+            );
         });
         this.pins = this.loadPins();
     }
 
     loadPins() {
-        const rawPins = STORAGE_SERVICE.get("COURSE_PINS_"+this.label, "{}");
+        const rawPins = STORAGE_SERVICE.get("COURSE_PINS_" + this.label, "{}");
         const pins = JSON.parse(rawPins);
         return ko.observable<Record<string, boolean>>(pins);
     }
@@ -47,7 +54,7 @@ export class CourseListInterface {
         let pins = this.pins();
         pins[courseId.toString()] = isPinned;
         this.pins(pins);
-        STORAGE_SERVICE.set("COURSE_PINS_"+this.label, JSON.stringify(pins));
+        STORAGE_SERVICE.set("COURSE_PINS_" + this.label, JSON.stringify(pins));
     }
 
     getPin(courseId: number): boolean {
@@ -58,20 +65,32 @@ export class CourseListInterface {
     _sorter(left: Course, right: Course): number {
         let sortMethod = this.sortMethod();
         if (this.getPin(left.id) || this.getPin(right.id)) {
-            return (+this.getPin(right.id)||0) - (+this.getPin(left.id)||0);
+            return (+this.getPin(right.id) || 0) - (+this.getPin(left.id) || 0);
         }
         if (sortMethod === "date_created_desc") {
-            return left.dateCreated() === right.dateCreated() ? 0
-                 : left.dateCreated() < right.dateCreated() ? 1 : -1;
+            return left.dateCreated() === right.dateCreated()
+                ? 0
+                : left.dateCreated() < right.dateCreated()
+                  ? 1
+                  : -1;
         } else if (sortMethod === "date_created_asc") {
-            return left.dateCreated() === right.dateCreated() ? 0
-                 : left.dateCreated() < right.dateCreated() ? -1 : 1;
+            return left.dateCreated() === right.dateCreated()
+                ? 0
+                : left.dateCreated() < right.dateCreated()
+                  ? -1
+                  : 1;
         } else if (sortMethod === "name_asc") {
-            return left.name() === right.name() ? 0
-                 : left.name() < right.name() ? -1 : 1;
+            return left.name() === right.name()
+                ? 0
+                : left.name() < right.name()
+                  ? -1
+                  : 1;
         } else if (sortMethod === "name_desc") {
-            return left.name() === right.name() ? 0
-                 : left.name() < right.name() ? 1 : -1;
+            return left.name() === right.name()
+                ? 0
+                : left.name() < right.name()
+                  ? 1
+                  : -1;
         } else {
             return 0;
         }
@@ -79,7 +98,7 @@ export class CourseListInterface {
 
     getRole(id: number): string {
         let roles = this.user.roles();
-        for (let i=0; i<roles.length; i+=1) {
+        for (let i = 0; i < roles.length; i += 1) {
             let role = roles[i];
             if (role.courseId() === id) {
                 return role.name();
@@ -139,6 +158,5 @@ export const COURSE_LIST_HTML = `
 
 ko.components.register("course-list", {
     viewModel: CourseListInterface,
-    template: COURSE_LIST_HTML
+    template: COURSE_LIST_HTML,
 });
-

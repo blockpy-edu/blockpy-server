@@ -32,6 +32,11 @@ def about():
     return render_template('about.html')
 
 
+@basic.route('/whoops', methods=['GET', 'POST'])
+def whoops():
+    raise Exception("Whoops!")
+
+
 @basic.route('/favicon.ico', methods=['GET', 'POST'])
 def favicon():
     return send_from_directory(os.path.join(current_app.root_path, 'static'),

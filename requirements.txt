@@ -1,65 +1,83 @@
-flask~=3.0.0
-flask-admin
-flask-sqlalchemy
-Flask-Security-Too
-flask-login
-flask-script
-flask-mail
-flask-wtf
-flask-assets
-Flask-JWT-Extended
-flask-migrate
-flask_cors
-flask-debugtoolbar
-flask-marshmallow
-flask-rebar
+# --- Flask core ---
+Flask==3.0.0
+Werkzeug>=3.0.6,<3.1          # BUMP: CVE-2024-34069/49766/49767; cap <3.1 for Flask 3.0.0
+Jinja2>=3.1.6,<3.2            # BUMP: CVE-2024-34064 + sandbox escapes
+MarkupSafe==2.1.3
+click==8.1.7
+itsdangerous==2.1.2
+blinker==1.7.0
 
-oauth2~=1.9.0.post1
-jinja2
-markdown~=3.5.1
-wtforms~=3.1.1
-sqlalchemy~=2.0.25
-SQLAlchemy-Utc
-marshmallow-sqlalchemy
-apispec[yaml]~=6.3.1
-apispec-webframeworks
-marshmallow~=3.20.1
+# --- Flask extensions ---
+Flask-Admin==2.0.2
+Flask-SQLAlchemy==3.1.1
+Flask-Security-Too==5.3.3
+Flask-Login==0.6.3
+Flask-Mail==0.9.1
+Flask-WTF==1.2.1
+Flask-Assets==2.1.0
+Flask-JWT-Extended==4.6.0
+Flask-Migrate==4.0.5
+Flask-Cors==4.0.0
+Flask-DebugToolbar==0.16.0
+flask-marshmallow==0.15.0
+flask-rebar==3.1.1
+GitHub-Flask==3.2.0
+# Flask-Script deleted: abandoned, nothing imports it
 
-simplejson
-lxml
-pygments~=2.17.2
-httplib2
+# --- LTI / OAuth ---
+oauth2==1.9.0.post1           # ABANDONED but signs all LTI 1.1 launches; replace only via LTI 1.3
 
-tqdm~=4.66.1
-pydot~=2.0.0
-six~=1.16.0
-bcrypt==4.0.1
-python-slugify~=8.0.1
-pytest
-pytest-flask
-natsort~=8.4.0
-psycopg
-psycopg2
-email-validator
-Werkzeug
-alembic~=1.13.1
-gunicorn
-redis
-huey~=2.5.0
-compare50
-pdfkit~=1.0.0
-thefuzz~=0.20.0
-MarkupSafe~=2.1.3
-pytz
-edit_distance
-click
-webassets
-python-dateutil
-emoji
 
-scipy
+# --- Data / ORM ---
+SQLAlchemy==2.0.25
+SQLAlchemy-Utc==0.14.0
+alembic==1.13.1
+marshmallow==3.20.1
+marshmallow-sqlalchemy==0.29.0
+apispec[yaml]==6.3.1
+apispec-webframeworks==0.5.2
+WTForms==3.1.1
 
-argon2_cffi
-GitHub-Flask
+# --- DB drivers ---
+psycopg==3.2.1                # ACTIVE driver (postgresql+psycopg://)
+psycopg2==2.9.9               # template + prod_config.py still resolve here; remove deliberately later
 
-strenum
+
+
+
+# --- Serving / queue ---
+gunicorn>=22.0,<24            # BUMP: CVE-2024-1135; gunicorn IS the production server
+redis==5.0.1
+huey==2.5.0
+
+# --- Utility ---
+Markdown==3.5.1
+simplejson==3.19.2
+lxml==5.0.0
+Pygments==2.17.2
+httplib2==0.22.0
+tqdm==4.66.1
+pydot==2.0.0
+six==1.16.0
+bcrypt==4.0.1                 # DO NOT BUMP: passlib 1.7.4 breaks with bcrypt >= 4.1 (all logins fail)
+python-slugify==8.0.1
+natsort==8.4.0
+email-validator==2.1.0.post1
+compare50==1.2.6
+pdfkit==1.0.0
+thefuzz==0.20.0
+pytz==2023.3.post1
+edit-distance==1.0.6
+webassets==2.0
+python-dateutil==2.8.2
+emoji==2.15.0
+scipy==1.12.0
+argon2-cffi==23.1.0
+StrEnum==0.4.15
+
+# --- System ---
+setuptools<82.0.0
+
+# --- Test ---
+pytest==7.4.4
+pytest-flask==1.3.0
