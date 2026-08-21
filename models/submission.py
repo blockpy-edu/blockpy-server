@@ -126,7 +126,6 @@ class Submission(EnhancedBase):
         Index("submission_index", "course_id", "assignment_id", "user_id"),
         Index("submission_assignment_index", "assignment_id"),
         Index("submission_user_index", "user_id"),
-        Index("submission_url_index", "url"),
     )
 
     def encode_json(self, use_owner=True):

@@ -125,7 +125,7 @@ class Course(Base):
             for m in models.AssignmentGroupMembership.by_course(course_id):
                 db.session.delete(m)
             for a in models.Assignment.by_course(course_id):
-                for s in a.sample_submissions():
+                for s in a.sample_submissions:
                     db.session.delete(s)
                 db.session.delete(a)
             for g in models.AssignmentGroup.by_course(course_id):

@@ -33,7 +33,6 @@ class AssignmentTag(Base):
         return '{} Tag {}'.format(self.kind.title(), self.name)
 
     def encode_json(self, use_owner=True):
-        user = models.User.query.get(self.owner_id)
         return {
             '_schema_version': 2,
             'name': self.name,
