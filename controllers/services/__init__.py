@@ -208,7 +208,9 @@ class ValidUserPermissionLayer(PermissionLayer):
                     raise e
                 else:
                     errors.append((ga, str(e)))
-        return grouped_assignments, scopes, errors
+        # Return `kept` (not the full list) so it stays index-aligned with `scopes`;
+        # otherwise a caller zipping the two would pair scopes with the wrong assignments.
+        return kept, scopes, errors
 
 
     def abort_with_error(self, message, code):

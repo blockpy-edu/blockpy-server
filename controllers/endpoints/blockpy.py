@@ -71,7 +71,7 @@ def load_submission():
         return redirect(url_for('blockpy.load', assignment_id=submission.assignment.id,
                                 course_id=course_id if course_id else submission.course_id))
     # Get the assignment
-    is_quiz = submission.assignment.type == 'quiz' and scope == 'grader'
+    is_quiz = submission.assignment.type == 'quiz' and scope.can_grade
     assignment_data = submission.assignment.for_editor(submission.user_id, submission.course_id, is_quiz)
     return load_editor({
         "user": user,
@@ -188,6 +188,10 @@ def load_assignment():
         student_id = given_user_id or user_id
     # Load models
     scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
+    # Permission check: viewing the assignment is not enough to view another user's
+    # submission/history. Only graders may request data for a student other than themselves.
+    if student_id != user_id and not scope.can_grade:
+        return ajax_failure("You do not have permission to view another user's submission.")
     # Start processing
     is_quiz = force_quiz or (assignment.type == 'quiz' and scope.can_view and not scope.can_edit)
 
@@ -307,8 +311,18 @@ def load_history():
     if assignment_ids is None:
         course = Course.by_id(course_id)
         assignment_ids = [a.id for a in course.get_submitted_assignments()]
+    scopes = []
     for assignment_id in assignment_ids:
         scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
+        scopes.append(scope)
+    # Permission check: viewing an assignment does not grant access to other users' logs.
+    # Only a grader for every requested assignment may pull history for other students;
+    # everyone else is restricted to their own history.
+    can_grade_all = bool(scopes) and all(scope.can_grade for scope in scopes)
+    if not can_grade_all:
+        if student_ids and any(student_id != user_id for student_id in student_ids):
+            return ajax_failure("You do not have permission to view another user's history.")
+        student_ids = [user_id]
     history = Log.get_history(course_id, assignment_ids, student_ids,
                               page_offset=page_offset,
                               page_limit=page_limit)

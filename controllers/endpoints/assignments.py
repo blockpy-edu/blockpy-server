@@ -311,8 +311,8 @@ def get_assignments():
     assignment_ids = request.values.get('assignment_ids', "")
     course_id = get_course_id()
     user, user_id = get_user()
-    # TODO: Remove any that are not valid for this user to view
-    # Alternatively, ONLY send the IDs back, not the full assignment information
+    # Only assignments the caller can grade are returned; `scopes` is index-aligned with
+    # the assignment list so the can_grade filter below applies to the correct assignment.
     assignments, groups = [], []
     errors = []
     if not assignment_ids:
@@ -347,9 +347,11 @@ def by_url():
     user, user_id = get_user()
     if assignment_url is None:
         return ajax_failure("No assignment URL was provided")
-    # TODO: verify that they have the permissions to see these assignments
     assignment = Assignment.by_url(assignment_url)
     check_resource_exists(assignment, "Assignment", assignment_url)
+    # Route through the permission layer so hidden/passcode/IP and enrollment gating
+    # are enforced, rather than handing back any assignment by its URL.
+    scope, assignment = g.safely.load_assignment_by_id(assignment.id, course_id)
     return ajax_success(dict(assignment=assignment.encode_json()))
 
 
