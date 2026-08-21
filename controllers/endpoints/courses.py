@@ -1098,7 +1098,7 @@ def fake_dashboard():
     found = []
     for submission, student, assignment in suas:
         by_submission[submission.id] = {}
-        found.append([submission, assignment, student, by_submission])
+        found.append([submission, assignment, student, by_submission[submission.id]])
         by_submission[submission.id]["score"] = submission.score
         by_submission[submission.id]["full_score"] = submission.full_score()
         by_submission[submission.id]["correct"] = int(submission.correct)
@@ -1112,27 +1112,23 @@ def fake_dashboard():
         by_submission[submission.id]["modifications"] = submission.version
         by_submission[submission.id]["attempts"] = submission.attempts
 
-    for count, in counts:
-        if count.submission_id not in by_submission:
+    for count_submission_id, metric, value in counts:
+        if count_submission_id not in by_submission:
             # TODO: Mark missing data
             continue
-        by_submission[count.submission_id][count.metric] = count.value
+        by_submission[count_submission_id][metric] = value
 
 
     if mode in ('csv', 'html', 'summary'):
         all_metrics = set([])
         pivoted = {}
-        for submission, assignment, user, by_submission in found:
+        for submission, assignment, user, metrics in found:
             if user not in pivoted:
                 pivoted[user] = {}
             if assignment not in pivoted[user]:
                 pivoted[user][assignment] = {}
-            for submission_id, metrics in by_submission.items():
-                if submission_id not in pivoted[user][assignment]:
-                    pivoted[user][assignment][submission_id] = {}
-                for metric, value in metrics.items():
-                    pivoted[user][assignment][submission_id][metric] = value
-                    all_metrics.add(metric)
+            pivoted[user][assignment][submission.id] = metrics
+            all_metrics.update(metrics)
         all_metrics = sorted(all_metrics)
         output = io.StringIO()
         # Handle numbers well for excel
@@ -1155,14 +1151,14 @@ def fake_dashboard():
             return Response(output.read(), mimetype='text/csv',
                            headers={'Content-Disposition': f'attachment;filename=fake_dashboard_course_{course_id}.csv'})
         elif mode == 'html':
-            html_table = "<table border='1'><tr>" + "".join(f"<th>{h}</th>" for h in full_header) + "</tr>"
+            html_parts = ["<table border='1'><tr>" + "".join(f"<th>{h}</th>" for h in full_header) + "</tr>"]
             output.seek(0)
             reader = csv.reader(output)
             next(reader)  # skip header
             for row in reader:
-                html_table += "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
-            html_table += "</table>"
-            return html_table
+                html_parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>")
+            html_parts.append("</table>")
+            return "".join(html_parts)
 
 
     return ajax_success({

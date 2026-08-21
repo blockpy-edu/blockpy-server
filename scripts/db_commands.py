@@ -555,15 +555,15 @@ def make_fake_dashboard(course_id, output, format):
         by_submission[submission.id]["attempts"] = submission.attempts
 
     click.echo(f"Indexing {len(counts)} Counts")
-    for count, in counts:
-        if count.submission_id not in by_submission:
+    for count_submission_id, metric, value in counts:
+        if count_submission_id not in by_submission:
             # TODO: Mark missing data
             continue
-        by_submission[count.submission_id][count.metric] = count.value
+        by_submission[count_submission_id][metric] = value
 
     if format == "json":
         click.echo("Streamlining")
-        result = [[a.url, u.id, s] for sub, a, u, s in found]
+        result = [[a.url, u.id, by_submission[sub_id]] for sub_id, a, u in found]
         click.echo("Writing out")
         with open(output, 'w', encoding="utf-8") as f:
             f.write(json.dumps(result, indent=4, sort_keys=True))

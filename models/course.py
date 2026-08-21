@@ -558,7 +558,11 @@ class Course(Base):
         submission_ids = (db.session.query(models.Submission.id)
                                   .filter(models.Submission.course_id == self.id)
                                   .subquery())
-        stmt = (select(models.SubmissionCounts)
+        # Plain column tuples (submission_id, metric, value) — skips ORM entity
+        # hydration, which matters at tens of thousands of count rows.
+        stmt = (select(models.SubmissionCounts.submission_id,
+                       models.SubmissionCounts.metric,
+                       models.SubmissionCounts.value)
                 .filter(models.SubmissionCounts.submission_id.in_(submission_ids)))
         counts = db.session.execute(stmt).all()
         return counts
