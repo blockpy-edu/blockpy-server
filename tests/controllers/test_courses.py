@@ -340,6 +340,49 @@ class TestCourseAssignments:
         response = client.get('/courses/assignments/10')
         assert response.status_code == 302  # Redirected
 
+    def test_assignments_page_student_in_course(self, client, test_data, act_as):
+        """Students in the course still cannot access the management page (instructors only)."""
+        # Lulu (100) is a student in course 6
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/courses/assignments/6')
+        assert response.status_code == 302  # Redirected
+
+    def test_assignments_page_instructor(self, client, test_data, act_as):
+        """Instructors can access the assignment management page."""
+        # Ada (10) is instructor in course 6
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/assignments/6')
+        assert response.status_code == 200
+
+    def test_manage_assignments_redirects_to_assignments(self, client, test_data, act_as):
+        """The old manage_assignments page now redirects to the canonical assignments page."""
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/manage_assignments/6')
+        assert response.status_code == 302
+        assert '/courses/assignments/6' in response.headers['Location']
+
+    def test_get_assignments_scoped_to_course(self, client, test_data, act_as):
+        """The manage_assignments/get endpoint only returns the requested course's data."""
+        # Ada (10) is instructor in course 6; other courses (e.g., 3 and 8) have their own groups
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/manage_assignments/get', query_string={'course_id': 6})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        assert data['groups'], "Expected course 6 to have assignment groups"
+        assert {group['course_id'] for group in data['groups']} == {6}
+        assert {assignment['course_id'] for assignment in data['assignments']} == {6}
+        group_ids = {group['id'] for group in data['groups']}
+        assert {membership['assignment_group_id'] for membership in data['memberships']} <= group_ids
+
+    def test_get_assignments_requires_instructor(self, client, test_data, act_as):
+        """Students cannot pull the assignment management data."""
+        # Lulu (100) is a student in course 6
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/courses/manage_assignments/get', query_string={'course_id': 6})
+        data = response.get_json()
+        assert data['success'] is False
+
 
 class TestCourseSettings:
     """Test course settings and configuration endpoints."""

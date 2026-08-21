@@ -1,0 +1,96 @@
+<div class="modal fade" id="assignment-create" tabindex="-1" role="dialog" aria-labelledby="assignment-create-label">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="assignment-create-label">Create Assignment</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+            <label for="assignment-type">Type:
+            <select class="form-control" id="assignment-type" data-bind="value: createAssignmentType">
+                <option>BlockPy</option>
+                <option>Reading</option>
+                <option value="quiz">Quiz Questions</option>
+                <option>TypeScript</option>
+                <option>Textbook</option>
+                <option value="java">Java</option>
+                <option value="explain">Code Explanation</option>
+                <option value="feedback">Feedback</option>
+            </select></label>
+        </div>
+        <div class="form-group" data-bind="visible: createAssignmentType() != 'Maze'">
+            <label for="assignment-name">Name:
+            <input type="text" class="form-control" id="assignment-name"
+                   data-bind="value: createAssignmentName" placeholder="Day 1 - #1.1">
+            </label>
+        </div>
+        <div class="form-group" data-bind="visible: createAssignmentType() != 'Maze'">
+            <label for="assignment-url">Unique URL:
+            <input type="text" class="form-control" id="assignment-url"
+                   data-bind="value: createAssignmentUrl" placeholder="assignment_url">
+            </label><br>
+            <small>Recommend format: <code>(course)_(topic name)_(problem_name)</code>, like <code>sneks_loops_convert_temperatures</code></small><br>
+            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>
+        </div>
+        <div class="form-group" data-bind="visible: createAssignmentType() == 'Maze'">
+            <label for="assignment-level">Maze Level:
+            <select class="form-control" id="assignment-level" data-bind="value: createAssignmentLevel">
+                <option value='1'>Level 1</option>
+                <option value='2'>Level 2</option>
+                <option value='3'>Level 3</option>
+                <option value='4'>Level 4</option>
+                <option value='5'>Level 5</option>
+                <option value='6'>Level 6</option>
+                <option value='7'>Level 7</option>
+                <option value='8'>Level 8</option>
+                <option value='9'>Level 9</option>
+                <option value='10'>Level 10</option>
+            </select>
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="assignment-group">Add to group:
+                <select class="form-control" id="assignment-group"
+                        data-bind="options: groupSelectOptions, optionsText: 'name', optionsValue: 'id', value: createAssignmentGroupId"></select>
+            </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-bind="click: addAssignment">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="group-create" tabindex="-1" role="dialog" aria-labelledby="group-create-label">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="group-create-label">Create Assignment Group</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+            <label for="group-name">Name:
+            <input type="text" class="form-control" id="group-name"
+                   data-bind="value: createGroupName" placeholder="Day X - ">
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="group-url">Url:
+            <input type="text" class="form-control" id="group-url"
+                   data-bind="value: createGroupUrl" placeholder="unique_group">
+            </label><br>
+            <small>Recommend format: <code>(course)_(topic name)</code>, like <code>sneks_loops</code></small><br>
+            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-bind="click: addGroup">Create</button>
+      </div>
+    </div>
+  </div>
+</div>

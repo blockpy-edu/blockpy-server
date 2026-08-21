@@ -1,0 +1,161 @@
+﻿<style>
+.assignment-manager .btn-group {
+    display: flex;
+}
+
+.assignment-manager .table-hover tbody tr:hover td, .assignment-manager .table-hover tbody tr:hover th {
+    background-color: #e9eaed;
+}
+
+.assignment-manager tr:hover.hover-movers-rows div.mover-buttons,
+.assignment-manager tr:hover.hover-remove-rows div.hide-buttons {
+    visibility: visible;
+}
+
+.assignment-manager tr.hover-movers-rows div.mover-buttons,
+.assignment-manager tr.hover-remove-rows div.hide-buttons {
+    visibility: hidden;
+}
+
+div.overlay {
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    background-color: rgba(16, 16, 16, 0.5);
+    overflow-x: hidden;
+    transition: 0.5s;
+}
+</style>
+
+<div class="assignment-manager">
+    <div class="overlay" style="display: none;"></div>
+
+    <div class="mb-2">
+        <a href="#" data-toggle="modal" data-target="#assignment-create" class="btn btn-outline-secondary btn-sm">
+            <span class="fas fa-plus" aria-hidden="true"></span> Create Assignment</a>
+        &nbsp;
+        <a href="#" data-toggle="modal" data-target="#group-create" class="btn btn-outline-secondary btn-sm">
+            <span class="fas fa-folder-plus" aria-hidden="true"></span> Create Group</a>
+    </div>
+
+    <div class="form-inline mb-3">
+        <label class="mr-1" for="assignment-manager-search">Search:</label>
+        <input type="text" id="assignment-manager-search" class="form-control form-control-sm mr-3"
+               placeholder="Filter by name, url, or type" data-bind="textInput: filterText">
+        <label class="mr-1" for="assignment-manager-sort">Sort groups by:</label>
+        <select id="assignment-manager-sort" class="form-control form-control-sm mr-1"
+                data-bind="options: sortOptions, optionsText: 'label', optionsValue: 'key', value: sortBy, enable: groupByGroup"></select>
+        <button type="button" class="btn btn-outline-secondary btn-sm mr-3" data-bind="click: toggleSortDirection, enable: groupByGroup">
+            <span class="fas" aria-hidden="true"
+                  data-bind="css: sortDescending() ? 'fa-sort-amount-down' : 'fa-sort-amount-up'"></span>
+            <span data-bind="text: sortDescending() ? 'Descending' : 'Ascending'"></span>
+        </button>
+        <div class="form-check mr-3">
+            <input class="form-check-input" type="checkbox" id="assignment-manager-grouped"
+                   data-bind="checked: groupByGroup">
+            <label class="form-check-label" for="assignment-manager-grouped">Organize by group</label>
+        </div>
+        <span class="text-muted small" data-bind="text: countLabel"></span>
+    </div>
+
+    <div class="alert alert-danger" data-bind="visible: errorMessage, text: errorMessage" style="display: none;"></div>
+
+    <div data-bind="visible: isLoading">
+        <span class="fas fa-spinner fa-spin" aria-hidden="true"></span> Loading assignments...
+    </div>
+
+    <table class="table table-condensed table-hover" data-bind="visible: !isLoading()" style="display: none;">
+    <tbody data-bind="foreach: displayGroups">
+        <!-- ko if: $component.groupByGroup() -->
+        <tr class="table-secondary hover-remove-rows">
+            <td colspan="3">
+                <!-- ko if: group -->
+                <a href="#" data-bind="click: $component.renameGroup.bind($component, group)">
+                    <strong data-bind="text: group.name"></strong></a><br>
+                <code data-bind="text: group.url" style="color: #333"></code>
+                <a href="" data-bind="attr: {href: $component.viewGroupUrl(group)}" target="_blank"><small class="fas fa-external-link-alt"></small></a>
+                <!-- /ko -->
+                <!-- ko ifnot: group -->
+                <strong data-bind="text: title"></strong>
+                <!-- /ko -->
+            </td>
+            <td>
+                <!-- ko if: group -->
+                <div class="btn-group hide-buttons">
+                    <a target="_blank" data-bind="attr: {href: $component.viewGroupUrl(group)}" class="btn btn-primary btn-sm">View</a>
+                    <button type="button" class="btn btn-primary dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a target="_blank" class="dropdown-item" data-bind="attr: {href: $component.editSecurityUrl(group)}">Edit Security</a>
+                        <a target="_blank" class="dropdown-item" data-bind="attr: {href: $component.forkGroupUrl(group)}">Fork Group</a>
+                        <a class="dropdown-item" href="#" data-bind="click: $component.removeGroup.bind($component, group)">Delete</a>
+                    </div>
+                </div>
+                <!-- /ko -->
+            </td>
+        </tr>
+        <!-- /ko -->
+        <!-- ko foreach: assignments -->
+        <tr class="hover-movers-rows">
+            <td style="width: 25%">
+                <strong data-bind="text: title"></strong><br>
+                <span class="badge bg-secondary text-light" data-bind="text: type"></span>
+                <code data-bind="text: url" style="color: #333"></code>
+                <a href="" data-bind="attr: {href: $component.openAssignmentUrl($data)}" target="_blank"><small class="fas fa-external-link-alt"></small></a>
+                <br>
+                <span class="small">
+                    <span data-bind="text: points() == null ? 1 : points()"></span> points &mdash;
+                    last modified <span data-bind="text: prettyDateModified, attr: {title: dateModified}"></span>
+                </span>
+            </td>
+            <td style="width: 42%">
+                <span data-bind="text: $component.shortInstructions($data)"></span>
+            </td>
+            <td style="width: 16%">
+                <div class="mover-buttons btn-group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Move Group<span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right">
+                        <!-- ko if: group() != null -->
+                        <a href="#" class="dropdown-item" data-bind="click: $component.moveMembership.bind($component, $data, null)">Ungrouped Assignments</a>
+                        <div class="dropdown-divider"></div>
+                        <!-- /ko -->
+                        <!-- ko foreach: $component.sortedGroups -->
+                        <a href="#" class="dropdown-item" data-bind="click: $component.moveMembership.bind($component, $parent, $data), text: name"></a>
+                        <!-- /ko -->
+                    </div>
+                </div>
+            </td>
+            <td style="width: 17%">
+                <div class="btn-group">
+                    <a target="_blank" data-bind="attr: {href: $component.editAssignmentUrl($data)}" class="btn btn-primary btn-sm">Edit</a>
+                    <button type="button" class="btn btn-primary dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="#" data-bind="click: $component.removeAssignment.bind($component, $data)">Delete</a>
+                        <a class="dropdown-item" href="#" data-bind="click: function() { $component.forkAssignment($data, true); }">Fork (prompt URL)</a>
+                        <a class="dropdown-item" href="#" data-bind="click: function() { $component.forkAssignment($data, false); }">Fork</a>
+                        <a class="dropdown-item" target="_blank" data-bind="attr: {href: $component.exportAssignmentUrl($data)}">Export Assignment</a>
+                        <a class="dropdown-item" target="_blank" data-bind="attr: {href: $component.submissionsUrl($data)}">View Submissions</a>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <!-- /ko -->
+        <!-- ko if: assignments.length === 0 -->
+        <tr>
+            <td colspan="4" class="text-muted small font-italic">No assignments here.</td>
+        </tr>
+        <!-- /ko -->
+    </tbody>
+    </table>
+</div>

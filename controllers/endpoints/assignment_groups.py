@@ -41,7 +41,8 @@ def add_group():
                                       assignment_group.name, is_embedded, True)
     return jsonify(success=True, id=assignment_group.id, url=assignment_group.url,
                    link=assignment_group.get_select_url(),
-                   name=assignment_group.name, select=select_url)
+                   name=assignment_group.name, select=select_url,
+                   assignment_group=assignment_group.encode_json())
 
 
 @blueprint_assignment_group.route('/fork', methods=['GET', 'POST'])

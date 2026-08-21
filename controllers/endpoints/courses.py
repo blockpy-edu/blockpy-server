@@ -22,7 +22,7 @@ from controllers.helpers import (get_lti_property, require_request_parameters, l
                                  maybe_bool, require_admin, check_course_unlocked,
                                  get_assignments_in_groups, make_log_entry)
 from models.data_formats.report import make_report
-from models import db, AssignmentGroup
+from models import db, AssignmentGroup, AssignmentGroupMembership
 from models.data_formats.portation import export_bundle
 from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent
 from models.user import User
@@ -246,21 +246,15 @@ def course(course_id):
 @login_required
 def assignments(course_id):
     user, user_id = get_user()
-    # TODO: Check if public course
-    if not g.user.in_course(course_id):
-        return redirect(url_for('courses.index'))
-    assignments = Assignment.get_available()
-    groups = AssignmentGroup.query.all()
-    course_groups = Course.get_all_groups()
-    editable_courses = g.user.get_editable_courses()
+    course_id = maybe_int(course_id)
     course = Course.by_id(course_id)
-
+    check_resource_exists(course, "Course", course_id)
+    if not user.is_instructor(course_id):
+        flash(f"You are not an instructor in course: {course_id}")
+        return redirect(url_for('courses.index'))
     return render_template('courses/assignments.html',
-                           assignments=assignments,
-                           groups=groups,
-                           editable_courses=editable_courses,
-                           course_groups=course_groups,
                            course_id=course_id,
+                           user=user,
                            course=course)
 
 @courses.route('/users/', methods=['GET'])
@@ -309,30 +303,26 @@ def users():
 @courses.route('/manage_assignments/<course_id>', methods=['GET', 'POST'])
 @login_required
 def manage_assignments(course_id):
-    user, user_id = get_user()
-    if not user.in_course(course_id):
-        flash("You are not in course_id")
-        return redirect(url_for('courses.index'))
-    course = Course.by_id(course_id)
-    if not user.is_instructor(course_id):
-        flash(f"You are not an instructor in course: {course_id}")
-        return redirect(url_for("courses.index"))
-    return render_template('courses/manage_assignments.html',
-                           course_id=course_id, user=user, course=course)
+    return redirect(url_for('courses.assignments', course_id=course_id))
 
 
 @courses.route('/manage_assignments/get/', methods=['GET'])
 @courses.route('/manage_assignments/get', methods=['GET'])
 @login_required
 def get_assignments():
-    course_id = request.values.get('course_id')
-    if not g.user.in_course(course_id):
-        return redirect(url_for('courses.index'))
-    groups = [g.encode_json() for g in AssignmentGroup.query.all()]
-
+    course_id = get_course_id()
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    require_course_instructor(g.user, course_id)
+    # Only this course's assignments, groups, and memberships
+    assignments = Assignment.by_course(course_id, exclude_builtins=False)
+    groups = AssignmentGroup.by_course(course_id)
+    memberships = AssignmentGroupMembership.by_course(course_id)
     return ajax_success(dict(
-                           groups=groups,
-                           course_id=course_id))
+        assignments=[assignment.encode_json() for assignment in assignments],
+        groups=[group.encode_json() for group in groups],
+        memberships=[membership.encode_json() for membership in memberships],
+        course_id=course_id))
 
 
 @courses.route('/watch_events/', methods=['GET'])

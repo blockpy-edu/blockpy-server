@@ -175,7 +175,8 @@ def fork():
                    export=url_for('assignments.export', assignment_id=assignment.id),
                    submissions=url_for('courses.submissions_filter', course_id=course_id, criteria='assignment', search_key=assignment.id),
                    edit=url_for('assignments.load', assignment_id=forked_assignment.id, course_id=forked_assignment.course_id),
-                   date_modified=forked_assignment.pretty_date_modified())
+                   date_modified=forked_assignment.pretty_date_modified(),
+                   assignment=forked_assignment.encode_json())
 
 
 @blueprint_assignments.route('/new/', methods=['GET', 'POST'])
@@ -214,7 +215,8 @@ def new_assignment():
                    select=select_url,
                    export=url_for('assignments.export', assignment_id=assignment.id),
                    edit=url_for('assignments.load', assignment_id=assignment.id, course_id=assignment.course_id),
-                   date_modified=assignment.pretty_date_modified())
+                   date_modified=assignment.pretty_date_modified(),
+                   assignment=assignment.encode_json())
 
 
 @blueprint_assignments.route('/get/', methods=['GET', 'POST'])

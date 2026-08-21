@@ -280,201 +280,347 @@ var EditorMode;
 
 /***/ }),
 
-/***/ "./components/assignment_manager.ts":
-/*!******************************************!*\
-  !*** ./components/assignment_manager.ts ***!
-  \******************************************/
+/***/ "./components/assignment_manager/assignment_manager.html":
+/*!***************************************************************!*\
+  !*** ./components/assignment_manager/assignment_manager.html ***!
+  \***************************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "﻿<style>\n.assignment-manager .btn-group {\n    display: flex;\n}\n\n.assignment-manager .table-hover tbody tr:hover td, .assignment-manager .table-hover tbody tr:hover th {\n    background-color: #e9eaed;\n}\n\n.assignment-manager tr:hover.hover-movers-rows div.mover-buttons,\n.assignment-manager tr:hover.hover-remove-rows div.hide-buttons {\n    visibility: visible;\n}\n\n.assignment-manager tr.hover-movers-rows div.mover-buttons,\n.assignment-manager tr.hover-remove-rows div.hide-buttons {\n    visibility: hidden;\n}\n\ndiv.overlay {\n    height: 100%;\n    width: 100%;\n    position: fixed;\n    z-index: 1;\n    left: 0;\n    top: 0;\n    background-color: rgba(16, 16, 16, 0.5);\n    overflow-x: hidden;\n    transition: 0.5s;\n}\n</style>\n\n<div class=\"assignment-manager\">\n    <div class=\"overlay\" style=\"display: none;\"></div>\n\n    <div class=\"mb-2\">\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#assignment-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-plus\" aria-hidden=\"true\"></span> Create Assignment</a>\n        &nbsp;\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#group-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-folder-plus\" aria-hidden=\"true\"></span> Create Group</a>\n    </div>\n\n    <div class=\"form-inline mb-3\">\n        <label class=\"mr-1\" for=\"assignment-manager-search\">Search:</label>\n        <input type=\"text\" id=\"assignment-manager-search\" class=\"form-control form-control-sm mr-3\"\n               placeholder=\"Filter by name, url, or type\" data-bind=\"textInput: filterText\">\n        <label class=\"mr-1\" for=\"assignment-manager-sort\">Sort groups by:</label>\n        <select id=\"assignment-manager-sort\" class=\"form-control form-control-sm mr-1\"\n                data-bind=\"options: sortOptions, optionsText: 'label', optionsValue: 'key', value: sortBy, enable: groupByGroup\"></select>\n        <button type=\"button\" class=\"btn btn-outline-secondary btn-sm mr-3\" data-bind=\"click: toggleSortDirection, enable: groupByGroup\">\n            <span class=\"fas\" aria-hidden=\"true\"\n                  data-bind=\"css: sortDescending() ? 'fa-sort-amount-down' : 'fa-sort-amount-up'\"></span>\n            <span data-bind=\"text: sortDescending() ? 'Descending' : 'Ascending'\"></span>\n        </button>\n        <div class=\"form-check mr-3\">\n            <input class=\"form-check-input\" type=\"checkbox\" id=\"assignment-manager-grouped\"\n                   data-bind=\"checked: groupByGroup\">\n            <label class=\"form-check-label\" for=\"assignment-manager-grouped\">Organize by group</label>\n        </div>\n        <span class=\"text-muted small\" data-bind=\"text: countLabel\"></span>\n    </div>\n\n    <div class=\"alert alert-danger\" data-bind=\"visible: errorMessage, text: errorMessage\" style=\"display: none;\"></div>\n\n    <div data-bind=\"visible: isLoading\">\n        <span class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></span> Loading assignments...\n    </div>\n\n    <table class=\"table table-condensed table-hover\" data-bind=\"visible: !isLoading()\" style=\"display: none;\">\n    <tbody data-bind=\"foreach: displayGroups\">\n        <!-- ko if: $component.groupByGroup() -->\n        <tr class=\"table-secondary hover-remove-rows\">\n            <td colspan=\"3\">\n                <!-- ko if: group -->\n                <a href=\"#\" data-bind=\"click: $component.renameGroup.bind($component, group)\">\n                    <strong data-bind=\"text: group.name\"></strong></a><br>\n                <code data-bind=\"text: group.url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <!-- /ko -->\n                <!-- ko ifnot: group -->\n                <strong data-bind=\"text: title\"></strong>\n                <!-- /ko -->\n            </td>\n            <td>\n                <!-- ko if: group -->\n                <div class=\"btn-group hide-buttons\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" class=\"btn btn-primary btn-sm\">View</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.editSecurityUrl(group)}\">Edit Security</a>\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.forkGroupUrl(group)}\">Fork Group</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeGroup.bind($component, group)\">Delete</a>\n                    </div>\n                </div>\n                <!-- /ko -->\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko foreach: assignments -->\n        <tr class=\"hover-movers-rows\">\n            <td style=\"width: 25%\">\n                <strong data-bind=\"text: title\"></strong><br>\n                <span class=\"badge bg-secondary text-light\" data-bind=\"text: type\"></span>\n                <code data-bind=\"text: url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.openAssignmentUrl($data)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <br>\n                <span class=\"small\">\n                    <span data-bind=\"text: points() == null ? 1 : points()\"></span> points &mdash;\n                    last modified <span data-bind=\"text: prettyDateModified, attr: {title: dateModified}\"></span>\n                </span>\n            </td>\n            <td style=\"width: 42%\">\n                <span data-bind=\"text: $component.shortInstructions($data)\"></span>\n            </td>\n            <td style=\"width: 16%\">\n                <div class=\"mover-buttons btn-group\">\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm dropdown-toggle\"\n                            data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        Move Group<span class=\"caret\"></span>\n                    </button>\n                    <div class=\"dropdown-menu dropdown-menu-right\">\n                        <!-- ko if: group() != null -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $data, null)\">Ungrouped Assignments</a>\n                        <div class=\"dropdown-divider\"></div>\n                        <!-- /ko -->\n                        <!-- ko foreach: $component.sortedGroups -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $parent, $data), text: name\"></a>\n                        <!-- /ko -->\n                    </div>\n                </div>\n            </td>\n            <td style=\"width: 17%\">\n                <div class=\"btn-group\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.editAssignmentUrl($data)}\" class=\"btn btn-primary btn-sm\">Edit</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeAssignment.bind($component, $data)\">Delete</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, true); }\">Fork (prompt URL)</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, false); }\">Fork</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.exportAssignmentUrl($data)}\">Export Assignment</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.submissionsUrl($data)}\">View Submissions</a>\n                    </div>\n                </div>\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko if: assignments.length === 0 -->\n        <tr>\n            <td colspan=\"4\" class=\"text-muted small font-italic\">No assignments here.</td>\n        </tr>\n        <!-- /ko -->\n    </tbody>\n    </table>\n</div>\n";
+
+/***/ }),
+
+/***/ "./components/assignment_manager/assignment_manager.ts":
+/*!*************************************************************!*\
+  !*** ./components/assignment_manager/assignment_manager.ts ***!
+  \*************************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   ASSIGNMENT_MANAGER_HTML: () => (/* binding */ ASSIGNMENT_MANAGER_HTML),
-/* harmony export */   AssignmentManagerInterface: () => (/* binding */ AssignmentManagerInterface)
+/* harmony export */   AssignmentManager: () => (/* binding */ AssignmentManager),
+/* harmony export */   SORT_OPTIONS: () => (/* binding */ SORT_OPTIONS),
+/* harmony export */   naturalCompare: () => (/* binding */ naturalCompare)
 /* harmony export */ });
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
 /* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _assignment_manager_html__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./assignment_manager.html */ "./components/assignment_manager/assignment_manager.html");
+/* harmony import */ var _modals_html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./modals.html */ "./components/assignment_manager/modals.html");
+/**
+ * The Assignment Manager is the instructor-facing interface for organizing a course's
+ * assignments and assignment groups. It replaces the old server-rendered
+ * `templates/courses/assignments.html` page, keeping all of its features (creating
+ * assignments and groups, moving assignments between groups, renaming/deleting/forking
+ * groups, deleting/forking/exporting assignments, viewing submissions) while adding
+ * sorting, searching, and flat-vs-grouped display controls.
+ *
+ * Data comes from the course-scoped `courses/manage_assignments/get` endpoint, which
+ * only returns the current course's assignments, groups, and memberships.
+ */
 
-class AssignmentManagerInterface {
+
+
+
+const SORT_OPTIONS = [
+    { key: "name", label: "Name" },
+    { key: "url", label: "URL" },
+    { key: "date_created", label: "Date Created" },
+    { key: "date_modified", label: "Date Modified" }
+];
+function naturalCompare(left, right) {
+    return (left || "").localeCompare(right || "", undefined, { numeric: true, sensitivity: "base" });
+}
+/** Strip HTML from instructions without loading any of its resources. */
+function stripHtmlTags(html) {
+    if (!html) {
+        return "";
+    }
+    return new DOMParser().parseFromString(html, "text/html").body.textContent || "";
+}
+class AssignmentManager {
     constructor(params) {
+        this.sortOptions = SORT_OPTIONS;
         this.server = params.server;
         this.course = params.course;
         this.user = params.user;
         this.assignments = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
         this.groups = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
-        this.server.assignmentStore.getAllAvailable({ assignment_ids: "", course_id: this.course.id }).then((created) => {
-            this.assignments.push(...created);
-            created.map(assignment => {
-                if (assignment.group() != null) {
-                    // TODO: Figure this all out
+        this.sortBy = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("name");
+        this.sortDescending = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.groupByGroup = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(true);
+        this.filterText = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.isLoading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(true);
+        this.errorMessage = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.createAssignmentType = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("BlockPy");
+        this.createAssignmentName = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("Day 1 - #1.1");
+        this.createAssignmentUrl = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("unique_name");
+        this.createAssignmentGroupId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(-1);
+        this.createAssignmentLevel = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("1");
+        this.createGroupName = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("Day X - ");
+        this.createGroupUrl = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("unique_group");
+        this.sortedGroups = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const key = this.sortBy();
+            const sorted = this.groups().slice().sort((left, right) => {
+                switch (key) {
+                    case "url": return naturalCompare(left.url(), right.url());
+                    case "date_created": return (left.dateCreated() || "").localeCompare(right.dateCreated() || "");
+                    case "date_modified": return (left.dateModified() || "").localeCompare(right.dateModified() || "");
+                    default: return naturalCompare(left.name(), right.name());
                 }
+            });
+            return this.sortDescending() ? sorted.reverse() : sorted;
+        });
+        this.groupSelectOptions = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => [{ id: -1, name: "Ungrouped Assignments" }].concat(this.sortedGroups().map((group) => ({ id: group.id, name: group.name() }))));
+        this.displayGroups = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.makeDisplayGroups());
+        this.countLabel = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const total = this.assignments().length;
+            const shown = this.filteredAssignments().length;
+            return shown === total ? `${total} assignments` : `Showing ${shown} of ${total} assignments`;
+        });
+        this.load();
+    }
+    /** (Re)load all of this course's assignments, groups, and memberships. */
+    load() {
+        this.isLoading(true);
+        return new Promise((resolve) => {
+            (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)("courses/manage_assignments/get", { course_id: this.course.id }).then((data) => {
+                if (data.success) {
+                    const groups = data.groups.map((json) => this.server.assignmentGroupStore.newInstance(json));
+                    const assignments = data.assignments.map((json) => this.server.assignmentStore.newInstance(json));
+                    const groupsById = {};
+                    groups.forEach((group) => groupsById[group.id] = group);
+                    const membershipMap = {};
+                    (data.memberships || []).forEach((membership) => {
+                        membershipMap[membership.assignment_id] = membership.assignment_group_id;
+                    });
+                    assignments.forEach((assignment) => {
+                        assignment.group(groupsById[membershipMap[assignment.id]] || null);
+                    });
+                    this.groups(groups);
+                    this.assignments(assignments);
+                    this.errorMessage("");
+                }
+                else {
+                    this.errorMessage(data.message || "Failed to load assignments.");
+                }
+                this.isLoading(false);
+                resolve();
+            }).catch((error) => {
+                this.errorMessage("Failed to load assignments: " + (error.statusText || error));
+                this.isLoading(false);
+                resolve();
             });
         });
     }
+    filteredAssignments() {
+        const needle = this.filterText().trim().toLowerCase();
+        if (!needle) {
+            return this.assignments();
+        }
+        return this.assignments().filter((assignment) => (assignment.title() || "").toLowerCase().includes(needle) ||
+            (assignment.url() || "").toLowerCase().includes(needle) ||
+            (assignment.type() || "").toLowerCase().includes(needle));
+    }
+    /** Assignments are always presented in the order students see them: alphabetically by title. */
+    sortAssignmentsByTitle(assignments) {
+        return assignments.slice().sort((left, right) => naturalCompare(left.title(), right.title()));
+    }
+    makeDisplayGroups() {
+        const filtered = this.filteredAssignments();
+        const isFiltering = this.filterText().trim() !== "";
+        if (!this.groupByGroup()) {
+            return [{ group: null, title: "All Assignments", assignments: this.sortAssignmentsByTitle(filtered) }];
+        }
+        const result = this.sortedGroups().map((group) => ({
+            group: group,
+            title: group.name(),
+            assignments: this.sortAssignmentsByTitle(filtered.filter((assignment) => assignment.group() != null && assignment.group().id === group.id))
+        }));
+        const ungrouped = this.sortAssignmentsByTitle(filtered.filter((assignment) => assignment.group() == null));
+        if (ungrouped.length) {
+            result.push({ group: null, title: "Ungrouped Assignments", assignments: ungrouped });
+        }
+        // While searching, collapse groups with no matches
+        return isFiltering ? result.filter((displayGroup) => displayGroup.assignments.length > 0) : result;
+    }
+    toggleSortDirection() {
+        this.sortDescending(!this.sortDescending());
+    }
+    shortInstructions(assignment) {
+        const text = stripHtmlTags(assignment.instructions());
+        return text.length > 255 ? text.slice(0, 255) + "…" : text;
+    }
+    /*
+     * URL builders (all bound in the template)
+     */
+    base() {
+        return window["$URL_ROOT"];
+    }
+    editAssignmentUrl(assignment) {
+        return `${this.base()}assignments/load?assignment_id=${assignment.id}&course_id=${this.course.id}`;
+    }
+    openAssignmentUrl(assignment) {
+        return assignment.url()
+            ? `${this.base()}assignments/load?assignment_url=${encodeURIComponent(assignment.url())}`
+            : `${this.base()}assignments/load?assignment_id=${assignment.id}`;
+    }
+    exportAssignmentUrl(assignment) {
+        return `${this.base()}assignments/export?assignment_id=${assignment.id}&course_id=${this.course.id}`;
+    }
+    submissionsUrl(assignment) {
+        return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=assignment&search_key=${assignment.id}`;
+    }
+    viewGroupUrl(group) {
+        return `${this.base()}assignments/load?course_id=${this.course.id}&assignment_group_id=${group.id}`;
+    }
+    editSecurityUrl(group) {
+        return `${this.base()}assignment_group/edit_security_settings?course_id=${this.course.id}&assignment_group_id=${group.id}`;
+    }
+    forkGroupUrl(group) {
+        return `${this.base()}assignment_group/forking_menu?course_id=${this.course.id}&assignment_group_id=${group.id}`;
+    }
+    /*
+     * Server-backed actions
+     */
+    post(url, payload, onSuccess) {
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.showOverlay)();
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_post)(url, payload).then((data) => {
+            if (data.success) {
+                onSuccess(data);
+            }
+            else {
+                alert("ERROR: " + data.message);
+                console.error(data.message);
+            }
+        }).catch((error) => {
+            alert("ERROR: " + (error.statusText || error));
+            console.error(error);
+        }).always(_services_ajax__WEBPACK_IMPORTED_MODULE_1__.hideOverlay);
+    }
+    findGroup(groupId) {
+        return this.groups().find((group) => group.id === groupId) || null;
+    }
+    addAssignment() {
+        this.post("assignments/new", {
+            name: this.createAssignmentName(),
+            url: this.createAssignmentUrl(),
+            course_id: this.course.id,
+            level: this.createAssignmentLevel(),
+            type: this.createAssignmentType().toLowerCase(),
+            group: this.createAssignmentGroupId()
+        }, (data) => {
+            $("#assignment-create").modal("hide");
+            const assignment = this.server.assignmentStore.newInstance(data.assignment);
+            assignment.group(this.findGroup(data.group));
+            this.assignments.push(assignment);
+        });
+    }
+    addGroup() {
+        this.post("assignment_group/add", {
+            course_id: this.course.id,
+            name: this.createGroupName(),
+            url: this.createGroupUrl()
+        }, (data) => {
+            $("#group-create").modal("hide");
+            const group = this.server.assignmentGroupStore.newInstance(data.assignment_group);
+            this.groups.push(group);
+            this.createAssignmentGroupId(group.id);
+        });
+    }
+    moveMembership(assignment, newGroup) {
+        const oldGroup = assignment.group();
+        const oldGroupId = oldGroup != null ? oldGroup.id : -1;
+        const newGroupId = newGroup != null ? newGroup.id : -1;
+        if (oldGroupId === newGroupId) {
+            return;
+        }
+        this.post("assignment_group/move_membership", {
+            assignment_id: assignment.id,
+            old_group_id: oldGroupId,
+            new_group_id: newGroupId
+        }, () => {
+            assignment.group(newGroup);
+        });
+    }
+    renameGroup(group) {
+        const newName = window.prompt("Give a new name for this group:", group.name());
+        if (newName == null) {
+            return;
+        }
+        const newUrl = window.prompt("Give a new url for this group:", group.url());
+        this.post("assignment_group/edit", {
+            assignment_group_id: group.id,
+            new_name: newName,
+            new_url: newUrl != null ? newUrl : group.url()
+        }, (data) => {
+            group.name(data.name);
+            group.url(data.url);
+        });
+    }
+    removeGroup(group) {
+        if (!confirm("Are you really sure you want to delete this group? Its assignments will become ungrouped.")) {
+            return;
+        }
+        this.post("assignment_group/remove", {
+            assignment_group_id: group.id
+        }, () => {
+            this.assignments().forEach((assignment) => {
+                if (assignment.group() != null && assignment.group().id === group.id) {
+                    assignment.group(null);
+                }
+            });
+            this.groups.remove(group);
+        });
+    }
+    removeAssignment(assignment) {
+        if (!confirm("Are you really sure you want to delete this assignment?")) {
+            return;
+        }
+        this.post("assignments/remove", {
+            assignment_id: assignment.id
+        }, () => {
+            this.assignments.remove(assignment);
+        });
+    }
+    forkAssignment(assignment, askUrl) {
+        const payload = {
+            assignment_id: assignment.id,
+            course_id: this.course.id,
+            group: assignment.group() != null ? assignment.group().id : -1
+        };
+        if (askUrl) {
+            const newUrl = prompt("What would you like the URL to be?", assignment.url() || "");
+            if (newUrl == null) {
+                return;
+            }
+            payload.url = newUrl;
+        }
+        this.post("assignments/fork", payload, (data) => {
+            const forked = this.server.assignmentStore.newInstance(data.assignment);
+            forked.group(this.findGroup(data.group));
+            this.assignments.push(forked);
+        });
+    }
 }
-const NEW_ASSIGNMENT_MODAL = `<div class="modal fade" id="assignment-create" tabindex="-1" role="dialog" aria-labelledby="assignment-create-label">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="assignment-create-label">Create Assignment</h4>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-            <label for="assignment-name">Type:
-            <select class="form-control" data-bind="value: createAssignmentType">
-                <option>BlockPy</option>
-                <option>Reading</option>
-                <option value="quiz">Quiz Questions</option>
-                <option>TypeScript</option>
-                <option>Textbook</option>
-                <option value="explain">Code Explanation</option>
-                <option value="feedback">Feedback</option>
-            </select></label>
-        </div>
-        <div class="form-group" data-bind="visible: createAssignmentType() != 'Maze'">
-            <label for="assignment-name">Student-facing Name:
-            <input type="text" class="form-control" id="assignment-name"
-                   data-bind="value: createAssignmentName" placeholder="Day 1 - #1.1">
-            </label>
-        </div>
-        <div class="form-group" data-bind="visible: createAssignmentType() != 'Maze'">
-            <label for="assignment-url">Unique Internal URL:
-            <input type="text" class="form-control" id="assignment-url"
-                   data-bind="value: createAssignmentUrl" placeholder="assignment_url">
-            </label>
-        </div>
-        <div class="form-group" data-bind="visible: createAssignmentType() == 'Maze'">
-            <label for="assignment-name">Maze Level:
-            <select class="form-control" data-bind="value: createAssignmentLevel">
-                <option value='1'>Level 1</option>
-                <option value='2'>Level 2</option>
-                <option value='3'>Level 3</option>
-                <option value='4'>Level 4</option>
-                <option value='5'>Level 5</option>
-                <option value='6'>Level 6</option>
-                <option value='7'>Level 7</option>
-                <option value='8'>Level 8</option>
-                <option value='9'>Level 9</option>
-                <option value='10'>Level 10</option>
-            </select>
-            </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-bind="click: $root.addAssignment">Create</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="group-create" tabindex="-1" role="dialog" aria-labelledby="group-create-label">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="group-create-label">Create Assignment Group</h4>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-            <label for="group-name">Name:
-            <input type="text" class="form-control" id="group-name"
-                   data-bind="value: createGroupName" placeholder="Day X - ">
-            </label>
-        </div>
-          <div class="form-group">
-            <label for="group-url">Internal Unique Url:
-            <input type="text" class="form-control" id="group-url"
-                   data-bind="value: createGroupUrl" placeholder="unique_group">
-            </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-bind="click: $root.addGroup">Create</button>
-      </div>
-    </div>
-  </div>
-</div>`;
-const ASSIGNMENT_MANAGER_HTML = `
-
-Bulk edit assignments/groups
-
-Then list the actual groups/assignments
-
-Group by?
-
-Sort by name, date, url, points
-
-Yes/No: Show assignments used by this course
-
-<div>
-    <a href="#" data-toggle="modal" data-target="#assignment-create" class="btn btn-outline-secondary btn-sm">
-        Create Assignment <span class="fas fa-plus" aria-hidden="true"></span></a>
-    
-    <a href="#" data-toggle="modal" data-target="#group-create" class="btn btn-outline-secondary btn-sm">
-        Create Group <span class="fas fa-folder-plus" aria-hidden="true"></span></a>
-    
-    <a href="#" data-toggle="modal" data-target="#assignment-import" class="btn btn-outline-secondary btn-sm">
-        Import from another course <span class="fas fa-file-import" aria-hidden="true"></span></a>
-        
-    <a href="#" data-toggle="modal" data-target="#assignment-upload" class="btn btn-outline-secondary btn-sm">
-        Import from file <span class="fas fa-file-upload" aria-hidden="true"></span></a>
-</div>
-
-<table class="table table-condensed table-hover">
-<caption>Assignments</caption>
-<tbody>
-   <!-- ko foreach: assignments -->
-   <tr class='hover-movers-rows'>
-        <td style='width: 25%'>
-            <strong data-bind="text: title"></strong><br>
-            <span data-bind="text: url" class="small"></span><br>
-            <span data-bind="text: prettyDateModified, attr: {title: dateModified}"></span>
-        </td>
-        <td style='width: 42%'>
-            <span data-bind="text: instructions"></span>
-        </td>
-        <td style='width: 16%'>
-            <div class="mover-buttons btn-group">
-              <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle"
-                      data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Move Group<span class="caret"></span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-right" data-bind="foreach: $parents.groups">
-                  <a href="#" class="dropdown-item" data-bind="click: $root.moveMembership.bind($data, $parent, $parents[1]), text: name"></a>
-              </div>
-            </div>
-        </td>
-        <td style='width: 17%'>
-            <div class="btn-group">
-                <!-- Select button -->
-                <a target="_blank" data-bind="attr: { href: editUrl }" class="btn btn-primary btn-sm">Edit</a>
-                <!-- Dropdown -->
-                <button type="button" class="btn btn-primary dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <!-- Extended buttons -->
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="#" data-bind="click: null /*$root.removeAssignment.bind($data, $parent)*/">Delete</a>
-                </div>
-            </div>
-        </td>
-    </tr>
-    <!-- /ko -->
-</tbody>
-</table>
-
-
-
-`;
 knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("assignment-manager", {
-    viewModel: AssignmentManagerInterface,
-    template: ASSIGNMENT_MANAGER_HTML
+    viewModel: AssignmentManager,
+    template: _modals_html__WEBPACK_IMPORTED_MODULE_3__ + _assignment_manager_html__WEBPACK_IMPORTED_MODULE_2__
 });
 
+
+/***/ }),
+
+/***/ "./components/assignment_manager/modals.html":
+/*!***************************************************!*\
+  !*** ./components/assignment_manager/modals.html ***!
+  \***************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<div class=\"modal fade\" id=\"assignment-create\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"assignment-create-label\">\n  <div class=\"modal-dialog\" role=\"document\">\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <h4 class=\"modal-title\" id=\"assignment-create-label\">Create Assignment</h4>\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\n      </div>\n      <div class=\"modal-body\">\n        <div class=\"form-group\">\n            <label for=\"assignment-type\">Type:\n            <select class=\"form-control\" id=\"assignment-type\" data-bind=\"value: createAssignmentType\">\n                <option>BlockPy</option>\n                <option>Reading</option>\n                <option value=\"quiz\">Quiz Questions</option>\n                <option>TypeScript</option>\n                <option>Textbook</option>\n                <option value=\"java\">Java</option>\n                <option value=\"explain\">Code Explanation</option>\n                <option value=\"feedback\">Feedback</option>\n            </select></label>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() != 'Maze'\">\n            <label for=\"assignment-name\">Name:\n            <input type=\"text\" class=\"form-control\" id=\"assignment-name\"\n                   data-bind=\"value: createAssignmentName\" placeholder=\"Day 1 - #1.1\">\n            </label>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() != 'Maze'\">\n            <label for=\"assignment-url\">Unique URL:\n            <input type=\"text\" class=\"form-control\" id=\"assignment-url\"\n                   data-bind=\"value: createAssignmentUrl\" placeholder=\"assignment_url\">\n            </label><br>\n            <small>Recommend format: <code>(course)_(topic name)_(problem_name)</code>, like <code>sneks_loops_convert_temperatures</code></small><br>\n            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() == 'Maze'\">\n            <label for=\"assignment-level\">Maze Level:\n            <select class=\"form-control\" id=\"assignment-level\" data-bind=\"value: createAssignmentLevel\">\n                <option value='1'>Level 1</option>\n                <option value='2'>Level 2</option>\n                <option value='3'>Level 3</option>\n                <option value='4'>Level 4</option>\n                <option value='5'>Level 5</option>\n                <option value='6'>Level 6</option>\n                <option value='7'>Level 7</option>\n                <option value='8'>Level 8</option>\n                <option value='9'>Level 9</option>\n                <option value='10'>Level 10</option>\n            </select>\n            </label>\n        </div>\n        <div class=\"form-group\">\n            <label for=\"assignment-group\">Add to group:\n                <select class=\"form-control\" id=\"assignment-group\"\n                        data-bind=\"options: groupSelectOptions, optionsText: 'name', optionsValue: 'id', value: createAssignmentGroupId\"></select>\n            </label>\n        </div>\n      </div>\n      <div class=\"modal-footer\">\n        <button type=\"button\" class=\"btn btn-outline-secondary\" data-dismiss=\"modal\">Cancel</button>\n        <button type=\"button\" class=\"btn btn-primary\" data-bind=\"click: addAssignment\">Create</button>\n      </div>\n    </div>\n  </div>\n</div>\n\n<div class=\"modal fade\" id=\"group-create\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"group-create-label\">\n  <div class=\"modal-dialog\" role=\"document\">\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <h4 class=\"modal-title\" id=\"group-create-label\">Create Assignment Group</h4>\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\n      </div>\n      <div class=\"modal-body\">\n        <div class=\"form-group\">\n            <label for=\"group-name\">Name:\n            <input type=\"text\" class=\"form-control\" id=\"group-name\"\n                   data-bind=\"value: createGroupName\" placeholder=\"Day X - \">\n            </label>\n        </div>\n        <div class=\"form-group\">\n            <label for=\"group-url\">Url:\n            <input type=\"text\" class=\"form-control\" id=\"group-url\"\n                   data-bind=\"value: createGroupUrl\" placeholder=\"unique_group\">\n            </label><br>\n            <small>Recommend format: <code>(course)_(topic name)</code>, like <code>sneks_loops</code></small><br>\n            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>\n        </div>\n      </div>\n      <div class=\"modal-footer\">\n        <button type=\"button\" class=\"btn btn-outline-secondary\" data-dismiss=\"modal\">Cancel</button>\n        <button type=\"button\" class=\"btn btn-primary\" data-bind=\"click: addGroup\">Create</button>\n      </div>\n    </div>\n  </div>\n</div>\n";
 
 /***/ }),
 
@@ -197584,7 +197730,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_watcher_watcher__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./components/watcher/watcher */ "./components/watcher/watcher.ts");
 /* harmony import */ var _services_editor__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./services/editor */ "./services/editor.ts");
 /* harmony import */ var _components_course_list__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./components/course_list */ "./components/course_list.ts");
-/* harmony import */ var _components_assignment_manager__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./components/assignment_manager */ "./components/assignment_manager.ts");
+/* harmony import */ var _components_assignment_manager_assignment_manager__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./components/assignment_manager/assignment_manager */ "./components/assignment_manager/assignment_manager.ts");
 /* harmony import */ var _components_quizzes_quizzer__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./components/quizzes/quizzer */ "./components/quizzes/quizzer.ts");
 /* harmony import */ var _components_reader_reader__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./components/reader/reader */ "./components/reader/reader.ts");
 /* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
