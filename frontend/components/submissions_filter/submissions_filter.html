@@ -229,7 +229,8 @@
                 </td>
                 <!-- /ko -->
 
-                <td data-bind="text: $component.scoreText($data)"></td>
+                <td data-bind="text: $component.scoreText($data),
+                               attr: {title: $component.scoreTitle($data)}"></td>
                 <td data-bind="text: submission != null ? submission.human_submission_status : ''"></td>
                 <td>
                     <span data-bind="html: $component.gradingIcon($data)"></span>

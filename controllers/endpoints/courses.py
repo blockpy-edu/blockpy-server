@@ -621,7 +621,9 @@ def encode_submission_for_filter(submission):
         "assignment_id": submission.assignment_id,
         "assignment_group_id": submission.assignment_group_id,
         "course_id": submission.course_id,
-        "score": submission.as_float_score(submission.score),
+        # The raw 0-100 score column, exactly what the old table rendered
+        # (as_float_score's 0-1 scale is for LMS grade passback, not display)
+        "score": submission.score,
         "correct": submission.correct,
         "submission_status": submission.submission_status,
         "grading_status": submission.grading_status,
@@ -720,8 +722,8 @@ def evaluate_search_criterion(submission, criterion):
     operator = criterion.get("operator", "")
     value = criterion.get("value", "")
     if field == "score":
-        result = _search_compare_numbers(submission.as_float_score(submission.score),
-                                         operator, value)
+        # Compare on the 0-100 scale the interface presents
+        result = _search_compare_numbers(submission.score, operator, value)
     elif field == "correct":
         result = bool(submission.correct) == (str(value).lower() == "true")
     elif field == "submission_status":

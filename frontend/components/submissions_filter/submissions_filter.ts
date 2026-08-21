@@ -84,6 +84,12 @@ export function roundScore(score: number): number {
     return Math.round(score * 10) / 10;
 }
 
+/** Rounds to one decimal, dropping it when whole: 20 -> "20", 20.5 -> "20.5". */
+export function formatScore(score: number): string {
+    const rounded = roundScore(score);
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 /** One remembered selection: which users and assignments were viewed. */
 export interface HistoryEntry {
     userIds: string;
@@ -771,8 +777,18 @@ export class SubmissionsFilter {
         if (row.submission == null) {
             return "No";
         }
-        const correct = row.submission.correct ? "Yes" : "No";
-        return `${correct} (${roundScore(row.submission.score).toFixed(1)}%)`;
+        if (row.submission.correct) {
+            // A correct submission's score is just noise; it stays in the tooltip
+            return "Yes";
+        }
+        return `No (${formatScore(row.submission.score)}%)`;
+    }
+
+    scoreTitle(row: SubmissionRow): string {
+        if (row.submission == null) {
+            return "";
+        }
+        return `score=${formatScore(row.submission.score)}%`;
     }
 
     gradingIcon(row: SubmissionRow): string {
