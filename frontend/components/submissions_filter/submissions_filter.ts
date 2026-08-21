@@ -93,6 +93,113 @@ export interface HistoryEntry {
 const HISTORY_LIMIT = 6;
 const BULK_REGRADE_WAIT = 200;
 
+/*
+ * Search criteria: each criterion is (field, operator, value, negate?), combined
+ * with a single combinator (and/or/none/xor). Evaluation happens server-side,
+ * where the full code/feedback contents live.
+ */
+
+export interface SearchOperator {
+    key: string;
+    label: string;
+}
+
+export interface SearchFieldSpec {
+    key: string;
+    label: string;
+    type: "number" | "text" | "select" | "date";
+    operators: SearchOperator[];
+    options?: {value: string, label: string}[];
+    placeholder?: string;
+}
+
+const NUMBER_OPERATORS: SearchOperator[] = [
+    {key: "ge", label: "is at least"},
+    {key: "gt", label: "is more than"},
+    {key: "eq", label: "is exactly"},
+    {key: "ne", label: "is not"},
+    {key: "le", label: "is at most"},
+    {key: "lt", label: "is less than"}
+];
+const TEXT_OPERATORS: SearchOperator[] = [
+    {key: "contains", label: "contains"},
+    {key: "icontains", label: "contains (ignore case)"},
+    {key: "regex", label: "matches regex"}
+];
+const DATE_OPERATORS: SearchOperator[] = [
+    {key: "before", label: "is before"},
+    {key: "on", label: "is on"},
+    {key: "after", label: "is after"}
+];
+const IS_OPERATOR: SearchOperator[] = [{key: "is", label: "is"}];
+
+export const SEARCH_FIELDS: SearchFieldSpec[] = [
+    {key: "score", label: "Score (%)", type: "number", operators: NUMBER_OPERATORS,
+     placeholder: "0-100"},
+    {key: "correct", label: "Correctness", type: "select", operators: IS_OPERATOR,
+     options: [{value: "true", label: "Correct (fully complete)"},
+               {value: "false", label: "Not correct"}]},
+    {key: "code", label: "Code contents", type: "text", operators: TEXT_OPERATORS,
+     placeholder: "text to look for in the code"},
+    {key: "feedback", label: "Feedback contents", type: "text", operators: TEXT_OPERATORS,
+     placeholder: "text to look for in the feedback"},
+    {key: "code_length", label: "Code length (characters)", type: "number",
+     operators: NUMBER_OPERATORS, placeholder: "e.g. 20"},
+    {key: "version", label: "Number of edits", type: "number", operators: NUMBER_OPERATORS,
+     placeholder: "e.g. 5"},
+    {key: "submission_status", label: "Submission status", type: "select", operators: IS_OPERATOR,
+     options: [{value: "Initialized", label: "Initialized (never started)"},
+               {value: "Started", label: "Started (never run)"},
+               {value: "inProgress", label: "In progress"},
+               {value: "Submitted", label: "Submitted"},
+               {value: "Completed", label: "Completed"}]},
+    {key: "grading_status", label: "Grading status", type: "select", operators: IS_OPERATOR,
+     options: [{value: "FullyGraded", label: "Fully graded"},
+               {value: "Pending", label: "Pending (maybe done)"},
+               {value: "PendingManual", label: "Human grading in progress"},
+               {value: "Failed", label: "Grade failed to transfer"},
+               {value: "NotReady", label: "Not yet graded"}]},
+    {key: "date_created", label: "Started date", type: "date", operators: DATE_OPERATORS},
+    {key: "date_modified", label: "Last edited date", type: "date", operators: DATE_OPERATORS}
+];
+
+export const SEARCH_COMBINATORS = [
+    {key: "and", label: "ALL of the criteria (and)"},
+    {key: "or", label: "ANY of the criteria (or)"},
+    {key: "none", label: "NONE of the criteria (nor)"},
+    {key: "xor", label: "EXACTLY ONE criterion (xor)"}
+];
+
+export class SearchCriterion {
+    field: KnockoutObservable<string>;
+    operator: KnockoutObservable<string>;
+    value: KnockoutObservable<string>;
+    negate: KnockoutObservable<boolean>;
+    spec: KnockoutReadonlyComputed<SearchFieldSpec>;
+
+    constructor() {
+        this.field = ko.observable(SEARCH_FIELDS[0].key);
+        this.operator = ko.observable(SEARCH_FIELDS[0].operators[0].key);
+        this.value = ko.observable("");
+        this.negate = ko.observable(false);
+        this.spec = ko.pureComputed(() =>
+            SEARCH_FIELDS.find((fieldSpec) => fieldSpec.key === this.field()) || SEARCH_FIELDS[0]);
+        this.field.subscribe(() => {
+            this.operator(this.spec().operators[0].key);
+            this.value(this.spec().type === "select" ? this.spec().options[0].value : "");
+        });
+    }
+
+    toJson() {
+        return {
+            field: this.field(),
+            operator: this.operator(),
+            value: this.value(),
+            negate: this.negate()
+        };
+    }
+}
+
 export class SubmissionsFilter {
     server: Server;
     course: Course;
@@ -109,8 +216,21 @@ export class SubmissionsFilter {
     // Push channels to re-apply a selection to the selectors (history clicks)
     userApply: KnockoutObservable<string>;
     assignmentApply: KnockoutObservable<string>;
+    // Set once each selector has applied its default selection; the ALL x ALL
+    // rule must not react to initialization noise before then
+    userSelectorReady: KnockoutObservable<boolean>;
+    assignmentSelectorReady: KnockoutObservable<boolean>;
     // Recently viewed selections, most recent first, persisted per course
     history: ko.ObservableArray<HistoryEntry>;
+
+    // Search criteria (evaluated server-side against the selected submissions)
+    searchFields = SEARCH_FIELDS;
+    combinatorOptions = SEARCH_COMBINATORS;
+    searchCombinator: KnockoutObservable<string>;
+    searchCriteria: ko.ObservableArray<SearchCriterion>;
+    searchErrors: ko.ObservableArray<string>;
+    // Whether the currently displayed results were produced by a search
+    loadedSearchActive: ko.Observable<boolean>;
 
     // The full course rosters, loaded once, for placeholder rows
     availableUsers: ko.ObservableArray<User>;
@@ -157,16 +277,27 @@ export class SubmissionsFilter {
         this.userApply = ko.observable<string>(null);
         this.assignmentApply = ko.observable<string>(null);
         this.history = ko.observableArray<HistoryEntry>(this.loadHistory());
+        this.searchCombinator = ko.observable("and");
+        this.searchCriteria = ko.observableArray<SearchCriterion>([]);
+        this.searchErrors = ko.observableArray<string>([]);
+        this.loadedSearchActive = ko.observable(false);
 
         // Never allow "All users" x "All assignments": switching one side to All
-        // flips the other side to Only (which picks its first entry).
+        // flips the other side to Only (which picks its first entry). Only enforce
+        // once both selectors have applied their defaults - during initialization
+        // both briefly claim ALL, and reacting then would corrupt the defaults.
+        this.userSelectorReady = ko.observable(false);
+        this.assignmentSelectorReady = ko.observable(false);
+        const exclusionArmed = () => this.userSelectorReady() && this.assignmentSelectorReady();
         this.userSelectMode.subscribe((mode: SelectMode) => {
-            if (mode === SelectMode.ALL && this.assignmentSelectMode() === SelectMode.ALL) {
+            if (exclusionArmed() && mode === SelectMode.ALL
+                    && this.assignmentSelectMode() === SelectMode.ALL) {
                 this.assignmentSelectMode(SelectMode.SINGLE);
             }
         });
         this.assignmentSelectMode.subscribe((mode: SelectMode) => {
-            if (mode === SelectMode.ALL && this.userSelectMode() === SelectMode.ALL) {
+            if (exclusionArmed() && mode === SelectMode.ALL
+                    && this.userSelectMode() === SelectMode.ALL) {
                 this.userSelectMode(SelectMode.SINGLE);
             }
         });
@@ -292,12 +423,14 @@ export class SubmissionsFilter {
         if (!(normalizedUserIds === "" && assignmentIds === "")) {
             userIds = normalizedUserIds;
         }
+        const search = this.serializeSearch();
         this.isLoading(true);
         this.hasFailed(false);
         ajax_post("courses/submissions_filter/get", {
             course_id: this.course.id,
             user_ids: userIds,
-            assignment_ids: assignmentIds
+            assignment_ids: assignmentIds,
+            search: search
         }).then((data: any) => {
             this.isLoading(false);
             this.hasFailed(!data.success);
@@ -305,6 +438,8 @@ export class SubmissionsFilter {
                 this.loadedUserIds(this.parseIds(userIds));
                 this.loadedAssignmentIds(this.parseIds(assignmentIds));
                 this.submissions(data.submissions);
+                this.loadedSearchActive(search !== "");
+                this.searchErrors(data.search_errors || []);
                 this.sortIndex(null);
                 this.sortDirections = {};
                 this.hasLoaded(true);
@@ -317,6 +452,37 @@ export class SubmissionsFilter {
             console.error("Loading submissions failed to get data!", error);
             this.hasFailed(true);
             this.isLoading(false);
+        });
+    }
+
+    /*
+     * Search criteria management
+     */
+
+    addSearchCriterion() {
+        this.searchCriteria.push(new SearchCriterion());
+    }
+
+    removeSearchCriterion(criterion: SearchCriterion) {
+        this.searchCriteria.remove(criterion);
+    }
+
+    /** Drop all criteria; if the current results were searched, re-view unfiltered. */
+    clearSearch() {
+        this.searchCriteria.removeAll();
+        this.searchErrors.removeAll();
+        if (this.loadedSearchActive()) {
+            this.viewSubmissions();
+        }
+    }
+
+    private serializeSearch(): string {
+        if (!this.searchCriteria().length) {
+            return "";
+        }
+        return JSON.stringify({
+            combinator: this.searchCombinator(),
+            criteria: this.searchCriteria().map((criterion) => criterion.toJson())
         });
     }
 
@@ -483,6 +649,11 @@ export class SubmissionsFilter {
                     this.server.userStore.sortMethod(left.user, right.user) ||
                     compareAssignmentsByGroup(left.assignment, right.assignment));
             }
+        }
+        if (this.loadedSearchActive()) {
+            // A search asks "which submissions match?" - placeholder rows for
+            // students/assignments without a matching submission are just noise.
+            rows = rows.filter((row) => row.submission != null);
         }
         if (this.showOnlyLearners() && this.isAssignmentMode()) {
             rows = rows.filter((row) => this.isLearner(row.user));

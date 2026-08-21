@@ -1,5 +1,6 @@
 import io
 import csv
+import re
 from datetime import datetime, timezone
 from pprint import pprint
 from collections import defaultdict
@@ -632,27 +633,165 @@ def encode_submission_for_filter(submission):
     }
 
 
+# Search criteria fields the submissions filter interface may use; anything else
+# is reported back as an error and skipped.
+VALID_SEARCH_FIELDS = {"score", "correct", "submission_status", "grading_status",
+                       "version", "code", "feedback", "code_length",
+                       "date_created", "date_modified"}
+
+
+def parse_submission_search(raw):
+    """ Parse and validate the search JSON from the submissions filter interface.
+    Returns (combinator, criteria, errors); invalid criteria are dropped with an error. """
+    if not raw:
+        return "and", [], []
+    errors = []
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return "and", [], ["Could not parse the search criteria."]
+    combinator = data.get("combinator", "and")
+    if combinator not in ("and", "or", "none", "xor"):
+        errors.append(f"Unknown search combinator: {combinator!r}; using 'and'.")
+        combinator = "and"
+    criteria = []
+    for criterion in data.get("criteria", []):
+        if not isinstance(criterion, dict):
+            errors.append("Malformed search criterion was skipped.")
+            continue
+        field = criterion.get("field")
+        if field not in VALID_SEARCH_FIELDS:
+            errors.append(f"Unknown search field: {field!r}")
+            continue
+        if criterion.get("operator") == "regex":
+            try:
+                re.compile(criterion.get("value", ""))
+            except re.error as regex_error:
+                errors.append(f"Invalid regular expression {criterion.get('value')!r}: {regex_error}")
+                continue
+        criteria.append(criterion)
+    return combinator, criteria, errors
+
+
+def _search_compare_numbers(actual, operator, value):
+    try:
+        target = float(value)
+    except (TypeError, ValueError):
+        return False
+    actual = actual if actual is not None else 0
+    return {"eq": actual == target, "ne": actual != target,
+            "lt": actual < target, "le": actual <= target,
+            "gt": actual > target, "ge": actual >= target}.get(operator, False)
+
+
+def _search_compare_text(text, operator, value):
+    text = text or ""
+    value = value or ""
+    if operator == "contains":
+        return value in text
+    elif operator == "icontains":
+        return value.lower() in text.lower()
+    elif operator == "regex":
+        try:
+            return re.search(value, text) is not None
+        except re.error:
+            return False
+    return False
+
+
+def _search_compare_date(actual, operator, value):
+    if actual is None:
+        return False
+    try:
+        target = datetime.strptime(str(value), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+    if operator == "before":
+        return actual.date() < target
+    elif operator == "on":
+        return actual.date() == target
+    elif operator == "after":
+        return actual.date() > target
+    return False
+
+
+def evaluate_search_criterion(submission, criterion):
+    field = criterion.get("field")
+    operator = criterion.get("operator", "")
+    value = criterion.get("value", "")
+    if field == "score":
+        result = _search_compare_numbers(submission.as_float_score(submission.score),
+                                         operator, value)
+    elif field == "correct":
+        result = bool(submission.correct) == (str(value).lower() == "true")
+    elif field == "submission_status":
+        result = submission.submission_status == value
+    elif field == "grading_status":
+        result = submission.grading_status == value
+    elif field == "version":
+        result = _search_compare_numbers(submission.version or 0, operator, value)
+    elif field == "code":
+        result = _search_compare_text(submission.code, operator, value)
+    elif field == "feedback":
+        result = _search_compare_text(submission.feedback, operator, value)
+    elif field == "code_length":
+        result = _search_compare_numbers(len(submission.code or ""), operator, value)
+    elif field == "date_created":
+        result = _search_compare_date(submission.date_created, operator, value)
+    elif field == "date_modified":
+        result = _search_compare_date(submission.date_modified, operator, value)
+    else:
+        result = False
+    if criterion.get("negate"):
+        result = not result
+    return result
+
+
+def matches_search_criteria(submission, combinator, criteria):
+    results = [evaluate_search_criterion(submission, criterion) for criterion in criteria]
+    if combinator == "or":
+        return any(results)
+    elif combinator == "none":
+        return not any(results)
+    elif combinator == "xor":
+        return sum(results) == 1
+    return all(results)
+
+
 @courses.route('/submissions_filter/get/', methods=['GET', 'POST'])
 @courses.route('/submissions_filter/get', methods=['GET', 'POST'])
 @login_required
 def submissions_filter_data():
     ''' JSON feed of this course's submissions, optionally narrowed down to
-    specific assignments and/or users. '''
+    specific assignments and/or users, and optionally searched by criteria
+    (score, correctness, code/feedback contents, statuses, dates, ...). '''
     course_id = get_course_id()
     require_course_grader(g.user, course_id)
     assignment_ids = [int(aid) for aid in request.values.get('assignment_ids', "").split(",")
                       if aid.strip().isdigit()]
     user_ids = [int(uid) for uid in request.values.get('user_ids', "").split(",")
                 if uid.strip().isdigit()]
+    combinator, criteria, search_errors = parse_submission_search(
+        request.values.get('search', ""))
+    # Only pull the heavyweight text columns when a criterion actually reads them
+    needs_code = any(c.get("field") in ("code", "code_length") for c in criteria)
+    needs_feedback = any(c.get("field") == "feedback" for c in criteria)
+    load_options = [defer(Submission.extra_files)]
+    if not needs_code:
+        load_options.append(defer(Submission.code))
+    if not needs_feedback:
+        load_options.append(defer(Submission.feedback))
     query = (Submission.query
              .filter(Submission.course_id == course_id)
-             .options(defer(Submission.code), defer(Submission.extra_files),
-                      defer(Submission.feedback)))
+             .options(*load_options))
     if assignment_ids:
         query = query.filter(Submission.assignment_id.in_(assignment_ids))
     if user_ids:
         query = query.filter(Submission.user_id.in_(user_ids))
     submissions = query.all()
+    if criteria:
+        submissions = [submission for submission in submissions
+                       if matches_search_criteria(submission, combinator, criteria)]
     # Batch-prefetch the assignments (for human statuses) and quiz submission code
     # (for quiz attempt status), holding them in locals so the identity map keeps them.
     _assignments = Assignment.query.filter(
@@ -661,8 +800,9 @@ def submissions_filter_data():
                            if s.assignment is not None and s.assignment.type == "quiz"]
     _quiz_code = (Submission.query.filter(Submission.id.in_(quiz_submission_ids))
                   .options(undefer(Submission.code)).all()) if quiz_submission_ids else []
-    return ajax_success(dict(submissions=[
-        encode_submission_for_filter(submission) for submission in submissions]))
+    return ajax_success(dict(
+        submissions=[encode_submission_for_filter(submission) for submission in submissions],
+        search_errors=search_errors))
 
 
 @courses.route('/feedback_editor/<course_id>/', methods=['GET'])

@@ -11,12 +11,96 @@
                                               displayMode: server.userStore.displayMode"></user-display-settings-editor>
         User(s):
         <user-set-selector params="store: server.userStore, modelSet: userSet, default: userDefault,
-                                   mode: userSelectMode, applySelection: userApply"></user-set-selector>
+                                   mode: userSelectMode, applySelection: userApply,
+                                   ready: userSelectorReady"></user-set-selector>
     </div>
     <div class="mt-4 mb-4">
         Assignment(s):
         <assignment-set-selector params="store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,
-                                         mode: assignmentSelectMode, applySelection: assignmentApply"></assignment-set-selector>
+                                         mode: assignmentSelectMode, applySelection: assignmentApply,
+                                         ready: assignmentSelectorReady"></assignment-set-selector>
+    </div>
+    <div class="mt-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                data-toggle="collapse" data-target="#submission-search-menu"
+                aria-expanded="false" aria-controls="submission-search-menu">
+            <span class="fas fa-search"></span> Search Criteria
+            <span class="badge badge-secondary"
+                  data-bind="text: searchCriteria().length, visible: searchCriteria().length > 0"></span>
+        </button>
+        <div id="submission-search-menu" class="collapse">
+            <div class="card card-body mt-2">
+                <div class="form-inline mb-2">
+                    <label class="mr-2" for="search-combinator">Keep submissions matching</label>
+                    <select id="search-combinator" class="form-control form-control-sm custom-select"
+                            data-bind="options: combinatorOptions, optionsText: 'label', optionsValue: 'key',
+                                       value: searchCombinator"></select>
+                </div>
+                <!-- ko foreach: searchCriteria -->
+                <div class="form-inline mb-2">
+                    <div class="form-check mr-2" title="Invert this criterion">
+                        <input type="checkbox" class="form-check-input"
+                               data-bind="checked: negate, attr: {id: 'search-negate-' + $index()}">
+                        <label class="form-check-label"
+                               data-bind="attr: {for: 'search-negate-' + $index()}">NOT</label>
+                    </div>
+                    <select class="form-control form-control-sm custom-select mr-2" aria-label="Search field"
+                            data-bind="options: $component.searchFields, optionsText: 'label', optionsValue: 'key',
+                                       value: field"></select>
+                    <select class="form-control form-control-sm custom-select mr-2" aria-label="Search operator"
+                            data-bind="options: spec().operators, optionsText: 'label', optionsValue: 'key',
+                                       value: operator"></select>
+                    <!-- ko if: spec().type === 'number' -->
+                    <input type="number" step="any" class="form-control form-control-sm mr-2"
+                           aria-label="Search value"
+                           data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+                    <!-- /ko -->
+                    <!-- ko if: spec().type === 'text' -->
+                    <input type="text" class="form-control form-control-sm mr-2" style="min-width: 18em"
+                           aria-label="Search value"
+                           data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+                    <!-- /ko -->
+                    <!-- ko if: spec().type === 'date' -->
+                    <input type="date" class="form-control form-control-sm mr-2"
+                           aria-label="Search value" data-bind="value: value">
+                    <!-- /ko -->
+                    <!-- ko if: spec().type === 'select' -->
+                    <select class="form-control form-control-sm custom-select mr-2" aria-label="Search value"
+                            data-bind="options: spec().options, optionsText: 'label', optionsValue: 'value',
+                                       value: value"></select>
+                    <!-- /ko -->
+                    <button type="button" class="btn btn-outline-danger btn-sm" title="Remove this criterion"
+                            data-bind="click: (criterion) => $component.removeSearchCriterion(criterion)">
+                        <span class="fas fa-times"></span></button>
+                </div>
+                <!-- /ko -->
+                <div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            data-bind="click: addSearchCriterion">
+                        <span class="fas fa-plus"></span> Add criterion</button>
+                    <button type="button" class="btn btn-primary btn-sm ml-2"
+                            data-bind="click: viewSubmissions, enable: searchCriteria().length > 0">
+                        Apply search</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm ml-2"
+                            data-bind="click: clearSearch, visible: searchCriteria().length > 0">
+                        Clear</button>
+                </div>
+                <small class="text-muted mt-2">
+                    "Score (%)" is the recorded percentage (0&ndash;100), while "Correctness" is the
+                    completion flag &mdash; a submission can score high without being flagged correct
+                    (and vice versa), so search on both when in doubt. Text criteria are checked on the
+                    server against the submission's saved code or feedback. While a search is applied,
+                    students/assignments without a matching submission are hidden from the table.
+                </small>
+                <!-- ko if: searchErrors().length -->
+                <div class="alert alert-warning mt-2 mb-0">
+                    <!-- ko foreach: searchErrors -->
+                    <div data-bind="text: $data"></div>
+                    <!-- /ko -->
+                </div>
+                <!-- /ko -->
+            </div>
+        </div>
     </div>
     <!-- ko if: history().length -->
     <div class="mt-2">

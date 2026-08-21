@@ -531,6 +531,66 @@ class TestSubmissionsAndGrading:
         assert filtered
         assert all(sub['assignment_id'] == some_assignment_id for sub in filtered)
 
+    def _search_submissions(self, client, criteria, combinator="and"):
+        import json
+        response = client.post('/courses/submissions_filter/get',
+                               data={'course_id': 6,
+                                     'search': json.dumps({'combinator': combinator,
+                                                           'criteria': criteria})})
+        assert response.status_code == 200, response.data
+        assert response.json['success'] is True, response.json
+        return response.json
+
+    def test_submissions_filter_search_correctness(self, client, test_data, act_as):
+        """The correctness criterion partitions submissions, and negate inverts it."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = self._search_submissions(client, [])['submissions']
+        correct = self._search_submissions(client, [
+            {'field': 'correct', 'operator': 'is', 'value': 'true'}])['submissions']
+        assert all(sub['correct'] for sub in correct)
+        negated = self._search_submissions(client, [
+            {'field': 'correct', 'operator': 'is', 'value': 'true', 'negate': True}])['submissions']
+        assert all(not sub['correct'] for sub in negated)
+        assert len(correct) + len(negated) == len(everything)
+
+    def test_submissions_filter_search_score_and_combinators(self, client, test_data, act_as):
+        """Score comparisons and the none/xor combinators behave sensibly."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = self._search_submissions(client, [])['submissions']
+        # Score >= 0 matches everything; "none" of that matches nothing
+        all_scores = self._search_submissions(client, [
+            {'field': 'score', 'operator': 'ge', 'value': '0'}])['submissions']
+        assert len(all_scores) == len(everything)
+        nothing = self._search_submissions(client, [
+            {'field': 'score', 'operator': 'ge', 'value': '0'}], combinator='none')['submissions']
+        assert nothing == []
+        # xor of (score >= 0) and (score >= 0) is never exactly one
+        xor = self._search_submissions(client, [
+            {'field': 'score', 'operator': 'ge', 'value': '0'},
+            {'field': 'score', 'operator': 'ge', 'value': '0'}], combinator='xor')['submissions']
+        assert xor == []
+
+    def test_submissions_filter_search_code_contents(self, client, test_data, act_as):
+        """Code-content criteria run server-side; contains and NOT-contains partition."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = self._search_submissions(client, [])['submissions']
+        containing = self._search_submissions(client, [
+            {'field': 'code', 'operator': 'icontains', 'value': 'print'}])['submissions']
+        missing = self._search_submissions(client, [
+            {'field': 'code', 'operator': 'icontains', 'value': 'print', 'negate': True}])['submissions']
+        assert len(containing) + len(missing) == len(everything)
+
+    def test_submissions_filter_search_reports_errors(self, client, test_data, act_as):
+        """Unknown fields and bad regexes are skipped with a reported error."""
+        act_as(test_data.user("ada@blockpy.com"))
+        result = self._search_submissions(client, [
+            {'field': 'nonsense', 'operator': 'eq', 'value': '5'},
+            {'field': 'code', 'operator': 'regex', 'value': '('}])
+        assert len(result['search_errors']) == 2
+        # With every criterion invalid, no filtering is applied
+        everything = self._search_submissions(client, [])['submissions']
+        assert len(result['submissions']) == len(everything)
+
     def test_edit_points_requires_proper_context(self, client, test_data, act_as):
         """edit_points requires proper course context via bulk_assignment_editor_setup."""
         # Lulu (100) is a student

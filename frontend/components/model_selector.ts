@@ -57,6 +57,10 @@ interface ModelSetSelectorJson<J extends ModelJson, T extends Model<J>> {
     // Optional channel for a parent to re-apply a selection later (same format as
     // `default`: "", "first", a single id, or a comma-separated id list).
     applySelection?: KnockoutObservable<string>;
+    // Optional flag the selector sets to true once its data has loaded and the
+    // default selection has been applied - before that, mode changes are just
+    // initialization noise that parents should not react to.
+    ready?: KnockoutObservable<boolean>;
 }
 
 export enum SelectMode {
@@ -97,6 +101,9 @@ export class ModelSetSelector<J extends ModelJson, T extends Model<J>> {
             // Load in any grouped sets from the DB
             this.loadGroups();
             this.isLoading(false);
+            if (params.ready != null) {
+                params.ready(true);
+            }
         });
 
         // Create single person model
