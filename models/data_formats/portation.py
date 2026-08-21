@@ -19,12 +19,17 @@ from werkzeug.utils import secure_filename
 
 import pdfkit
 
+from sqlalchemy.orm import selectinload
+
 from common.maybe import maybe_int
 from models.generics.models import db
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.assignment_group_membership import AssignmentGroupMembership
 from models.course import Course
+from models.role import Role
+from models.user import User
+from models.log_tables import SubmissionLog
 
 from models.data_formats.progsnap2 import dump_progsnap, get_course_users
 import models.data_formats.progsnap2ite as progsnap2ite
@@ -111,22 +116,50 @@ def export_bundle(**kwargs):
     :return:
     """
     dumped = {}
+    all_instances = []
     for category, values in kwargs.items():
         if category not in CATEGORY_MODELS:
             raise ValueError('Unknown export category: '+repr(category))
         table = CATEGORY_MODELS[category]
-        dumped[category] = []
+        # Batch-fetch by id and by url instead of one query per value
+        ids = {value for value in values if isinstance(value, int)}
+        urls = {value for value in values if isinstance(value, str)}
+        query = table.query
+        if table is Assignment:
+            query = query.options(selectinload(Assignment.tags),
+                                  selectinload(Assignment.sample_submissions))
+        by_id = ({instance.id: instance for instance in query.filter(table.id.in_(ids))}
+                 if ids else {})
+        by_url = ({instance.url: instance for instance in query.filter(table.url.in_(urls))}
+                  if urls else {})
+        instances = []
         for value in values:
             if isinstance(value, int):
-                instance = table.by_id(value)
+                instance = by_id.get(value)
             elif isinstance(value, str):
-                instance = table.by_url(value)
+                instance = by_url.get(value)
             elif isinstance(value, table):
                 instance = value
             else:
                 raise TypeError('Unknown export type for {!r}: {!r}'.format(category, type(value)))
-            dumped[category].append(instance.encode_json())
-    return dumped
+            instances.append(instance)
+        all_instances.extend(instances)
+        dumped[category] = instances
+    # Load every owner in one query so the encoders' User.query.get calls
+    # resolve from the session's identity map without SQL
+    owner_ids = {getattr(instance, 'owner_id', None) for instance in all_instances
+                 if instance is not None}
+    for instance in all_instances:
+        if isinstance(instance, Assignment):
+            owner_ids.update(tag.owner_id for tag in instance.tags)
+            owner_ids.update(sample.owner_id for sample in instance.sample_submissions)
+    owner_ids.discard(None)
+    # Hold the loaded owners in a local so the identity map (weak references)
+    # keeps them until encoding is done
+    _owners = (User.query.filter(User.id.in_(owner_ids)).all()
+               if owner_ids else [])
+    return {category: [instance.encode_json() for instance in instances]
+            for category, instances in dumped.items()}
 
 
 def export_progsnap2(output, course_id, assignment_group_ids=None, exclude=None, log=False, format='csv', overwrite=False, partition=None, users=None):
@@ -188,11 +221,87 @@ def export_peml():
     pass
 
 
+def _prefetch_assignment_encoding(assignments):
+    """
+    Batch-load the tags, sample submissions, and owners that
+    Assignment.encode_json touches, so encoding N assignments does not issue
+    3 queries per assignment.
+
+    Returns the loaded owners; the caller must keep the return value referenced
+    while encoding, because the session's identity map only holds weak
+    references.
+    """
+    assignment_ids = [a.id for a in assignments if a.id is not None]
+    if assignment_ids:
+        (Assignment.query
+         .options(selectinload(Assignment.tags),
+                  selectinload(Assignment.sample_submissions))
+         .filter(Assignment.id.in_(assignment_ids))
+         .all())
+    owner_ids = {a.owner_id for a in assignments}
+    for assignment in assignments:
+        owner_ids.update(tag.owner_id for tag in assignment.tags)
+        owner_ids.update(sample.owner_id for sample in assignment.sample_submissions)
+    owner_ids.discard(None)
+    if owner_ids:
+        return User.query.filter(User.id.in_(owner_ids)).all()
+    return []
+
+
+def _prefetch_submission_related(submissions):
+    """
+    Load the users, assignments, and courses referenced by the given submissions
+    in one query per table, so later lazy relationship accesses (many-to-one
+    loads) resolve from the session's identity map without SQL.
+
+    Returns (user_ids, assignment_ids, course_ids, loaded); the caller must
+    keep `loaded` referenced while it works, because the session's identity map
+    only holds weak references.
+    """
+    user_ids = {s.user_id for s in submissions if s.user_id is not None}
+    assignment_ids = {s.assignment_id for s in submissions if s.assignment_id is not None}
+    course_ids = {s.course_id for s in submissions if s.course_id is not None}
+    loaded = []
+    if user_ids:
+        loaded.extend(User.query.filter(User.id.in_(user_ids)).all())
+    if assignment_ids:
+        loaded.extend(Assignment.query.filter(Assignment.id.in_(assignment_ids)).all())
+    if course_ids:
+        loaded.extend(Course.query.filter(Course.id.in_(course_ids)).all())
+    return user_ids, assignment_ids, course_ids, loaded
+
+
+def _build_role_lookup(course_ids, user_ids):
+    """ One Role query for all (course, user) pairs: {(course_id, user_id): [names]} """
+    role_lookup = {}
+    if course_ids and user_ids:
+        for role in Role.query.filter(Role.course_id.in_(course_ids),
+                                      Role.user_id.in_(user_ids)).all():
+            role_lookup.setdefault((role.course_id, role.user_id), []).append(role.name)
+    return role_lookup
+
+
+def _build_log_lookup(submissions):
+    """ One SubmissionLog query for all submissions: {submission_id: [logs]} """
+    log_lookup = {}
+    submission_ids = [s.id for s in submissions]
+    if submission_ids:
+        logs = (SubmissionLog.query
+                .filter(SubmissionLog.submission_id.in_(submission_ids))
+                .order_by(SubmissionLog.date_created.asc())
+                .all())
+        for log in logs:
+            log_lookup.setdefault(log.submission_id, []).append(log)
+    return log_lookup
+
+
 # noinspection PyTypeHints
 def export_zip(assignments=None, submissions=None, users=None, with_history=False):
     dumped = {}
     assignment_paths = {}
     if assignments:
+        assignments = list(assignments)
+        _owners = _prefetch_assignment_encoding(assignments)
         for assignment in assignments:
             assignment_paths[assignment.id] = assignment.get_filename(extension='')
             dumped[assignment.get_filename(extension='.md')] = json.dumps(assignment.encode_json())
@@ -204,8 +313,14 @@ def export_zip(assignments=None, submissions=None, users=None, with_history=Fals
             user_names.append(user.name())
     dumped['users.txt'] = "\n".join(sorted(set(user_names)))
     if submissions:
+        submissions = list(submissions)
+        user_ids, assignment_ids, course_ids, _related = _prefetch_submission_related(submissions)
+        role_lookup = _build_role_lookup(course_ids, user_ids)
+        log_lookup = _build_log_lookup(submissions) if with_history else None
         for submission in submissions:
-            files = submission.encode_human(with_history=with_history)
+            files = submission.encode_human(with_history=with_history,
+                                            role_lookup=role_lookup,
+                                            log_lookup=log_lookup)
             for filename, contents in files.items():
                 path = assignment_paths[submission.assignment_id]+'/'
                 path += user_paths[submission.user_id]+'/'
@@ -224,6 +339,8 @@ def export_pdf_zip(assignments=None, submissions=None, users=None, jinja_environ
     dumped = {}
     assignment_paths = {}
     if assignments:
+        assignments = list(assignments)
+        _owners = _prefetch_assignment_encoding(assignments)
         for assignment in assignments:
             assignment_paths[assignment.id] = assignment.get_filename(extension='')
             dumped[assignment.get_filename(extension='.md')] = json.dumps(assignment.encode_json())
@@ -238,6 +355,10 @@ def export_pdf_zip(assignments=None, submissions=None, users=None, jinja_environ
     pdfs = {}
     # Add submissions to the PDF
     if submissions:
+        submissions = list(submissions)
+        # Batch-load users/assignments so the per-submission relationship
+        # accesses below do not each issue a query
+        _user_ids, _assignment_ids, _course_ids, _related = _prefetch_submission_related(submissions)
         template = jinja_environment.from_string("""
                         <strong>Student Name: {{ submission.user.name() }}</strong><br>
                         {{ submission.code|highlight_java_code|safe }}

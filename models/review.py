@@ -120,6 +120,27 @@ class Review(VersionedBase):
     def get_generic_reviews():
         return Review.query.filter_by(generic=True).all()
 
+    @staticmethod
+    def prefetch_fork_chains(reviews):
+        """
+        Load every review in the given reviews' fork chains into the session,
+        one query per chain depth level instead of one query per hop. While the
+        returned list is referenced, `get_actual_score` resolves entirely from
+        the session's identity map (which only holds weak references), so keep
+        the result alive until the scores have been computed.
+        """
+        prefetched = []
+        known_ids = {review.id for review in reviews if review.id is not None}
+        pending_ids = {review.forked_id for review in reviews
+                       if review.score is None and review.forked_id is not None} - known_ids
+        while pending_ids:
+            fetched = Review.query.filter(Review.id.in_(pending_ids)).all()
+            prefetched.extend(fetched)
+            known_ids |= pending_ids
+            pending_ids = {review.forked_id for review in fetched
+                           if review.score is None and review.forked_id is not None} - known_ids
+        return prefetched
+
     def get_actual_score(self):
         if self.score is not None:
             if isinstance(self.score, str):

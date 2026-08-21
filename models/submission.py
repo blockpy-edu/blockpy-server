@@ -160,7 +160,17 @@ class Submission(EnhancedBase):
             "date_started": datetime_to_string(self.date_started),
         }
 
-    def encode_human(self, with_history=False):
+    def encode_human(self, with_history=False, role_lookup=None, log_lookup=None):
+        """
+        Create a human-readable dictionary of files for this submission.
+
+        :param with_history: Include the full submission log as history.json
+        :param role_lookup: Optional prefetched {(course_id, user_id): [role names]}
+            so bulk exports avoid one Role query per submission.
+        :param log_lookup: Optional prefetched {submission_id: [SubmissionLog]}
+            (ordered by date_created) so bulk exports avoid one log query per
+            submission when with_history is True.
+        """
         if self.extra_files:
             try:
                 extra_files = json.loads(self.extra_files)
@@ -192,10 +202,14 @@ class Submission(EnhancedBase):
             "version": self.version,
             "attempts": self.attempts,
             "files": [filename] + [f[0] for f in extra_files],
-            "roles": [
-                role.name
-                for role, user in User.get_user_role(self.course_id, self.user_id)
-            ],
+            "roles": (
+                role_lookup.get((self.course_id, self.user_id), [])
+                if role_lookup is not None
+                else [
+                    role.name
+                    for role, user in User.get_user_role(self.course_id, self.user_id)
+                ]
+            ),
             "date_created": datetime_to_string(self.date_created),
             "date_modified": datetime_to_string(self.date_modified),
             "date_submitted": datetime_to_string(self.date_submitted),
@@ -219,8 +233,11 @@ class Submission(EnhancedBase):
                 "url": self.course.url,
             }
         if with_history:
+            logs = (log_lookup.get(self.id, [])
+                    if log_lookup is not None
+                    else self.get_logs())
             extra_files["history.json"] = json.dumps(
-                [history.encode_json() for history in self.get_logs()], indent=2
+                [history.encode_json() for history in logs], indent=2
             )
         files = {
             filename: self.code,
@@ -396,12 +413,17 @@ class Submission(EnhancedBase):
         possible = self.assignment.get_points()
         reviews = self.get_reviews_db()
         if self.assignment.reviewed or reviews:
+            # Keep the prefetched chain alive so get_actual_score hits the
+            # session's identity map instead of re-querying
+            _fork_chain = Review.prefetch_fork_chains(reviews)
             review_score = sum(review.get_actual_score() for review in reviews)
             return (self.as_float_score(self.score + review_score)) * possible
         return (float(self.correct) or self.as_float_score(self.score)) * possible
 
     def get_reviews_db(self):
-        return Review.query.filter_by(submission_id=self.id).all()
+        # Uses the relationship so callers can batch with selectinload(), and
+        # repeated calls (e.g., full_score twice in one request) reuse the load.
+        return self.reviews
 
     @classmethod
     def new(cls, assignment_id: int, user_id: int, course_id: int, code: str = "", extra_files: str = "", assignment_version: int = 0, assignment_group_id: int = None, correct: bool = False, **kwargs) -> "Submission":

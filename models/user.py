@@ -248,15 +248,22 @@ class User(Base, UserMixin):
         return None
 
     def update_roles(self, new_roles, course_id):
-        old_roles = [role for role in self.roles if role.course_id == maybe_int(course_id)]
+        course_id = maybe_int(course_id)
+        old_roles = [role for role in self.roles if role.course_id == course_id]
         new_role_names = set(new_role_name.lower() for new_role_name in new_roles)
-        for old_role in old_roles:
-            if old_role.name.lower() not in new_role_names:
-                models.Role.query.filter(models.Role.id == old_role.id).delete()
+        stale_role_ids = [old_role.id for old_role in old_roles
+                          if old_role.name.lower() not in new_role_names]
+        if stale_role_ids:
+            models.Role.query.filter(models.Role.id.in_(stale_role_ids)).delete()
         old_role_names = set(role.name.lower() for role in old_roles)
+        added_roles = False
         for new_role_name in new_roles:
             if new_role_name.lower() not in old_role_names:
-                models.Role.new(name=new_role_name.lower(), user_id=self.id, course_id=maybe_int(course_id))
+                db.session.add(models.Role(name=new_role_name.lower(), user_id=self.id,
+                                           course_id=course_id))
+                added_roles = True
+        if stale_role_ids or added_roles:
+            db.session.commit()
 
     def determine_role(self, assignments, submissions):
         '''
@@ -265,19 +272,28 @@ class User(Base, UserMixin):
         it would be very unusual to be able to access submissions from that menu, but in theory that's
         what this role delegation means.
 
-        TODO: Make it so that you have the least privleged role based on all the assignments.
+        TODO: Make it so that you have the least privileged role based on all the assignments.
         TODO: Make it so that hidden assignments do not give TAs grader access.
 
         :param assignments:
         :param submissions:
         :return:
         '''
+        # Load this user's roles once and answer all course checks from memory,
+        # instead of issuing a Role query per assignment.
+        instructor_course_ids = set()
+        grader_course_ids = set()
+        for role in self.roles:
+            if role.name == UserRoles.INSTRUCTOR:
+                instructor_course_ids.add(role.course_id)
+            if role.name in RolePermissions.GRADER_ROLES:
+                grader_course_ids.add(role.course_id)
         roles = set()
         for assignment, submission in zip(assignments, submissions):
-            check_function = self.is_instructor if assignment.hidden else self.is_grader
-            if check_function(assignment.course_id):
+            allowed_course_ids = instructor_course_ids if assignment.hidden else grader_course_ids
+            if assignment.course_id in allowed_course_ids:
                 roles.add((2, 'owner'))
-            elif check_function(submission.course_id):
+            elif submission.course_id in allowed_course_ids:
                 roles.add((1, 'grader'))
             else:
                 roles.add((0, 'student'))

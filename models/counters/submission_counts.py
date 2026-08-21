@@ -9,7 +9,6 @@ from emoji import emoji_count
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, func, JSON, Index, and_, Enum, DateTime, Float, \
     UniqueConstraint, BigInteger, text
-from sqlalchemy import update
 import models
 from models.enums.metrics import SubmissionMetrics
 from models.generics.models import db, ma, get_non_durable_session
@@ -185,7 +184,12 @@ class SubmissionCounts(Base):
         Safely update multiple fields with insert/on_conflict_do_update.
         Only commits once.
         """
-        insert = insert_sqlite if db.engine.dialect.name == 'insert_sqlite' else insert_postgres
+        insert = insert_sqlite if db.engine.dialect.name == 'sqlite' else insert_postgres
+
+        # Merge duplicate metrics so the multi-row upsert never touches a row twice
+        merged = {}
+        for metric, value in updates:
+            merged[metric] = merged.get(metric, 0) + value
 
         s = get_non_durable_session()
         try:
@@ -193,18 +197,20 @@ class SubmissionCounts(Base):
                 # Only for Postgres; SQLite will just ignore/skip this
                 if db.engine.dialect.name == "postgresql":
                     s.execute(text("SET LOCAL synchronous_commit = off"))
-                for metric, value in updates:
-                    stmt = insert(cls).values({
-                        "submission_id": submission_id,
-                        "metric": metric,
-                        "value": value
-                    })
+                if merged:
+                    stmt = insert(cls).values([
+                        {"submission_id": submission_id, "metric": metric, "value": value}
+                        for metric, value in merged.items()
+                    ])
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[cls.submission_id, cls.metric],
-                        set_={"value": cls.value + value}
+                        set_={"value": cls.value + stmt.excluded.value}
                     )
                     s.execute(stmt)
 
+                # total_time_spent starts at 0 (no prior event to measure a gap from)
+                # but increments by the gap on every later event, so it cannot be
+                # folded into the multi-row statement above.
                 stmt = insert(cls).values({
                     "submission_id": submission_id,
                     "metric": SubmissionMetrics.total_time_spent,
@@ -228,17 +234,18 @@ class SubmissionCounts(Base):
         :param kwargs: The fields to update.
         :return:
         """
-        stmt = (
-            update(cls).
-            where(cls.submission_id == submission_id, cls.metric == metric).
-            values({"value": value})
+        insert = insert_sqlite if db.engine.dialect.name == 'sqlite' else insert_postgres
+        stmt = insert(cls).values({
+            "submission_id": submission_id,
+            "metric": metric,
+            "value": default
+        })
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[cls.submission_id, cls.metric],
+            set_={"value": value}
         )
-        result = db.session.execute(stmt)
+        db.session.execute(stmt)
         db.session.commit()
-        if result.rowcount == 0:
-            instance = cls(submission_id=submission_id, metric=metric, value=default)
-            db.session.add(instance)
-            db.session.commit()
 
     @classmethod
     def safely_max(cls, submission_id: int, metric: str, value: int):

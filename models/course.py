@@ -1,7 +1,7 @@
 import json
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, defer, selectinload
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, or_, Boolean, Enum, Index, exists, and_, select
 from marshmallow import fields
 from werkzeug.utils import secure_filename
@@ -80,20 +80,51 @@ class Course(Base):
 
     @staticmethod
     def export(course_id):
-        course = Course.query.get(maybe_int(course_id))
+        course_id = maybe_int(course_id)
+        course = Course.query.get(course_id)
         # Get all course's assignments
-        course_assignments = models.Assignment.by_course(maybe_int(course_id), False)
+        course_assignments = models.Assignment.by_course(course_id, False)
         # Get all course's assignment groups
         groups = course.get_assignment_groups()
-        assignment_groups = [a.encode_json() for a in groups]
-
         # Get all assignment groups' memberships
-        assignment_memberships = [a.encode_json()
-                                  for a in models.AssignmentGroupMembership.by_course(maybe_int(course_id))]
-        # Get all assignment groups' assignments
-        groups_assignments = {a for g in groups
-                              for a in g.get_assignments()}
+        memberships = models.AssignmentGroupMembership.by_course(course_id)
+        # Get all assignment groups' assignments in one join, instead of one
+        # query per group
+        group_ids = [g.id for g in groups]
+        grouped_assignments = []
+        if group_ids:
+            grouped_assignments = (models.Assignment.query
+                .join(models.AssignmentGroupMembership,
+                      models.AssignmentGroupMembership.assignment_id == models.Assignment.id)
+                .filter(models.AssignmentGroupMembership.assignment_group_id.in_(group_ids))
+                .all())
+        groups_assignments = set(grouped_assignments)
         groups_assignments.update(course_assignments)
+        # Preload each assignment's tags and sample submissions in two batched
+        # queries, rather than two lazy loads per assignment during encoding
+        assignment_ids = [a.id for a in groups_assignments]
+        if assignment_ids:
+            (models.Assignment.query
+             .options(selectinload(models.Assignment.tags),
+                      selectinload(models.Assignment.sample_submissions))
+             .filter(models.Assignment.id.in_(assignment_ids))
+             .all())
+        # Load every owner in one query; the per-object User.query.get calls in
+        # the encoders then resolve from the session's identity map without SQL
+        owner_ids = {course.owner_id}
+        owner_ids.update(g.owner_id for g in groups)
+        for a in groups_assignments:
+            owner_ids.add(a.owner_id)
+            owner_ids.update(tag.owner_id for tag in a.tags)
+            owner_ids.update(sample.owner_id for sample in a.sample_submissions)
+        owner_ids.discard(None)
+        # Hold the loaded owners in a local so the identity map (weak
+        # references) keeps them until encoding is done
+        _owners = (models.User.query.filter(models.User.id.in_(owner_ids)).all()
+                   if owner_ids else [])
+
+        assignment_groups = [a.encode_json() for a in groups]
+        assignment_memberships = [a.encode_json() for a in memberships]
         assignments = [a.encode_json() for a in groups_assignments]
         assignments.sort(key=lambda a: a['name'])
         return {
@@ -180,15 +211,32 @@ class Course(Base):
                 .filter(models.Assignment.id.in_(assignments))
                 .distinct())
 
-    def get_users_submitted_assignments(self, user_ids=None):
+    def get_users_submitted_assignments(self, user_ids=None, limit=None, offset=None):
+        # Defer the large Text columns (student code, feedback, assignment bodies)
+        # since callers only need metadata, and preload reviews for full_score().
         query = (db.session.query(models.Submission, models.User, models.Assignment)
                 .join(models.Submission,
                       models.Submission.assignment_id == models.Assignment.id)
                 .join(models.User,
                       models.Submission.user_id == models.User.id)
+                .options(defer(models.Submission.code),
+                         defer(models.Submission.extra_files),
+                         defer(models.Submission.feedback),
+                         selectinload(models.Submission.reviews),
+                         defer(models.Assignment.instructions),
+                         defer(models.Assignment.on_run),
+                         defer(models.Assignment.on_change),
+                         defer(models.Assignment.on_eval),
+                         defer(models.Assignment.starting_code),
+                         defer(models.Assignment.extra_instructor_files),
+                         defer(models.Assignment.extra_starting_files))
                 .filter(models.Submission.course_id==self.id))
         if user_ids is not None:
             query = query.filter(models.User.id.in_(user_ids))
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
         return query.all()
 
     def get_users_submitted_assignments_grouped(self, user_id):
