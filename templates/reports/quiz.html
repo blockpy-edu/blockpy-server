@@ -147,8 +147,10 @@
                                 points
                         {%- endif -%}
                         {%- if 'summary' in code -%}
-                            , or {{ ((100*feedback.get('score', 0)*question['points'])/code['summary']['points_possible'])|round(1) -}}%
+                            {% if 'summary' in code and code['summary'].get('points_possible', 0) > 0 %}
+                            , or {{ ((100*feedback.get('score', 0)*question['points']) / code['summary']['points_possible'])|round(1) -}}%
                             overall
+                            {% endif %}
                         {%- endif -%})
                     </button>
                 </h3>
