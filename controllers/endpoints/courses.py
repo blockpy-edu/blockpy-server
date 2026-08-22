@@ -1,12 +1,13 @@
 import io
 import csv
-import re
+import statistics
 from datetime import datetime, timezone
 from pprint import pprint
 from collections import defaultdict
 import json
 from natsort import natsorted
-from sqlalchemy.orm import defer, undefer
+from sqlalchemy import func, case, select
+from sqlalchemy.orm import undefer
 
 from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
@@ -23,8 +24,12 @@ from controllers.helpers import (get_lti_property, require_request_parameters, l
                                  check_resource_exists, get_course_id, ajax_success, ajax_failure, maybe_int,
                                  maybe_bool, require_admin, check_course_unlocked,
                                  make_log_entry)
+from controllers.submission_search import (parse_submission_search, matches_search_criteria,
+                                           encode_submission_for_filter, search_load_options,
+                                           prefetch_search_relations, VIEW_SUBMISSIONS_SEARCH_FIELDS,
+                                           ANALYTICS_SEARCH_FIELDS)
 from models.data_formats.report import make_report
-from models import db, AssignmentGroup, AssignmentGroupMembership
+from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
 from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent
 from models.user import User
@@ -611,155 +616,6 @@ def submissions_filter(course_id):
                            is_instructor=is_grader)
 
 
-def encode_submission_for_filter(submission):
-    """ A lightweight encoding of a submission for the submissions filter table:
-    skips the heavyweight text fields (code, feedback) but includes the
-    server-computed human-readable statuses. """
-    return {
-        "id": submission.id,
-        "user_id": submission.user_id,
-        "assignment_id": submission.assignment_id,
-        "assignment_group_id": submission.assignment_group_id,
-        "course_id": submission.course_id,
-        # The raw 0-100 score column, exactly what the old table rendered
-        # (as_float_score's 0-1 scale is for LMS grade passback, not display)
-        "score": submission.score,
-        "correct": submission.correct,
-        "submission_status": submission.submission_status,
-        "grading_status": submission.grading_status,
-        "version": submission.version,
-        "date_created": datetime_to_string(submission.date_created),
-        "date_modified": datetime_to_string(submission.date_modified),
-        "human_submission_status": submission.human_submission_status(),
-        "human_grading_status": submission.human_grading_status(),
-    }
-
-
-# Search criteria fields the submissions filter interface may use; anything else
-# is reported back as an error and skipped.
-VALID_SEARCH_FIELDS = {"score", "correct", "submission_status", "grading_status",
-                       "version", "code", "feedback", "code_length",
-                       "date_created", "date_modified"}
-
-
-def parse_submission_search(raw):
-    """ Parse and validate the search JSON from the submissions filter interface.
-    Returns (combinator, criteria, errors); invalid criteria are dropped with an error. """
-    if not raw:
-        return "and", [], []
-    errors = []
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        return "and", [], ["Could not parse the search criteria."]
-    combinator = data.get("combinator", "and")
-    if combinator not in ("and", "or", "none", "xor"):
-        errors.append(f"Unknown search combinator: {combinator!r}; using 'and'.")
-        combinator = "and"
-    criteria = []
-    for criterion in data.get("criteria", []):
-        if not isinstance(criterion, dict):
-            errors.append("Malformed search criterion was skipped.")
-            continue
-        field = criterion.get("field")
-        if field not in VALID_SEARCH_FIELDS:
-            errors.append(f"Unknown search field: {field!r}")
-            continue
-        if criterion.get("operator") == "regex":
-            try:
-                re.compile(criterion.get("value", ""))
-            except re.error as regex_error:
-                errors.append(f"Invalid regular expression {criterion.get('value')!r}: {regex_error}")
-                continue
-        criteria.append(criterion)
-    return combinator, criteria, errors
-
-
-def _search_compare_numbers(actual, operator, value):
-    try:
-        target = float(value)
-    except (TypeError, ValueError):
-        return False
-    actual = actual if actual is not None else 0
-    return {"eq": actual == target, "ne": actual != target,
-            "lt": actual < target, "le": actual <= target,
-            "gt": actual > target, "ge": actual >= target}.get(operator, False)
-
-
-def _search_compare_text(text, operator, value):
-    text = text or ""
-    value = value or ""
-    if operator == "contains":
-        return value in text
-    elif operator == "icontains":
-        return value.lower() in text.lower()
-    elif operator == "regex":
-        try:
-            return re.search(value, text) is not None
-        except re.error:
-            return False
-    return False
-
-
-def _search_compare_date(actual, operator, value):
-    if actual is None:
-        return False
-    try:
-        target = datetime.strptime(str(value), "%Y-%m-%d").date()
-    except (TypeError, ValueError):
-        return False
-    if operator == "before":
-        return actual.date() < target
-    elif operator == "on":
-        return actual.date() == target
-    elif operator == "after":
-        return actual.date() > target
-    return False
-
-
-def evaluate_search_criterion(submission, criterion):
-    field = criterion.get("field")
-    operator = criterion.get("operator", "")
-    value = criterion.get("value", "")
-    if field == "score":
-        # Compare on the 0-100 scale the interface presents
-        result = _search_compare_numbers(submission.score, operator, value)
-    elif field == "correct":
-        result = bool(submission.correct) == (str(value).lower() == "true")
-    elif field == "submission_status":
-        result = submission.submission_status == value
-    elif field == "grading_status":
-        result = submission.grading_status == value
-    elif field == "version":
-        result = _search_compare_numbers(submission.version or 0, operator, value)
-    elif field == "code":
-        result = _search_compare_text(submission.code, operator, value)
-    elif field == "feedback":
-        result = _search_compare_text(submission.feedback, operator, value)
-    elif field == "code_length":
-        result = _search_compare_numbers(len(submission.code or ""), operator, value)
-    elif field == "date_created":
-        result = _search_compare_date(submission.date_created, operator, value)
-    elif field == "date_modified":
-        result = _search_compare_date(submission.date_modified, operator, value)
-    else:
-        result = False
-    if criterion.get("negate"):
-        result = not result
-    return result
-
-
-def matches_search_criteria(submission, combinator, criteria):
-    results = [evaluate_search_criterion(submission, criterion) for criterion in criteria]
-    if combinator == "or":
-        return any(results)
-    elif combinator == "none":
-        return not any(results)
-    elif combinator == "xor":
-        return sum(results) == 1
-    return all(results)
-
-
 @courses.route('/submissions_filter/get/', methods=['GET', 'POST'])
 @courses.route('/submissions_filter/get', methods=['GET', 'POST'])
 @login_required
@@ -774,15 +630,8 @@ def submissions_filter_data():
     user_ids = [int(uid) for uid in request.values.get('user_ids', "").split(",")
                 if uid.strip().isdigit()]
     combinator, criteria, search_errors = parse_submission_search(
-        request.values.get('search', ""))
-    # Only pull the heavyweight text columns when a criterion actually reads them
-    needs_code = any(c.get("field") in ("code", "code_length") for c in criteria)
-    needs_feedback = any(c.get("field") == "feedback" for c in criteria)
-    load_options = [defer(Submission.extra_files)]
-    if not needs_code:
-        load_options.append(defer(Submission.code))
-    if not needs_feedback:
-        load_options.append(defer(Submission.feedback))
+        request.values.get('search', ""), VIEW_SUBMISSIONS_SEARCH_FIELDS)
+    load_options = search_load_options(criteria)
     query = (Submission.query
              .filter(Submission.course_id == course_id)
              .options(*load_options))
@@ -792,6 +641,9 @@ def submissions_filter_data():
         query = query.filter(Submission.user_id.in_(user_ids))
     submissions = query.all()
     if criteria:
+        # Batch-load any users/assignments/groups the criteria read, held in a
+        # local so the identity map keeps them for the evaluation loop.
+        _search_relations = prefetch_search_relations(submissions, criteria)
         submissions = [submission for submission in submissions
                        if matches_search_criteria(submission, combinator, criteria)]
     # Batch-prefetch the assignments (for human statuses) and quiz submission code
@@ -805,6 +657,236 @@ def submissions_filter_data():
     return ajax_success(dict(
         submissions=[encode_submission_for_filter(submission) for submission in submissions],
         search_errors=search_errors))
+
+
+@courses.route('/analytics/<int:course_id>/', methods=['GET', 'POST'])
+@courses.route('/analytics/<int:course_id>', methods=['GET', 'POST'])
+@login_required
+def course_analytics(course_id):
+    ''' The Course Analytics dashboard: statistics and visualizations over the
+    course's submissions and their activity counters. Mirrors `submissions_filter`:
+    grader-only, with the course's users and grouped assignments embedded so the
+    selectors populate instantly; the numbers come from the `analytics/rollup`
+    and `analytics/detail` endpoints below. '''
+    course_id = int(course_id)
+    is_grader = g.user.is_grader(course_id)
+    if not is_grader:
+        return "You are not an instructor or TA in this course!"
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    # Users with their course roles, in the same shape as `courses/users`
+    user_data = {}
+    for role, user in course.get_users():
+        if user.id not in user_data:
+            user_data[user.id] = user.encode_json()
+            user_data[user.id]['roles'] = []
+        user_data[user.id]['roles'].append(role.encode_json())
+    grouped_assignments, scopes, _ = g.safely.load_submitted_assignments_grouped(
+        course_id, abort_on_error=False)
+    grouped_assignments = [ga for ga, scope in zip(grouped_assignments, scopes)
+                           if scope.can_grade]
+    # Default selection: the most recent assignment group with student activity,
+    # so first paint answers "how is the current lesson going" without loading
+    # the whole course.
+    recent_group = (db.session.query(Submission.assignment_group_id)
+                    .filter(Submission.course_id == course_id,
+                            Submission.assignment_group_id.isnot(None))
+                    .group_by(Submission.assignment_group_id)
+                    .order_by(func.max(Submission.date_modified).desc())
+                    .first())
+    default_assignment_ids = []
+    if recent_group is not None:
+        default_assignment_ids = [ga.Assignment.id for ga in grouped_assignments
+                                  if ga.AssignmentGroup is not None
+                                  and ga.AssignmentGroup.id == recent_group[0]]
+    return render_template('courses/analytics.html',
+                           course_id=course_id,
+                           course=course,
+                           user=g.user,
+                           users=list(user_data.values()),
+                           assignments=[ga.Assignment.encode_json() for ga in grouped_assignments],
+                           groups=[ga.AssignmentGroup.encode_json() if ga.AssignmentGroup is not None else None
+                                   for ga in grouped_assignments],
+                           default_assignment_ids=default_assignment_ids,
+                           is_instructor=is_grader)
+
+
+def _analytics_scope_filters(course_id, assignment_ids, user_ids):
+    filters = [Submission.course_id == course_id]
+    if assignment_ids:
+        filters.append(Submission.assignment_id.in_(assignment_ids))
+    if user_ids:
+        filters.append(Submission.user_id.in_(user_ids))
+    return filters
+
+
+def _analytics_rollup_rows(filters, grain_column):
+    """ One aggregate row per distinct `grain_column` value (assignment or user)
+    for the submissions matching `filters`: submission-status funnel counts,
+    correct count, score stats, last activity, and per-metric sum/n/median.
+    Aggregation happens in SQL on Postgres (medians via percentile_cont); the
+    SQLite dev fallback aggregates plain column tuples in Python. """
+    rows = {}
+
+    def row_for(key):
+        if key not in rows:
+            rows[key] = {"id": key, "n": 0, "correct": 0,
+                         "mean_score": None, "median_score": None, "median_attempts": None,
+                         "last_activity": None, "statuses": {}, "metrics": {}}
+        return rows[key]
+
+    if db.engine.dialect.name == "postgresql":
+        funnel = (select(grain_column, Submission.submission_status, func.count())
+                  .filter(*filters).group_by(grain_column, Submission.submission_status))
+        for key, status, count in db.session.execute(funnel):
+            row_for(key)["statuses"][str(status)] = count
+        stats = (select(grain_column, func.count(),
+                        func.sum(case((Submission.correct, 1), else_=0)),
+                        func.avg(Submission.score),
+                        func.percentile_cont(0.5).within_group(Submission.score),
+                        func.percentile_cont(0.5).within_group(Submission.attempts),
+                        func.max(Submission.date_modified))
+                 .filter(*filters).group_by(grain_column))
+        for key, n, correct, mean_score, median_score, median_attempts, last_activity \
+                in db.session.execute(stats):
+            row = row_for(key)
+            row["n"] = n
+            row["correct"] = int(correct or 0)
+            row["mean_score"] = float(mean_score) if mean_score is not None else None
+            row["median_score"] = float(median_score) if median_score is not None else None
+            row["median_attempts"] = float(median_attempts) if median_attempts is not None else None
+            row["last_activity"] = datetime_to_string(last_activity)
+        metrics = (select(grain_column, SubmissionCounts.metric,
+                          func.sum(SubmissionCounts.value), func.count(),
+                          func.percentile_cont(0.5).within_group(SubmissionCounts.value))
+                   .join(Submission, SubmissionCounts.submission_id == Submission.id)
+                   .filter(*filters).group_by(grain_column, SubmissionCounts.metric))
+        for key, metric, total, n, median in db.session.execute(metrics):
+            row_for(key)["metrics"][str(metric)] = {
+                "sum": int(total), "n": n,
+                "median": float(median) if median is not None else None}
+    else:
+        # Dev fallback: plain column tuples, pivoted in Python (dev datasets are small)
+        submissions = db.session.execute(
+            select(grain_column, Submission.correct, Submission.score,
+                   Submission.attempts, Submission.submission_status,
+                   Submission.date_modified)
+            .filter(*filters)).all()
+        scores = defaultdict(list)
+        attempts = defaultdict(list)
+        for key, correct, score, attempt_count, status, date_modified in submissions:
+            row = row_for(key)
+            row["n"] += 1
+            row["correct"] += 1 if correct else 0
+            row["statuses"][str(status)] = row["statuses"].get(str(status), 0) + 1
+            if score is not None:
+                scores[key].append(score)
+            if attempt_count is not None:
+                attempts[key].append(attempt_count)
+            if date_modified is not None and (row["last_activity"] is None
+                                              or row["last_activity"] < datetime_to_string(date_modified)):
+                row["last_activity"] = datetime_to_string(date_modified)
+        for key, values in scores.items():
+            rows[key]["mean_score"] = statistics.mean(values)
+            rows[key]["median_score"] = statistics.median(values)
+        for key, values in attempts.items():
+            rows[key]["median_attempts"] = float(statistics.median(values))
+        counts = db.session.execute(
+            select(grain_column, SubmissionCounts.metric, SubmissionCounts.value)
+            .join(Submission, SubmissionCounts.submission_id == Submission.id)
+            .filter(*filters)).all()
+        values_by_metric = defaultdict(list)
+        for key, metric, value in counts:
+            values_by_metric[(key, str(metric))].append(value)
+        for (key, metric), values in values_by_metric.items():
+            row_for(key)["metrics"][metric] = {
+                "sum": sum(values), "n": len(values),
+                "median": float(statistics.median(values))}
+    return list(rows.values())
+
+
+@courses.route('/analytics/rollup/', methods=['GET', 'POST'])
+@courses.route('/analytics/rollup', methods=['GET', 'POST'])
+@login_required
+def analytics_rollup():
+    ''' JSON aggregates for the analytics dashboard's tables and tiles: one row
+    per assignment and one per student for the selection, aggregated in SQL —
+    the payload never contains per-submission data. '''
+    course_id = get_course_id()
+    require_course_grader(g.user, course_id)
+    assignment_ids = [int(aid) for aid in request.values.get('assignment_ids', "").split(",")
+                      if aid.strip().isdigit()]
+    user_ids = [int(uid) for uid in request.values.get('user_ids', "").split(",")
+                if uid.strip().isdigit()]
+    filters = _analytics_scope_filters(course_id, assignment_ids, user_ids)
+    return ajax_success(dict(
+        assignments=_analytics_rollup_rows(filters, Submission.assignment_id),
+        students=_analytics_rollup_rows(filters, Submission.user_id),
+        # Served live from GROUP BY queries for now; when the rollup tables land,
+        # this becomes their refresh watermark.
+        data_as_of=datetime_to_string(datetime.now(timezone.utc))))
+
+
+# The analytics detail endpoint refuses unscoped requests and scopes larger than
+# this many submissions; per-submission payloads are for drill-downs only.
+ANALYTICS_DETAIL_CAP = 2000
+
+
+@courses.route('/analytics/detail/', methods=['GET', 'POST'])
+@courses.route('/analytics/detail', methods=['GET', 'POST'])
+@login_required
+def analytics_detail():
+    ''' Per-submission JSON for an explicitly scoped analytics drill-down (some
+    assignments, some students, or one exam group): the submissions-filter
+    encoding plus dates, attempts, and the pivoted counter metrics. Metrics
+    with no row are omitted, not zero-filled — that is how the frontend tells
+    "no data" from 0. '''
+    course_id = get_course_id()
+    require_course_grader(g.user, course_id)
+    assignment_ids = [int(aid) for aid in request.values.get('assignment_ids', "").split(",")
+                      if aid.strip().isdigit()]
+    user_ids = [int(uid) for uid in request.values.get('user_ids', "").split(",")
+                if uid.strip().isdigit()]
+    assignment_group_id = maybe_int(request.values.get('assignment_group_id'))
+    if not assignment_ids and not user_ids and assignment_group_id is None:
+        return ajax_failure("The analytics detail endpoint requires a scope: "
+                            "assignment_ids, user_ids, or assignment_group_id.")
+    combinator, criteria, search_errors = parse_submission_search(
+        request.values.get('search', ""), ANALYTICS_SEARCH_FIELDS)
+    query = (Submission.query
+             .filter(*_analytics_scope_filters(course_id, assignment_ids, user_ids))
+             .options(*search_load_options(criteria)))
+    if assignment_group_id is not None:
+        query = query.filter(Submission.assignment_group_id == assignment_group_id)
+    if query.count() > ANALYTICS_DETAIL_CAP:
+        return ajax_failure(f"That scope covers more than {ANALYTICS_DETAIL_CAP} submissions; "
+                            "narrow the selection to drill down.")
+    submissions = query.all()
+    # Pivot the counters: submission_id -> {metric: value}, absent metrics omitted
+    metrics_by_submission = defaultdict(dict)
+    if submissions:
+        counter_rows = db.session.execute(
+            select(SubmissionCounts.submission_id, SubmissionCounts.metric,
+                   SubmissionCounts.value)
+            .filter(SubmissionCounts.submission_id.in_([s.id for s in submissions])))
+        for submission_id, metric, value in counter_rows:
+            metrics_by_submission[submission_id][str(metric)] = value
+    if criteria:
+        # Batch-load any users/assignments/groups the criteria read, held in a
+        # local so the identity map keeps them for the evaluation loop.
+        _search_relations = prefetch_search_relations(submissions, criteria)
+        submissions = [submission for submission in submissions
+                       if matches_search_criteria(submission, combinator, criteria,
+                                                  metrics_by_submission.get(submission.id))]
+    encoded = []
+    for submission in submissions:
+        entry = encode_submission_for_filter(submission)
+        entry["date_started"] = datetime_to_string(submission.date_started)
+        entry["date_due"] = datetime_to_string(submission.date_due)
+        entry["attempts"] = submission.attempts
+        entry["metrics"] = metrics_by_submission.get(submission.id, {})
+        encoded.append(entry)
+    return ajax_success(dict(submissions=encoded, search_errors=search_errors))
 
 
 @courses.route('/feedback_editor/<course_id>/', methods=['GET'])

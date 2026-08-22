@@ -83,8 +83,11 @@
                            data-bind="attr: {for: 'search-negate-' + $index()}">NOT</label>
                 </div>
                 <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition field"
-                        data-bind="options: $component.searchFields, optionsText: 'label', optionsValue: 'key',
-                                   value: field"></select>
+                        data-bind="foreach: $component.searchFieldGroups, value: field">
+                    <optgroup data-bind="attr: {label: $data.label}, foreach: $data.fields">
+                        <option data-bind="text: $data.label, attr: {value: $data.key}"></option>
+                    </optgroup>
+                </select>
                 <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition operator"
                         data-bind="options: spec().operators, optionsText: 'label', optionsValue: 'key',
                                    value: operator"></select>
@@ -156,6 +159,9 @@
 
     <div data-bind="if: hasLoaded() && !isLoading()">
         <div class="float-right">
+            <a data-bind="attr: {href: analyzeUrl()}" target="_blank"
+               class="btn btn-outline-secondary mt-2 mr-2"
+               title="Open the Course Analytics page for this same selection">Analyze these</a>
             <span id="bulk-regrade-status" data-bind="text: bulkRegradeStatus"></span>
             <div class="btn-group mt-2">
                 <button

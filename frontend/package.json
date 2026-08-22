@@ -10,6 +10,7 @@
     "@types/select2": "^4.0.53",
     "async": "^3.2.4",
     "browserfs": "^1.4.3",
+    "chart.js": "^4.5.1",
     "codemirror": "^5.65.18",
     "contodo": "^0.4.7",
     "filepond": "^4.30.4",

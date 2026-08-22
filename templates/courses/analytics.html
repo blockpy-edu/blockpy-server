@@ -1,0 +1,51 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Analytics: {{ course.name }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+
+<script type='text/javascript'>
+
+    $().ready(function() {
+        let loggedInUser = {{ user.encode_json()|tojson }};
+        let course = {{ course.encode_json()|tojson }};
+        server = new frontend.Server(course.id, {}, {
+            users: [loggedInUser],
+            courses: [course]
+        });
+        // Preload the course's users and assignments so the selectors populate instantly
+        server.userStore.preload({{ users|tojson }});
+        server.assignmentStore.preloadWithGroups({{ assignments|tojson }}, {{ groups|tojson }});
+        mainModel = {
+            course: server.courseStore.getInstance(course.id),
+            server: server,
+            user: server.userStore.getInstance(loggedInUser.id),
+            defaultAssignmentIds: {{ default_assignment_ids|join(',')|tojson }},
+            userIds: {{ request.values.get('user_ids', '')|tojson }},
+            assignmentIds: {{ request.values.get('assignment_ids', '')|tojson }}
+        }
+        ko.applyBindings(mainModel);
+    });
+
+</script>
+{% endblock %}
+
+{% block body %}
+
+<h1>Course Analytics</h1>
+
+<p class="text-muted small">Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">{{ course.name }}</a></p>
+
+<course-analytics params="server: server,
+                          course: course,
+                          user: user,
+                          defaultAssignmentIds: defaultAssignmentIds,
+                          userIds: userIds,
+                          assignmentIds: assignmentIds"></course-analytics>
+
+{% endblock %}

@@ -58,6 +58,8 @@ def load():
         return blockpy.view_submission()
     if grade_mode == 'filter':
         return course_endpoints.submissions_filter(request.args.get('course_id'))
+    if grade_mode == 'analytics':
+        return course_endpoints.course_analytics(maybe_int(request.args.get('course_id')))
     if grade_mode == 'watch':
         return course_endpoints.watch_events()
     editor_information = parse_assignment_load()

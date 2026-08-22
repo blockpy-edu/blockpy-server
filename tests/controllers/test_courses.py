@@ -591,6 +591,45 @@ class TestSubmissionsAndGrading:
         everything = self._search_submissions(client, [])['submissions']
         assert len(result['submissions']) == len(everything)
 
+    def test_submissions_filter_search_user_fields(self, client, test_data, act_as):
+        """user.* criteria compare against the submission's user."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = self._search_submissions(client, [])['submissions']
+        lulu = test_data.user("lulu@blockpy.com")
+        matching = self._search_submissions(client, [
+            {'field': 'user.email', 'operator': 'icontains', 'value': 'lulu@'}])['submissions']
+        assert all(sub['user_id'] == lulu.id for sub in matching)
+        missing = self._search_submissions(client, [
+            {'field': 'user.email', 'operator': 'icontains', 'value': 'lulu@',
+             'negate': True}])['submissions']
+        assert len(matching) + len(missing) == len(everything)
+
+    def test_submissions_filter_search_assignment_fields(self, client, test_data, act_as):
+        """assignment.* criteria compare against the submission's assignment."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = self._search_submissions(client, [])['submissions']
+        # Any assignment.name value partitions the submissions with its negation
+        named = self._search_submissions(client, [
+            {'field': 'assignment.name', 'operator': 'icontains', 'value': 'a'}])['submissions']
+        unnamed = self._search_submissions(client, [
+            {'field': 'assignment.name', 'operator': 'icontains', 'value': 'a',
+             'negate': True}])['submissions']
+        assert len(named) + len(unnamed) == len(everything)
+        typed = self._search_submissions(client, [
+            {'field': 'assignment.type', 'operator': 'is', 'value': 'blockpy'}])['submissions']
+        untyped = self._search_submissions(client, [
+            {'field': 'assignment.type', 'operator': 'is', 'value': 'blockpy',
+             'negate': True}])['submissions']
+        assert len(typed) + len(untyped) == len(everything)
+
+    def test_submissions_filter_search_rejects_metric_fields(self, client, test_data, act_as):
+        """View Submissions has no metrics dict, so metric fields are not in its
+        accepted set and report back as unknown."""
+        act_as(test_data.user("ada@blockpy.com"))
+        result = self._search_submissions(client, [
+            {'field': 'total_time_spent', 'operator': 'ge', 'value': '10'}])
+        assert len(result['search_errors']) == 1
+
     def test_edit_points_requires_proper_context(self, client, test_data, act_as):
         """edit_points requires proper course context via bulk_assignment_editor_setup."""
         # Lulu (100) is a student
@@ -602,6 +641,118 @@ class TestSubmissionsAndGrading:
         if response.status_code == 200:
             # May return plain text or JSON depending on where it fails
             assert b'error' in response.data.lower() or b'grader' in response.data.lower() or b'instructor' in response.data.lower()
+
+
+class TestCourseAnalytics:
+    """Test the course analytics dashboard endpoints."""
+
+    def test_analytics_page_student_blocked(self, client, test_data, act_as):
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/courses/analytics/6/')
+        assert response.status_code == 200
+        assert b'not an instructor' in response.data.lower()
+
+    def test_analytics_page_instructor_allowed(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/analytics/6/')
+        assert response.status_code == 200, response.data
+        assert b'not an instructor' not in response.data.lower()
+        assert b'course-analytics' in response.data
+
+    def test_analytics_rollup_student_blocked(self, client, test_data, act_as):
+        act_as(test_data.user("lulu@blockpy.com"))
+        response = client.get('/courses/analytics/rollup', query_string={'course_id': 6})
+        assert response.is_json
+        assert response.json['success'] is False
+
+    def test_analytics_rollup_shape(self, client, test_data, act_as):
+        """One aggregate row per assignment and per student, never per submission."""
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/analytics/rollup', query_string={'course_id': 6})
+        assert response.status_code == 200, response.data
+        assert response.json['success'] is True, response.json
+        assert 'data_as_of' in response.json
+        assignments = response.json['assignments']
+        students = response.json['students']
+        for row in assignments + students:
+            for field in ('id', 'n', 'correct', 'mean_score', 'median_score',
+                          'last_activity', 'statuses', 'metrics'):
+                assert field in row, f"Missing {field}"
+            assert row['n'] >= 1
+            assert sum(row['statuses'].values()) == row['n']
+        # Both grains cover the same submissions, so their totals agree
+        assert sum(r['n'] for r in assignments) == sum(r['n'] for r in students)
+
+    def test_analytics_rollup_scoping(self, client, test_data, act_as):
+        """assignment_ids/user_ids narrow both grains."""
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = client.get('/courses/analytics/rollup',
+                                query_string={'course_id': 6}).json
+        if not everything['assignments']:
+            return
+        target = everything['assignments'][0]['id']
+        scoped = client.get('/courses/analytics/rollup',
+                            query_string={'course_id': 6,
+                                          'assignment_ids': str(target)}).json
+        assert [row['id'] for row in scoped['assignments']] == [target]
+        assert sum(r['n'] for r in scoped['students']) == scoped['assignments'][0]['n']
+
+    def test_analytics_detail_requires_scope(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/analytics/detail', query_string={'course_id': 6})
+        assert response.json['success'] is False
+
+    def test_analytics_detail_scoped(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        rollup = client.get('/courses/analytics/rollup',
+                            query_string={'course_id': 6}).json
+        if not rollup['assignments']:
+            return
+        target = rollup['assignments'][0]['id']
+        response = client.get('/courses/analytics/detail',
+                              query_string={'course_id': 6, 'assignment_ids': str(target)})
+        assert response.json['success'] is True, response.json
+        submissions = response.json['submissions']
+        assert len(submissions) == rollup['assignments'][0]['n']
+        for sub in submissions:
+            for field in ('id', 'score', 'correct', 'date_started', 'date_due',
+                          'attempts', 'metrics'):
+                assert field in sub, f"Missing {field}"
+
+    def test_analytics_detail_metric_search(self, client, test_data, act_as):
+        """Metric criteria match against the pivoted counters, and submissions
+        with no counter data never match (no data is not 0)."""
+        import json
+        from models import db, SubmissionCounts
+        from models.enums.metrics import SubmissionMetrics
+        act_as(test_data.user("ada@blockpy.com"))
+        everything = client.get('/courses/analytics/rollup',
+                                query_string={'course_id': 6}).json
+        if not everything['assignments']:
+            return
+        target = everything['assignments'][0]['id']
+        detail = client.get('/courses/analytics/detail',
+                            query_string={'course_id': 6,
+                                          'assignment_ids': str(target)}).json['submissions']
+        assert detail
+        chosen = detail[0]['id']
+        db.session.add(SubmissionCounts(submission_id=chosen,
+                                        metric=SubmissionMetrics.total_time_spent,
+                                        value=500))
+        db.session.commit()
+        search = json.dumps({'combinator': 'and', 'criteria': [
+            {'field': 'total_time_spent', 'operator': 'ge', 'value': '100'}]})
+        matched = client.post('/courses/analytics/detail',
+                              data={'course_id': 6, 'assignment_ids': str(target),
+                                    'search': search}).json['submissions']
+        assert [sub['id'] for sub in matched] == [chosen]
+        assert matched[0]['metrics'].get('total_time_spent') == 500
+        # The rollup now aggregates that counter row too
+        rollup = client.get('/courses/analytics/rollup',
+                            query_string={'course_id': 6,
+                                          'assignment_ids': str(target)}).json
+        stats = rollup['assignments'][0]['metrics'].get('total_time_spent')
+        assert stats == {'sum': 500, 'n': 1, 'median': 500.0}
 
 
 class TestDashboardAndReporting:

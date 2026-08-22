@@ -29,6 +29,8 @@ import '../model_selector';
 import {ajax_post} from "../../services/ajax";
 import {prettyPrintDateTime} from "../../utilities/dates";
 import {STORAGE_SERVICE} from "../../utilities/safe_local_storage";
+import {SearchCriterion, SEARCH_COMBINATORS, VIEW_SUBMISSIONS_FIELD_GROUPS,
+        flattenFieldGroups} from "../search_criteria";
 
 import SUBMISSIONS_FILTER_HTML from "./submissions_filter.html";
 
@@ -106,119 +108,10 @@ const BULK_REGRADE_WAIT = 200;
 
 /*
  * Search criteria: each criterion is (field, operator, value, negate?), combined
- * with a single combinator (and/or/none/xor). Evaluation happens server-side,
- * where the full code/feedback contents live.
+ * with a single combinator (and/or/none/xor). The field specs and SearchCriterion
+ * live in the shared `../search_criteria` module (also used by Course Analytics);
+ * this page opts into the Submission / Student / Assignment field groups.
  */
-
-export interface SearchOperator {
-    key: string;
-    label: string;
-}
-
-export interface SearchFieldSpec {
-    key: string;
-    label: string;
-    type: "number" | "text" | "select" | "date";
-    operators: SearchOperator[];
-    options?: {value: string, label: string}[];
-    placeholder?: string;
-    // Shown under the condition row while this field is selected
-    help?: string;
-}
-
-const NUMBER_OPERATORS: SearchOperator[] = [
-    {key: "ge", label: "is at least"},
-    {key: "gt", label: "is more than"},
-    {key: "eq", label: "is exactly"},
-    {key: "ne", label: "is not"},
-    {key: "le", label: "is at most"},
-    {key: "lt", label: "is less than"}
-];
-const TEXT_OPERATORS: SearchOperator[] = [
-    {key: "contains", label: "contains"},
-    {key: "icontains", label: "contains (ignore case)"},
-    {key: "regex", label: "matches regex"}
-];
-const DATE_OPERATORS: SearchOperator[] = [
-    {key: "before", label: "is before"},
-    {key: "on", label: "is on"},
-    {key: "after", label: "is after"}
-];
-const IS_OPERATOR: SearchOperator[] = [{key: "is", label: "is"}];
-
-export const SEARCH_FIELDS: SearchFieldSpec[] = [
-    {key: "score", label: "Score (%)", type: "number", operators: NUMBER_OPERATORS,
-     placeholder: "0-100",
-     help: "The recorded percentage (0–100). A submission can score high without being " +
-           "flagged correct, so also filter on Correctness when in doubt."},
-    {key: "correct", label: "Correctness", type: "select", operators: IS_OPERATOR,
-     options: [{value: "true", label: "Correct (fully complete)"},
-               {value: "false", label: "Not correct"}],
-     help: "The completion flag, which is separate from the score — a submission " +
-           "can be flagged correct or not regardless of its score."},
-    {key: "code", label: "Code contents", type: "text", operators: TEXT_OPERATORS,
-     placeholder: "text to look for in the code",
-     help: "Checked on the server against the submission's saved code."},
-    {key: "feedback", label: "Feedback contents", type: "text", operators: TEXT_OPERATORS,
-     placeholder: "text to look for in the feedback",
-     help: "Checked on the server against the feedback the student was shown."},
-    {key: "code_length", label: "Code length (characters)", type: "number",
-     operators: NUMBER_OPERATORS, placeholder: "e.g. 20"},
-    {key: "version", label: "Number of edits", type: "number", operators: NUMBER_OPERATORS,
-     placeholder: "e.g. 5"},
-    {key: "submission_status", label: "Submission status", type: "select", operators: IS_OPERATOR,
-     options: [{value: "Initialized", label: "Initialized (never started)"},
-               {value: "Started", label: "Started (never run)"},
-               {value: "inProgress", label: "In progress"},
-               {value: "Submitted", label: "Submitted"},
-               {value: "Completed", label: "Completed"}]},
-    {key: "grading_status", label: "Grading status", type: "select", operators: IS_OPERATOR,
-     options: [{value: "FullyGraded", label: "Fully graded"},
-               {value: "Pending", label: "Pending (maybe done)"},
-               {value: "PendingManual", label: "Human grading in progress"},
-               {value: "Failed", label: "Grade failed to transfer"},
-               {value: "NotReady", label: "Not yet graded"}]},
-    {key: "date_created", label: "Started date", type: "date", operators: DATE_OPERATORS},
-    {key: "date_modified", label: "Last edited date", type: "date", operators: DATE_OPERATORS}
-];
-
-// Labels complete the sentence "Match ___ of the following conditions"
-export const SEARCH_COMBINATORS = [
-    {key: "and", label: "all"},
-    {key: "or", label: "any"},
-    {key: "none", label: "none"},
-    {key: "xor", label: "exactly one"}
-];
-
-export class SearchCriterion {
-    field: KnockoutObservable<string>;
-    operator: KnockoutObservable<string>;
-    value: KnockoutObservable<string>;
-    negate: KnockoutObservable<boolean>;
-    spec: KnockoutReadonlyComputed<SearchFieldSpec>;
-
-    constructor() {
-        this.field = ko.observable(SEARCH_FIELDS[0].key);
-        this.operator = ko.observable(SEARCH_FIELDS[0].operators[0].key);
-        this.value = ko.observable("");
-        this.negate = ko.observable(false);
-        this.spec = ko.pureComputed(() =>
-            SEARCH_FIELDS.find((fieldSpec) => fieldSpec.key === this.field()) || SEARCH_FIELDS[0]);
-        this.field.subscribe(() => {
-            this.operator(this.spec().operators[0].key);
-            this.value(this.spec().type === "select" ? this.spec().options[0].value : "");
-        });
-    }
-
-    toJson() {
-        return {
-            field: this.field(),
-            operator: this.operator(),
-            value: this.value(),
-            negate: this.negate()
-        };
-    }
-}
 
 export class SubmissionsFilter {
     server: Server;
@@ -244,7 +137,8 @@ export class SubmissionsFilter {
     history: ko.ObservableArray<HistoryEntry>;
 
     // Search criteria (evaluated server-side against the selected submissions)
-    searchFields = SEARCH_FIELDS;
+    searchFieldGroups = VIEW_SUBMISSIONS_FIELD_GROUPS;
+    searchFields = flattenFieldGroups(VIEW_SUBMISSIONS_FIELD_GROUPS);
     combinatorOptions = SEARCH_COMBINATORS;
     searchCombinator: KnockoutObservable<string>;
     searchCriteria: ko.ObservableArray<SearchCriterion>;
@@ -501,7 +395,7 @@ export class SubmissionsFilter {
      */
 
     addSearchCriterion() {
-        this.searchCriteria.push(new SearchCriterion());
+        this.searchCriteria.push(new SearchCriterion(this.searchFields));
     }
 
     removeSearchCriterion(criterion: SearchCriterion) {
@@ -910,6 +804,19 @@ export class SubmissionsFilter {
 
     filterByStudentUrl(user: User): string {
         return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=student&search_key=${user.id}`;
+    }
+
+    /** The Course Analytics page, pre-filtered to the same users + assignments. */
+    analyzeUrl(): string {
+        const parts: string[] = [];
+        if (this.loadedUserIds().length) {
+            parts.push(`user_ids=${this.loadedUserIds().join(",")}`);
+        }
+        if (this.loadedAssignmentIds().length) {
+            parts.push(`assignment_ids=${this.loadedAssignmentIds().join(",")}`);
+        }
+        return `${this.base()}courses/analytics/${this.course.id}`
+            + (parts.length ? "?" + parts.join("&") : "");
     }
 
     viewSubmissionUrl(row: SubmissionRow): string {

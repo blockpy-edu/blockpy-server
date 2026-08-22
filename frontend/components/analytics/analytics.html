@@ -1,0 +1,415 @@
+<style>
+#analytics-assignments-table thead tr,
+#analytics-students-table thead tr {
+    cursor: pointer;
+}
+.course-analytics td.stat-cell {
+    white-space: nowrap;
+}
+.course-analytics .progress-cell {
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 1px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+</style>
+
+<div class="course-analytics">
+    <user-display-settings-editor params="options: server.userStore.displayOptions,
+                                          sortMode: server.userStore.sortMode,
+                                          displayMode: server.userStore.displayMode"></user-display-settings-editor>
+
+    <!-- The shared control bar: every selection narrows every tab -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header py-2">
+                    <strong>Students</strong>
+                </div>
+                <div class="card-body py-3">
+                    <user-set-selector params="store: server.userStore, modelSet: userSet, default: userDefault,
+                                               mode: userSelectMode, applySelection: userApply,
+                                               ready: userSelectorReady"></user-set-selector>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header py-2">
+                    <strong>Assignments</strong>
+                </div>
+                <div class="card-body py-3">
+                    <assignment-set-selector params="store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,
+                                                     mode: assignmentSelectMode, applySelection: assignmentApply,
+                                                     ready: assignmentSelectorReady"></assignment-set-selector>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optional criteria: submission, metric, student, and assignment fields -->
+    <div class="card mb-3">
+        <div class="card-header py-2 d-flex align-items-center">
+            <strong>Submission filters</strong>
+            <span class="badge badge-secondary ml-2"
+                  data-bind="text: searchCriteria().length, visible: searchCriteria().length > 0"></span>
+            <small class="text-muted ml-auto">Optional</small>
+        </div>
+        <div class="card-body py-3">
+            <!-- ko ifnot: searchCriteria().length -->
+            <span class="text-muted mr-3">No submission filters</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bind="click: addSearchCriterion">
+                <span class="fas fa-plus"></span> Add filter</button>
+            <!-- /ko -->
+            <!-- ko if: searchCriteria().length -->
+            <div class="form-inline mb-2">
+                <label class="mr-2" for="analytics-search-combinator">Match</label>
+                <select id="analytics-search-combinator" class="form-control form-control-sm custom-select"
+                        data-bind="options: combinatorOptions, optionsText: 'label', optionsValue: 'key',
+                                   value: searchCombinator"></select>
+                <span class="ml-2">of the following conditions:</span>
+            </div>
+            <!-- ko foreach: searchCriteria -->
+            <div class="form-inline mb-1">
+                <div class="form-check mr-2" title="Invert this condition">
+                    <input type="checkbox" class="form-check-input"
+                           data-bind="checked: negate, attr: {id: 'analytics-negate-' + $index()}">
+                    <label class="form-check-label"
+                           data-bind="attr: {for: 'analytics-negate-' + $index()}">NOT</label>
+                </div>
+                <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition field"
+                        data-bind="foreach: $component.searchFieldGroups, value: field">
+                    <optgroup data-bind="attr: {label: $data.label}, foreach: $data.fields">
+                        <option data-bind="text: $data.label, attr: {value: $data.key}"></option>
+                    </optgroup>
+                </select>
+                <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition operator"
+                        data-bind="options: spec().operators, optionsText: 'label', optionsValue: 'key',
+                                   value: operator"></select>
+                <!-- ko if: spec().type === 'number' -->
+                <input type="number" step="any" class="form-control form-control-sm mr-2"
+                       aria-label="Condition value"
+                       data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+                <!-- /ko -->
+                <!-- ko if: spec().type === 'text' -->
+                <input type="text" class="form-control form-control-sm mr-2" style="min-width: 18em"
+                       aria-label="Condition value"
+                       data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+                <!-- /ko -->
+                <!-- ko if: spec().type === 'date' -->
+                <input type="date" class="form-control form-control-sm mr-2"
+                       aria-label="Condition value" data-bind="value: value">
+                <!-- /ko -->
+                <!-- ko if: spec().type === 'select' -->
+                <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition value"
+                        data-bind="options: spec().options, optionsText: 'label', optionsValue: 'value',
+                                   value: value"></select>
+                <!-- /ko -->
+                <button type="button" class="btn btn-outline-danger btn-sm" title="Remove this condition"
+                        data-bind="click: (criterion) => $component.removeSearchCriterion(criterion)">
+                    <span class="fas fa-times"></span></button>
+            </div>
+            <!-- ko if: spec().help -->
+            <small class="form-text text-muted mt-0 mb-2" data-bind="text: spec().help"></small>
+            <!-- /ko -->
+            <!-- /ko -->
+            <div class="mt-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        data-bind="click: addSearchCriterion">
+                    <span class="fas fa-plus"></span> Add condition</button>
+                <button type="button" class="btn btn-link btn-sm ml-2"
+                        data-bind="click: clearSearch">Clear all</button>
+            </div>
+            <small class="text-muted mt-2 d-block">
+                While filters are applied, the statistics are computed from only the
+                matching submissions, and the selection must stay modest (filters read
+                each submission, so very large scopes are refused).
+            </small>
+            <!-- /ko -->
+            <!-- ko if: searchErrors().length -->
+            <div class="alert alert-warning mt-2 mb-0">
+                <!-- ko foreach: searchErrors -->
+                <div data-bind="text: $data"></div>
+                <!-- /ko -->
+            </div>
+            <!-- /ko -->
+        </div>
+    </div>
+
+    <!-- The current interpretation of the form, then the single action -->
+    <div class="mb-4">
+        <div class="text-muted mb-2" data-bind="text: querySummary"></div>
+        <button class="btn btn-primary" data-bind="click: viewAnalytics">View analytics</button>
+        <a data-bind="attr: {href: viewSubmissionsUrl()}, visible: hasLoaded" target="_blank"
+           class="btn btn-outline-secondary ml-2">Open in View Submissions</a>
+    </div>
+
+    <div data-bind="if: isLoading">
+        <div class="spinner-loader" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- ko if: hasFailed -->
+    <div class="alert alert-danger" role="alert" data-bind="text: failureMessage"></div>
+    <!-- /ko -->
+
+    <div data-bind="if: hasLoaded() && !isLoading()">
+
+        <!-- ko if: dataAsOf -->
+        <div class="text-muted small mb-2">
+            Data as of <span data-bind="text: dataAsOf"></span>
+            <button type="button" class="btn btn-link btn-sm p-0 ml-1"
+                    data-bind="click: refresh">Refresh</button>
+        </div>
+        <!-- /ko -->
+
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"
+                   title="Coming in a later phase">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"
+                   data-bind="css: {active: currentTab() === 'assignments'},
+                              click: () => switchTab('assignments')">Assignments</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#"
+                   data-bind="css: {active: currentTab() === 'students'},
+                              click: () => switchTab('students')">Students</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"
+                   title="Coming in a later phase">Exams</a>
+            </li>
+        </ul>
+
+        <!-- Tab 2: is the content working? One row per assignment, grouped by
+             assignment group, with type-aware columns. -->
+        <div data-bind="visible: currentTab() === 'assignments'">
+            <table class="table table-condensed table-hover table-striped table-bordered"
+                   id="analytics-assignments-table">
+                <caption>
+                    Per-assignment statistics for the selected students.
+                    A "—" means no recorded data (which is not the same as 0);
+                    medians cover only the students with data.
+                </caption>
+                <thead class="thead-dark">
+                    <tr data-bind="foreach: columns">
+                        <th data-bind="click: () => $component.sortColumn($index()),
+                                       attr: {'data-type': type, title: $data.help || ''}">
+                            <span data-bind="text: label"></span>
+                            <span class="fas fa-sort float-right"></span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ko foreach: assignmentRows -->
+                    <!-- ko if: isGroupHeader -->
+                    <tr class="table-active">
+                        <td data-bind="attr: {colspan: $component.columns().length}">
+                            <strong data-bind="text: groupName"></strong>
+                        </td>
+                    </tr>
+                    <!-- /ko -->
+                    <!-- ko ifnot: isGroupHeader -->
+                    <tr>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-link p-0 mr-2"
+                                    title="Histograms and score-vs-time for this assignment"
+                                    data-bind="click: () => $component.toggleAssignmentDetail($data),
+                                               text: $component.expandedAssignmentId() === assignment.id ? '▾' : '▸'"></button>
+                            <a data-bind="text: assignment.title(),
+                                          attr: {href: $component.viewAssignmentSubmissionsUrl($data),
+                                                 title: 'Open in View Submissions'}"
+                               target="_blank"></a>
+                        </td>
+                        <td data-bind="text: assignment.type()"></td>
+                        <td class="stat-cell" data-bind="text: $component.countText($component.startedCount($data))"></td>
+                        <td class="stat-cell" data-bind="text: $component.countText($component.ranCount($data))"></td>
+                        <td class="stat-cell" data-bind="text: stats != null ? stats.correct : '—'"></td>
+                        <td class="stat-cell" data-bind="text: $component.completionText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.scoreText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.timeText($data),
+                                                         attr: {title: $component.timeTitle($data)}"></td>
+                        <td class="stat-cell" data-bind="text: $component.runsText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.rateText($data, 'feedback_syntax_errors', 'feedback_total')"></td>
+                        <td class="stat-cell" data-bind="text: $component.rateText($data, 'feedback_runtime_errors', 'feedback_total')"></td>
+                        <td class="stat-cell" data-bind="text: $component.rateText($data, 'feedback_assertion_successes', 'feedback_assertion_counts')"></td>
+                    </tr>
+                    <!-- ko if: $component.expandedAssignmentId() === assignment.id -->
+                    <tr>
+                        <td data-bind="attr: {colspan: $component.columns().length}">
+                            <!-- ko if: $component.isDetailLoading -->
+                            <div class="text-muted p-3">Loading the drill-down…</div>
+                            <!-- /ko -->
+                            <!-- ko if: $component.detailError() -->
+                            <div class="alert alert-warning m-2" data-bind="text: $component.detailError()"></div>
+                            <!-- /ko -->
+                            <!-- ko if: !$component.isDetailLoading() && !$component.detailError() -->
+                            <div class="text-muted small px-3 pt-2">
+                                <span data-bind="text: $component.expandedDataCount()"></span>
+                                students with recorded activity data
+                                (of <span data-bind="text: $component.expandedDetail().length"></span>
+                                with a submission).
+                            </div>
+                            <div class="d-flex flex-wrap p-2">
+                                <!-- ko if: $component.expandedTimeChart() -->
+                                <div class="p-2" style="width: 33%; min-width: 20rem; height: 240px;">
+                                    <canvas data-bind="chart: $component.expandedTimeChart"></canvas>
+                                </div>
+                                <!-- /ko -->
+                                <!-- ko if: $component.expandedRunsChart() -->
+                                <div class="p-2" style="width: 33%; min-width: 20rem; height: 240px;">
+                                    <canvas data-bind="chart: $component.expandedRunsChart"></canvas>
+                                </div>
+                                <!-- /ko -->
+                                <!-- ko if: $component.expandedScatterChart() -->
+                                <div class="p-2" style="width: 33%; min-width: 20rem; height: 240px;">
+                                    <canvas data-bind="chart: $component.expandedScatterChart"></canvas>
+                                </div>
+                                <!-- /ko -->
+                                <!-- ko if: !$component.expandedTimeChart() && !$component.expandedRunsChart() && !$component.expandedScatterChart() -->
+                                <div class="text-muted p-3">
+                                    No recorded activity data for this assignment yet —
+                                    the charts appear once students generate events.
+                                </div>
+                                <!-- /ko -->
+                            </div>
+                            <!-- /ko -->
+                        </td>
+                    </tr>
+                    <!-- /ko -->
+                    <!-- /ko -->
+                    <!-- /ko -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tab 3: the roster — one row per student, aggregated over the
+             selected assignments. Rates color against the class median. -->
+        <div data-bind="visible: currentTab() === 'students'">
+            <div class="mb-2">
+                <input type="checkbox" name="analytics-only-learners" id="analytics-only-learners"
+                       data-bind="checked: showOnlyLearners" />
+                <label for="analytics-only-learners">Show only learners</label>
+            </div>
+            <table class="table table-condensed table-hover table-striped table-bordered"
+                   id="analytics-students-table">
+                <caption>
+                    Per-student statistics for the selected assignments.
+                    A "—" means no recorded data (which is not the same as 0);
+                    error rates are colored against the class median.
+                </caption>
+                <thead class="thead-dark">
+                    <tr data-bind="foreach: studentColumns">
+                        <th data-bind="click: () => $component.sortStudentColumn($index()),
+                                       attr: {'data-type': type, title: $data.help || ''}">
+                            <span data-bind="text: label"></span>
+                            <span class="fas fa-sort float-right"></span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ko if: !studentRows().length -->
+                    <tr>
+                        <td class="text-muted" data-bind="attr: {colspan: studentColumns().length}">
+                            No students to show — if this course has no learner roles,
+                            uncheck "Show only learners" above.
+                        </td>
+                    </tr>
+                    <!-- /ko -->
+                    <!-- ko foreach: studentRows -->
+                    <tr>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-link p-0 mr-2"
+                                    title="This student's whole-course picture"
+                                    data-bind="click: () => $component.toggleStudentDetail($data),
+                                               text: $component.expandedUserId() === user.id ? '▾' : '▸'"></button>
+                            <span data-bind="text: user.title()"></span>
+                        </td>
+                        <td data-bind="text: $component.rolesList(user)"></td>
+                        <td class="stat-cell" data-bind="text: stats != null ? stats.correct : '—'"></td>
+                        <td class="stat-cell" data-bind="text: $component.studentCompletionText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.studentScoreText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.totalTimeText($data)"></td>
+                        <td class="stat-cell" data-bind="text: $component.studentRateText($data, 'feedback_syntax_errors', 'feedback_total'),
+                                                         css: $component.studentRateClass($data, 'syntax'),
+                                                         attr: {title: $component.studentRateTitle($data, 'syntax')}"></td>
+                        <td class="stat-cell" data-bind="text: $component.studentRateText($data, 'feedback_runtime_errors', 'feedback_total'),
+                                                         css: $component.studentRateClass($data, 'runtime'),
+                                                         attr: {title: $component.studentRateTitle($data, 'runtime')}"></td>
+                        <td class="stat-cell" data-bind="text: $component.studentRateText($data, 'feedback_assertion_successes', 'feedback_assertion_counts'),
+                                                         css: $component.studentRateClass($data, 'tests'),
+                                                         attr: {title: $component.studentRateTitle($data, 'tests')}"></td>
+                        <td class="stat-cell" data-bind="text: $component.lastActivityText($data)"></td>
+                        <td class="stat-cell">
+                            <a data-bind="attr: {href: $component.submissionsUserUrl($data)}"
+                               target="_blank" title="This student's submissions, one row per assignment">Overview</a>
+                            ·
+                            <a data-bind="attr: {href: $component.viewStudentSubmissionsUrl($data)}"
+                               target="_blank" title="View Submissions filtered to this student">Submissions</a>
+                        </td>
+                    </tr>
+                    <!-- ko if: $component.expandedUserId() === user.id -->
+                    <tr>
+                        <td data-bind="attr: {colspan: $component.studentColumns().length}">
+                            <!-- ko if: $component.isUserDetailLoading -->
+                            <div class="text-muted p-3">Loading this student's whole-course picture…</div>
+                            <!-- /ko -->
+                            <!-- ko if: $component.userDetailError() -->
+                            <div class="alert alert-warning m-2" data-bind="text: $component.userDetailError()"></div>
+                            <!-- /ko -->
+                            <!-- ko if: !$component.isUserDetailLoading() && !$component.userDetailError() -->
+                            <div class="p-2">
+                                <div class="text-muted small mb-2">
+                                    Progress across the whole course (every group, not just the
+                                    selection). Hover a cell for the assignment; click to open
+                                    the submission.
+                                </div>
+                                <!-- ko foreach: $component.progressStrip -->
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="text-truncate mr-2" style="width: 14rem;"
+                                         data-bind="text: groupName, attr: {title: groupName}"></div>
+                                    <div class="d-flex flex-wrap">
+                                        <!-- ko foreach: cells -->
+                                        <!-- ko if: submission != null -->
+                                        <a class="progress-cell" target="_blank"
+                                           data-bind="css: cellClass,
+                                                      attr: {title: title, href: $component.progressCellUrl($data)}"></a>
+                                        <!-- /ko -->
+                                        <!-- ko ifnot: submission != null -->
+                                        <span class="progress-cell" data-bind="css: cellClass, attr: {title: title}"></span>
+                                        <!-- /ko -->
+                                        <!-- /ko -->
+                                    </div>
+                                </div>
+                                <!-- /ko -->
+                                <div class="text-muted small mt-2">
+                                    <span class="progress-cell bg-success"></span> complete
+                                    <span class="progress-cell bg-warning ml-2"></span> partial score
+                                    <span class="progress-cell bg-info ml-2"></span> started
+                                    <span class="progress-cell bg-secondary ml-2"></span> opened, never started
+                                    <span class="progress-cell bg-light ml-2"></span> no submission
+                                </div>
+                                <!-- ko if: $component.studentAnomaliesText() -->
+                                <div class="small mt-2">
+                                    <strong>Signals to review</strong> (neutral counts, not verdicts):
+                                    <span data-bind="text: $component.studentAnomaliesText()"></span>
+                                </div>
+                                <!-- /ko -->
+                            </div>
+                            <!-- /ko -->
+                        </td>
+                    </tr>
+                    <!-- /ko -->
+                    <!-- /ko -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
