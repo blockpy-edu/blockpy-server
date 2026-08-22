@@ -61,9 +61,8 @@ def process_quiz(body: dict, checks: dict, submission_body: dict) -> QuizResult:
     checks = checks.get('questions', {})
     questions = body.get('questions', {})
     settings = body.get("settings", {})
-    if "feedbackType" in settings:
-        if settings["feedbackType"] == "SUMMARY":
-            print("HELLO WORLD")
+    # Surveys are graded for participation, not against the answer key
+    is_survey = str(settings.get("gradeMode", "QUIZ")).upper() == "SURVEY"
     # For each question in the on_run, run the evaluation criteria
     total_score, total_points = 0., 0.
     total_correct = True
@@ -77,7 +76,10 @@ def process_quiz(body: dict, checks: dict, submission_body: dict) -> QuizResult:
         check = checks.get(question_id, {})
         points = question.get('points', 1)
         total_points += points
-        checked_question = check_quiz_question(question, check, student)
+        if is_survey:
+            checked_question = check_survey_question(question, student)
+        else:
+            checked_question = check_quiz_question(question, check, student)
         if checked_question is None:
             feedbacks[question_id] = {"message": "Unknown Type: " + question.get('type'),
                                       "correct": None, "score": 0, "status": "error", 'tags': []}
@@ -97,6 +99,32 @@ def process_quiz(body: dict, checks: dict, submission_body: dict) -> QuizResult:
     # Report back the final score and feedback objects
     return QuizResult(total_score / total_points if total_points else 0,
                       total_correct, total_points, feedbacks, True, submission_body, None)
+
+
+def is_answer_given(student) -> bool:
+    """ Whether a student answer, in any question type's shape, is non-empty:
+    a string, a list of parts (matching/multiple answers), or a dict of blanks. """
+    if student is None:
+        return False
+    if isinstance(student, str):
+        return bool(student.strip())
+    if isinstance(student, (list, tuple)):
+        return any(is_answer_given(part) for part in student)
+    if isinstance(student, dict):
+        return any(is_answer_given(part) for part in student.values())
+    return True
+
+
+def check_survey_question(question, student) -> (float, bool, str):
+    """ Survey grading: full credit for any answer regardless of its content.
+    Essay (and text-only) questions always earn their points; every other
+    type earns them only if the student actually answered, so a skipped
+    multiple-choice question is worth nothing. """
+    if question.get('type') in ('text_only_question', 'essay_question'):
+        return 1, True, "Thank you!"
+    if is_answer_given(student):
+        return 1, True, "Thank you!"
+    return 0, False, "Skipped"
 
 
 def check_matching_question(student_part, correct_part):
