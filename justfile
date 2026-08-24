@@ -17,5 +17,8 @@ huey:
 frontend:
     cd frontend && npm run watch
 
+frontend-build:
+    cd frontend && npm run nowatch
+
 [parallel]
 dev: serve huey frontend

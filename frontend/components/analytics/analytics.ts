@@ -1225,9 +1225,15 @@ export class CourseAnalytics {
             .map((id: string) => parseInt(id, 10));
     }
 
-    /** Keep the address bar shareable with co-instructors and TAs. */
+    /** Keep the address bar shareable with co-instructors and TAs. Only when
+     * actually served at the canonical courses/analytics path: LTI relaunches
+     * render this page at /assignments/load?grade_mode=analytics&course_id=...,
+     * where swapping in user_ids/assignment_ids params would corrupt the URL. */
     private updateUrl() {
         if (!window.history || !window.history.replaceState) {
+            return;
+        }
+        if (window.location.pathname.indexOf("courses/analytics") === -1) {
             return;
         }
         const parts: string[] = [];

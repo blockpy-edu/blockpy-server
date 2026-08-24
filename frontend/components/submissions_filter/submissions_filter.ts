@@ -518,12 +518,19 @@ export class SubmissionsFilter {
             .map((id: string) => parseInt(id, 10));
     }
 
-    /** Keep the address bar shareable, using the same URLs the old page produced. */
+    /** Keep the address bar shareable, using the same URLs the old page produced.
+     * Only when actually served at the canonical courses/submissions_filter path:
+     * LTI relaunches render this page at /assignments/load?grade_mode=filter&course_id=...,
+     * where swapping in criteria/search_key params would corrupt the URL (dropping
+     * course_id and grade_mode, so a refresh would load the plain editor instead). */
     private updateUrl() {
         if (!window.history || !window.history.replaceState) {
             return;
         }
         const base = window.location.pathname;
+        if (base.indexOf("courses/submissions_filter") === -1) {
+            return;
+        }
         let search = "";
         if (this.loadedAssignmentIds().length === 1 && this.loadedUserIds().length !== 1) {
             search = `?criteria=assignment&search_key=${this.loadedAssignmentIds()[0]}`;
