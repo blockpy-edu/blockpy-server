@@ -1270,7 +1270,7 @@ def _studio_pedal_evaluate(evaluation, on_eval, options_json):
     except BaseException:  # noqa: BLE001 - grading must fail soft
         return _studio_fail_soft()
 `;
-  const We = ["pedal", "curriculum-sneks", "bakery"];
+  const We = ["pedal>=3.0.3", "curriculum-sneks", "bakery"];
   class J {
     constructor(e, t) {
       this.grade_ = e, this.evaluate_ = t;
@@ -1437,6 +1437,11 @@ pyodide_http.patch_all()`
       if (e.allowRealRequests)
         try {
           await this.ensureRealRequests();
+        } catch {
+        }
+      if (e.warmPedal)
+        try {
+          await this.ensurePedal();
         } catch {
         }
       this.pyodide.runPython(

@@ -259,7 +259,7 @@ def parse_assignment_load(assignment_id_or_url=None):
         if assignment.has_passcode() and not passcode_protected:
             passcode_protected = True
     # Check for studio flag
-    use_studio = maybe_bool(request.args.get('use_studio', None))
+    use_studio = maybe_bool(request.values.get('use_studio', None))
     # Combine the submissions and assignments
     group = list(zip(assignments, submissions))
     # Get session start time
