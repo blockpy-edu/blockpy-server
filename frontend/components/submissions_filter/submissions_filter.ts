@@ -221,8 +221,9 @@ export class SubmissionsFilter {
         const criteria = params.criteria || "none";
         const searchKey = params.searchKey;
         // Initial selection: URL criteria/search_key or user_ids/assignment_ids
-        // (deep links), then the most recently viewed selection, then the default
-        // of all users on the first assignment.
+        // (deep links), or the default of all users on the first assignment.
+        // Recent views are offered as buttons but never auto-applied, so loading
+        // the page never silently swaps in a remembered selection.
         let autoLoad: HistoryEntry = null;
         let loadFirstAssignment = false;
         if (criteria === "assignment" && searchKey > 0) {
@@ -237,11 +238,6 @@ export class SubmissionsFilter {
             this.userDefault = params.userIds || "";
             this.assignmentDefault = params.assignmentIds || "";
             autoLoad = {userIds: this.userDefault, assignmentIds: this.assignmentDefault};
-        } else if (this.history().length) {
-            const recent = this.history()[0];
-            this.userDefault = recent.userIds;
-            this.assignmentDefault = recent.assignmentIds;
-            autoLoad = {userIds: recent.userIds, assignmentIds: recent.assignmentIds};
         } else {
             this.userDefault = "";
             this.assignmentDefault = "first";
@@ -273,7 +269,7 @@ export class SubmissionsFilter {
         this.server.assignmentStore.getAllAvailable().then((assignments: Assignment[]) => {
             this.availableAssignments(assignments);
             if (loadFirstAssignment && assignments.length) {
-                this.load("", String(assignments[0].id));
+                this.load("", String(assignments[0].id), {updateUrl: false, recordHistory: false});
             }
         });
 
@@ -339,7 +335,7 @@ export class SubmissionsFilter {
         });
 
         if (autoLoad != null) {
-            this.load(autoLoad.userIds, autoLoad.assignmentIds);
+            this.load(autoLoad.userIds, autoLoad.assignmentIds, {updateUrl: false});
         }
     }
 
@@ -350,7 +346,12 @@ export class SubmissionsFilter {
         this.load(userIds, assignmentIds);
     }
 
-    load(userIds: string, assignmentIds: string) {
+    /** Fetch and show submissions. The automatic initial load passes options to
+     * leave the address bar exactly as navigated (and, for the default
+     * first-assignment view, to keep it out of Recent views); explicit loads
+     * (View submissions, recent-view buttons) update both. */
+    load(userIds: string, assignmentIds: string,
+         options: {updateUrl?: boolean, recordHistory?: boolean} = {}) {
         assignmentIds = this.normalizeSelection(assignmentIds, this.availableAssignments());
         const normalizedUserIds = this.normalizeSelection(userIds, this.availableUsers());
         // Everything x everything is not a real selection; keep the explicit list
@@ -378,8 +379,12 @@ export class SubmissionsFilter {
                 this.sortIndex(null);
                 this.sortDirections = {};
                 this.hasLoaded(true);
-                this.updateUrl();
-                this.pushHistory(userIds, assignmentIds);
+                if (options.updateUrl !== false) {
+                    this.updateUrl();
+                }
+                if (options.recordHistory !== false) {
+                    this.pushHistory(userIds, assignmentIds);
+                }
             } else {
                 console.error("Loading submissions failed!", data);
             }
