@@ -158,8 +158,13 @@ def export():
             return abort(400, "Not an instructor in this assignments' course.")
         return json.dumps(export_bundle(assignments=[assignment]))
     group_id = request.json.get("assignment_group_id")
-    if group_id:
-        assignment_group = AssignmentGroup.by_id(group_id)
+    group_url = request.json.get("assignment_group_url")
+    if group_id or group_url:
+        if group_url:
+            assignment_group = AssignmentGroup.by_url(group_url)
+        else:
+            assignment_group = AssignmentGroup.by_id(group_id)
+        check_resource_exists(assignment_group, "AssignmentGroup", group_id or group_url)
         assignments = assignment_group.get_assignments()
         memberships = assignment_group.get_memberships()
         if not user.is_instructor(assignment_group.course_id):
@@ -171,10 +176,15 @@ def export():
                                memberships=memberships)
         return json.dumps(bundle)
     course_id = request.json.get("course_id")
-    if course_id:
-        if not user.is_instructor(course_id):
+    course_url = request.json.get("course_url")
+    if course_id or course_url:
+        if course_url:
+            course = Course.by_url(course_url)
+        else:
+            course = Course.by_id(course_id)
+        check_resource_exists(course, "Course", course_id or course_url)
+        if not user.is_instructor(course.id):
             return abort(400, "Not an instructor in this course.")
-        course = Course.by_id(course_id)
         groups = course.get_assignment_groups()
         assignment_and_memberships = course.get_assignments()
         assignments = [a for a, m in assignment_and_memberships]
@@ -182,7 +192,7 @@ def export():
         bundle = export_bundle(groups=groups, assignments=assignments,
                                memberships=memberships)
         return json.dumps(bundle)
-    abort(400, "No assignment_id or assignment_group_id given")
+    abort(400, "No assignment_id, assignment_url, assignment_group_id, assignment_group_url, course_id, or course_url given")
 
 
 @blueprint_api.route('/import/', methods=['GET', 'POST'])
