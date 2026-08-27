@@ -1,0 +1,49 @@
+{% set reduced_layout = embed or 'iframe' == request.form.get('launch_presentation_document_target') %}
+{% extends 'helpers/layout.html' %}
+{% import 'helpers/navigation.html' as navigation %}
+
+{% block title %}
+Browse Assignment Group History
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<script type='text/javascript'>
+    $(function() {
+        let loggedInUser = {{ user.encode_json()|tojson }};
+        let server = new frontend.Server({{ course_id|tojson }}, {}, {
+            users: [loggedInUser]
+        });
+        
+        // WatchMode enum values
+        const WatchMode = {
+            SUMMARY: 0,
+            FULL: 1
+        };
+        
+        let mainModel = {
+            server: server,
+            courseId: {{ course_id|tojson }},
+            assignmentIds: {{ assignment_ids|tojson }},
+            userIds: {{ user_ids|tojson }},
+            defaultWatchMode: WatchMode.SUMMARY
+        };
+        
+        ko.applyBindings(mainModel);
+    });
+</script>
+{% endblock %}
+
+{% block body %}
+
+    <h1>Browse Assignment Group History</h1>
+    {{ navigation.navigate_course(course_id) }}
+
+    <p>Assignment Group: {{ assignment_group.name }}</p>
+    <p>Course: {{ course.name }}</p>
+
+    <watcher params="server: server, courseId: courseId, assignmentIds: assignmentIds, userIds: userIds, defaultWatchMode: defaultWatchMode"></watcher>
+
+{% endblock %}

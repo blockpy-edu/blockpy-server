@@ -55,6 +55,15 @@
     
     <assignment-group params="group: group"></assignment-group>
 
+    {% if is_grader %}
+    <p>
+        <a href="{{ url_for('assignment_group.browse_history', assignment_group_id=assignment_group.id, course_id=course_id, user_id=user_id) }}" 
+           class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-history"></i> Browse All Submission History
+        </a>
+    </p>
+    {% endif %}
+
     <p>
     {% if reduced_layout %}
         Below, you can see your current submission for this assignment.<br>
