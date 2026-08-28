@@ -22,7 +22,55 @@
         <a target="_blank" href="{{ url_for('blockpy.load_assignment', assignment_id=current_assignment_id, course_id=course_id, assignment_group_id=assignment_group_id, embed=embed, read_only=read_only) }}">Click here to try again</a>.
     </span>
 
+    <div id="safari-warning" class="alert alert-danger alert-dismissible" role="alert" style="display: none; margin: 8px;">
+        <strong>Safari is not currently supported by BlockPy.</strong>
+        You appear to be using Safari, which is not working correctly with BlockPy right now.
+        Please switch to <a href="https://www.google.com/chrome/" target="_blank" rel="noopener">Google Chrome</a>
+        (or another Chromium-based browser) to complete this assignment.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+
+    <div id="chrome-150-warning" class="alert alert-danger alert-dismissible" role="alert" style="display: none; margin: 8px;">
+        <strong>Please update Google Chrome.</strong>
+        You appear to be using Chrome 150 on macOS, which has a known bug that breaks dropdown menus in BlockPy.
+        Please update Chrome (Chrome menu &rarr; <em>About Google Chrome</em>) or use a different Chromium-based browser
+        to complete this assignment.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+
     <script>
+    (function () {
+        // Safari's UA contains "Safari", but so do Chrome/Edge/Opera/Firefox-on-iOS; exclude those.
+        const ua = navigator.userAgent || "";
+        const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/i.test(ua);
+        if (isSafari) {
+            document.getElementById("safari-warning").style.display = "block";
+            console.warn("Safari detected; BlockPy is not currently supported on Safari. Please use Chrome.");
+        }
+    })();
+    (function () {
+        // Chrome 150 on macOS has a bug that breaks dropdowns. Prefer userAgentData (real major version,
+        // not affected by UA reduction); fall back to parsing the UA string.
+        const ua = navigator.userAgent || "";
+        const uaData = navigator.userAgentData;
+        let isMac = /Mac OS X|Macintosh/i.test(ua);
+        let chromeMajor = null;
+        if (uaData && Array.isArray(uaData.brands)) {
+            if (uaData.platform) { isMac = uaData.platform === "macOS"; }
+            const brand = uaData.brands.find(b => b.brand === "Google Chrome");
+            chromeMajor = brand ? parseInt(brand.version, 10) : -1;
+        }
+        if (chromeMajor === null) {
+            const m = ua.match(/\bChrome\/(\d+)/);
+            if (m && !/Edg|OPR/i.test(ua)) { chromeMajor = parseInt(m[1], 10); }
+        }
+        if (isMac && chromeMajor === 150) {
+            document.getElementById("chrome-150-warning").style.display = "block";
+            console.warn("Chrome 150 on macOS detected; dropdowns are broken in this version. Please update Chrome.");
+            alert("Your version of Google Chrome (150) has a bug on macOS that breaks dropdown menus in BlockPy.\n\n" +
+                  "Please update Chrome (Chrome menu > About Google Chrome) and reload this page.");
+        }
+    })();
 
     window.ltiLoadedCorrectly = frontend.checkCookies();
     if (!frontend.checkCookies()) {
