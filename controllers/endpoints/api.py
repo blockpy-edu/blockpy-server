@@ -211,7 +211,9 @@ def import_endpoint():
     groups = request.json.get('groups', [])
     for group in groups:
         group = AssignmentGroup.by_url(group['url'])
-        if not user.is_instructor(group.course_id):
+        # A group that does not exist yet will be created in `course_id`.
+        if ((group and not user.is_instructor(group.course_id))
+                or (not group and not user.is_instructor(course_id))):
             return abort(400, "Not an instructor in this assignment groups' course.")
     # TODO: Verify that memberships are all attached to a group owned by this user
     import_bundle(request.json, owner_id=user.id, course_id=course_id)
