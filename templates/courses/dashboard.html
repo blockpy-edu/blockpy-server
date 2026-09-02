@@ -73,6 +73,17 @@ Dashboard
             </div>
         </div>
 
+        <!-- Exam Time -->
+        <div class="col-sm-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Exam Time</h5>
+                    <p class="card-text">Check how much time you will have on exams, including any extra time accommodations set for you.</p>
+                    <a href="{{ url_for('courses.exam_time', course_id=g.course.id) }}" class="btn btn-primary" id="check-exam-time">Check Exam Time</a>
+                </div>
+            </div>
+        </div>
+
 
 
     </div>

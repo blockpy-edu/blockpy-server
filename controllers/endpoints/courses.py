@@ -1596,3 +1596,101 @@ def manage_time():
                             missing_assignments=missing_assignments
                            )
 
+
+def _parse_limit_minutes(value):
+    """ Parse a time limit string like "60" or "60min" into a number of minutes.
+        Mirrors parseTimeLimit in frontend/components/assignment_interface.ts. """
+    try:
+        return float(value.lower().replace("min", "").strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+def _format_minutes(minutes):
+    if minutes is None:
+        return None
+    if minutes == int(minutes):
+        minutes = int(minutes)
+    return f"{minutes} minute{'' if minutes == 1 else 's'}"
+
+
+def _describe_exam_time(base_limit, student_limit):
+    """ Produce (standard_time, accommodation) display strings for a student.
+        The accommodation is None when the student has the default time. """
+    base_minutes = _parse_limit_minutes(base_limit)
+    standard = _format_minutes(base_minutes) or str(base_limit)
+    if not student_limit:
+        return standard, None
+    if "min" in student_limit:
+        return standard, _format_minutes(_parse_limit_minutes(student_limit)) or student_limit
+    if "x" in student_limit:
+        try:
+            modifier = float(student_limit.replace("x", "").strip())
+        except ValueError:
+            return standard, student_limit
+        description = f"{student_limit} the standard time"
+        effective = _format_minutes(base_minutes * modifier) if base_minutes is not None else None
+        if effective:
+            description += f" ({effective})"
+        return standard, description
+    return standard, student_limit
+
+
+@courses.route('/exam_time/<course_id>', methods=['GET'])
+@courses.route('/exam_time/<course_id>/', methods=['GET'])
+@login_required
+def exam_time(course_id):
+    course_id = maybe_int(course_id)
+    user, user_id = get_user()
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    if not user.in_course(course_id):
+        return redirect(url_for('courses.index'))
+    # Find all the timed assignment groups (exams)
+    timed_groups = {}
+    group_assignments = {}
+    timed_assignment_ids = set()
+    for assignment in Assignment.get_timed_assignments():
+        timed_assignment_ids.add(assignment.id)
+        for membership in assignment.memberships:
+            group = membership.assignment_group
+            if group is not None:
+                timed_groups[group.id] = group
+                group_assignments.setdefault(group.id, []).append(assignment)
+    # The exams relevant to this student in this course: groups owned by the course, plus
+    # groups the student has submissions for here (exam groups can be shared across courses)
+    relevant_group_ids = {group_id for group_id, group in timed_groups.items()
+                          if group.course_id == course_id}
+    submissions_by_assignment = {}
+    for submission, _, _ in Submission.by_student(user_id, course_id):
+        if submission.assignment_id in timed_assignment_ids:
+            submissions_by_assignment[submission.assignment_id] = submission
+            if submission.assignment_group_id in timed_groups:
+                relevant_group_ids.add(submission.assignment_group_id)
+    # Build a display row per exam, splitting by assignment if limits differ within a group
+    exams = []
+    relevant_groups = [timed_groups[group_id] for group_id in relevant_group_ids]
+    for group in natsorted(relevant_groups, key=lambda grp: grp.name):
+        details = []
+        for assignment in group_assignments[group.id]:
+            submission = submissions_by_assignment.get(assignment.id)
+            base_limit = assignment.get_setting('time_limit', None)
+            student_limit = (submission.time_limit or "").strip() if submission else ""
+            standard, accommodation = _describe_exam_time(base_limit, student_limit)
+            details.append({'name': f"{group.name}: {assignment.title()}",
+                            'standard': standard,
+                            'accommodation': accommodation,
+                            'date_started': submission.date_started if submission else None})
+        if len({(d['standard'], d['accommodation']) for d in details}) == 1:
+            exams.append({'name': group.name,
+                          'standard': details[0]['standard'],
+                          'accommodation': details[0]['accommodation'],
+                          'date_started': next((d['date_started'] for d in details
+                                                if d['date_started']), None)})
+        else:
+            exams.extend(details)
+    return render_template("courses/exam_time.html",
+                           course_id=course_id,
+                           course=course,
+                           exams=exams)
+
