@@ -24,9 +24,11 @@ import models
 class AssignmentLog(Base):
     __tablename__ = "assignment_log"
     # Identification
-    assignment_id: Mapped[int] = mapped_column(Integer(), ForeignKey('assignment.id'))
+    # No database foreign keys on the course/role/assignment columns: audit rows must outlive
+    # the rows they describe (see fall26_audit_log_fk.sql). The relationships join explicitly.
+    assignment_id: Mapped[int] = mapped_column(Integer())
     assignment_version: Mapped[int] = mapped_column(Integer())
-    course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
+    course_id: Mapped[int] = mapped_column(Integer())
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
     event_type: Mapped[AssignmentLogEvent] = mapped_column(Enum(AssignmentLogEvent, values_callable=get_enum_values))
@@ -36,9 +38,11 @@ class AssignmentLog(Base):
     client_timestamp: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
     client_timezone: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
 
-    assignment: Mapped["Assignment"] = db.relationship(back_populates="assignment_logs")
+    assignment: Mapped["Assignment"] = db.relationship(back_populates="assignment_logs",
+                                                       primaryjoin="foreign(AssignmentLog.assignment_id) == Assignment.id")
     subject: Mapped["User"] = db.relationship(back_populates="assignment_logs")
-    course: Mapped["Course"] = db.relationship(back_populates="assignment_logs")
+    course: Mapped["Course"] = db.relationship(back_populates="assignment_logs",
+                                               primaryjoin="foreign(AssignmentLog.course_id) == Course.id")
 
     __table_args__ = (Index('assignment_log_assignment_index', "assignment_id"),
                       Index('assignment_log_subject_index', "subject_id"))

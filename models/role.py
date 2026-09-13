@@ -28,7 +28,8 @@ class Role(Base):
 
     user: Mapped["User"] = db.relationship(back_populates='roles')
     course: Mapped["Course"] = db.relationship(back_populates='roles')
-    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="role", passive_deletes=True)
+    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="role", passive_deletes=True,
+                                                        primaryjoin="foreign(RoleLog.role_id) == Role.id")
 
     __table_args__ = (Index('role_user_id', "user_id",),
                       Index('role_course_id', "course_id"),)

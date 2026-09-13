@@ -85,7 +85,8 @@ class Assignment(EnhancedBase):
                                                           secondary=assignment_tag_membership)
     sample_submissions: Mapped[list["SampleSubmission"]] = db.relationship(back_populates="assignment")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="assignment")
-    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="assignment", passive_deletes=True)
+    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="assignment", passive_deletes=True,
+                                                                    primaryjoin="foreign(AssignmentLog.assignment_id) == Assignment.id")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="assignment")

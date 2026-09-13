@@ -46,9 +46,12 @@ class Course(Base):
     assignments: Mapped[list["Assignment"]] = db.relationship(back_populates="course")
     assignment_groups: Mapped[list["AssignmentGroup"]] = db.relationship(back_populates="course")
     tags: Mapped[list["AssignmentTag"]] = db.relationship(back_populates="course")
-    course_logs: Mapped[list["CourseLog"]] = db.relationship(back_populates="course", passive_deletes=True)
-    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="course", passive_deletes=True)
-    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="course", passive_deletes=True)
+    course_logs: Mapped[list["CourseLog"]] = db.relationship(back_populates="course", passive_deletes=True,
+                                                            primaryjoin="foreign(CourseLog.course_id) == Course.id")
+    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="course", passive_deletes=True,
+                                                        primaryjoin="foreign(RoleLog.course_id) == Course.id")
+    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="course", passive_deletes=True,
+                                                                    primaryjoin="foreign(AssignmentLog.course_id) == Course.id")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="course")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="course")
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="course")

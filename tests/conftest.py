@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 import pytest
 from flask import Flask
+from sqlalchemy import event
 from tests.factory.loader import test_data
 
 from main import create_app
@@ -42,6 +43,18 @@ def run_server():
         })
 
         with app.app_context():
+            # SQLite ignores foreign keys unless told otherwise, while production Postgres
+            # enforces them. Opt in with BLOCKPY_TEST_FOREIGN_KEYS=1. It is off by default
+            # because two pre-existing bugs violate constraints unrelated to audit logging:
+            # removing an assignment group leaves its memberships behind, and removing a
+            # course leaves its roles behind (test_remove_group_instructor_allowed and
+            # test_remove_logs_delete fail with it on).
+            if os.environ.get('BLOCKPY_TEST_FOREIGN_KEYS', '').lower() in ('1', 'true', 'yes'):
+                @event.listens_for(db.engine, 'connect')
+                def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute('PRAGMA foreign_keys=ON')
+                    cursor.close()
             db.create_all()
             try:
                 yield app
