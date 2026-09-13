@@ -55,3 +55,4 @@ class GradeHistory(Base):
 
     def __str__(self):
         return f'GradeHistory(submission_id={self.submission_id},grader_id={self.grader_id},score={self.score})'
+
