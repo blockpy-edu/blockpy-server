@@ -43,6 +43,7 @@ function renameCourse() {
     <a href="{{ url_for('courses.edit_points', course_id=course.id) }}" class='btn btn-outline-secondary'>Edit Points</a> Bulk Edit Points for assignments.<br><br>
     <a href="{{ url_for('courses.edit_settings', course_id=course.id) }}" class='btn btn-outline-secondary'>Edit Settings</a> Bulk Edit other settings for assignments.<br><br>
     <a href="{{ url_for('assignment_group.forking_menu', course_id=course.id) }}" class='btn btn-outline-secondary'>Make Forks</a> Copy assignments to other courses.<br><br>
+    <a href="{{ url_for('courses.adopt_assignments', course_id=course.id) }}" class='btn btn-outline-secondary'>Adopt Assignments</a> Reuse assignments and groups from other courses in this course, without copying them.<br><br>
     <a href="{{ url_for('assignments.bulk_upload', course_id=course.id) }}" class='btn btn-outline-secondary'>Import Assignments</a> Load assignments exported from another course.<br><br>
     <a href="{{ url_for('courses.export', course_id=course.id) }}" class="btn btn-outline-secondary">Export Assignments</a> Export all the assignments and groups owned by this course.<br><br>
     </div>

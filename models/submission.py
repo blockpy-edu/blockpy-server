@@ -537,6 +537,67 @@ class Submission(EnhancedBase):
             db.session.commit()
         return submission
 
+    @staticmethod
+    def adopt(assignment, user_id, course_id, assignment_group_id=None) -> tuple["Submission", bool]:
+        """
+        "Adopt" an assignment into a course by ensuring the given user (usually an instructor)
+        has a submission for it there. Once any submission exists for an assignment in a course,
+        the assignment shows up in that course's views (see Course.get_submitted_assignments_grouped).
+
+        :return: The submission and whether it was newly created.
+        """
+        submission = Submission.get_submission(assignment.id, user_id, course_id)
+        if submission is not None:
+            return submission, False
+        return Submission.from_assignment(assignment, user_id, course_id, assignment_group_id), True
+
+    @staticmethod
+    def count_by_assignments(course_id, assignment_ids) -> dict[int, int]:
+        """ Count the submissions in the course for each of the given assignments (missing means zero). """
+        assignment_ids = list(assignment_ids)
+        if not assignment_ids:
+            return {}
+        rows = (db.session.query(Submission.assignment_id, func.count(Submission.id))
+                .filter(Submission.course_id == maybe_int(course_id),
+                        Submission.assignment_id.in_(assignment_ids))
+                .group_by(Submission.assignment_id)
+                .all())
+        return {assignment_id: count for assignment_id, count in rows}
+
+    @staticmethod
+    def by_user_and_assignments(user_id, course_id, assignment_ids) -> dict[int, "Submission"]:
+        """ Get the user's submissions in the course for the given assignments, keyed by assignment id. """
+        assignment_ids = list(assignment_ids)
+        if not assignment_ids:
+            return {}
+        return {submission.assignment_id: submission
+                for submission in Submission.query.filter(Submission.course_id == maybe_int(course_id),
+                                                          Submission.user_id == user_id,
+                                                          Submission.assignment_id.in_(assignment_ids))
+                .all()}
+
+    def has_changes(self) -> bool:
+        """ Whether this submission has been modified since it was created from the assignment. """
+        return bool(self.version)
+
+    def delete_completely(self):
+        """
+        Delete this submission along with its logs, counters, reviews, and grade history.
+        Any sample submissions forked from this one are kept, but unlinked.
+        Meant for removing an instructor's "adoption" submission; use with care on student work!
+        """
+        models.SubmissionCounts.delete_for_submission(self.id)
+        (SubmissionLog.query.filter_by(submission_id=self.id)
+         .delete(synchronize_session='fetch'))
+        (models.GradeHistory.query.filter_by(submission_id=self.id)
+         .delete(synchronize_session='fetch'))
+        (Review.query.filter_by(submission_id=self.id)
+         .delete(synchronize_session='fetch'))
+        (models.SampleSubmission.query.filter_by(forked_id=self.id)
+         .update({"forked_id": None}, synchronize_session='fetch'))
+        db.session.delete(self)
+        db.session.commit()
+
     STUDENT_FILENAMES = ("#extra_student_files.blockpy", "answer.py")
 
     def save_code(self, filename, code, part_id=""):

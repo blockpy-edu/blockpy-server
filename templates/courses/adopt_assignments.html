@@ -1,0 +1,284 @@
+{% extends 'helpers/layout.html' %}
+{% import 'helpers/navigation.html' as navigation %}
+
+{% block title %}
+Adopt Assignments: {{ course.name }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .adopt-group-header {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+    .adopt-group-header form {
+        display: inline;
+    }
+    .adopt-actions form {
+        display: inline;
+    }
+    .adopt-status-adopted {
+        color: #155724;
+    }
+    .adopt-status-changed {
+        color: #856404;
+    }
+</style>
+<script type='text/javascript'>
+function confirmUnadopt(form, title, hasChanges, version) {
+    let message;
+    if (hasChanges) {
+        message = "WARNING: Your submission for "+title+" has been modified since it was adopted (version "+version+").\n\n"+
+                  "Unadopting will permanently delete your submission and its history. Continue?";
+    } else {
+        message = "Unadopt "+title+"? Your (unmodified) submission will be deleted, and the assignment will no longer show up in this course.";
+    }
+    if (!window.confirm(message)) {
+        return false;
+    }
+    if (hasChanges) {
+        form.querySelector("input[name=force]").value = "true";
+    }
+    return true;
+}
+function confirmUnadoptGroup(form, title, changedTitles) {
+    let message;
+    if (changedTitles.length) {
+        message = "WARNING: Your submissions for the following assignments have been modified since they were adopted:\n\n  "+
+                  changedTitles.join("\n  ")+
+                  "\n\nUnadopting "+title+" will permanently delete those submissions and their history. Continue?";
+    } else {
+        message = "Unadopt every assignment in "+title+"? Your (unmodified) submissions will be deleted, "+
+                  "and the assignments will no longer show up in this course.";
+    }
+    if (!window.confirm(message)) {
+        return false;
+    }
+    if (changedTitles.length) {
+        form.querySelector("input[name=force]").value = "true";
+    }
+    return true;
+}
+</script>
+{% endblock %}
+
+{% block body %}
+
+<h1>Adopt Assignments</h1>
+
+<p>Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">Course: <code>{{ course.name }}</code></a>
+{% if source_course %}
+    | <a href="{{ url_for('courses.adopt_assignments', course_id=course_id) }}">Choose a different course</a>
+{% endif %}
+</p>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-warning">
+        {% for message in messages %}
+            {{ message }}<br>
+        {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<p>
+    Adopting an assignment (or an entire assignment group) makes it available in
+    <strong>{{ course.name }}</strong> without copying it: the original course still owns the assignment,
+    and any edits made there will show up here too. Behind the scenes, adopting just creates your own
+    instructor submission for the assignment in this course, which is what makes it appear in the
+    course's assignment lists, the grading views, the Feedback Editor, and so on.
+    If you want your own editable copy instead, use <a href="{{ url_for('assignment_group.forking_menu', course_id=course_id) }}">Make Forks</a>.
+</p>
+
+{% if not source_course %}
+
+    <h3>Choose a course to adopt from</h3>
+
+    {% if courses_with_role %}
+    <h5>Courses where you have a role</h5>
+    <table class="table table-condensed table-striped table-hover">
+        <thead>
+        <tr>
+            <th>Course</th>
+            <th>URL</th>
+            <th>Term</th>
+            <th>Visibility</th>
+            <th>Your Role</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for other_course, role in courses_with_role %}
+        <tr>
+            <td>{{ other_course.name }} <small class="text-muted">({{ other_course.id }})</small></td>
+            <td><code>{{ other_course.url or "" }}</code></td>
+            <td>{{ other_course.term or "" }}</td>
+            <td>{{ other_course.visibility.title() }}</td>
+            <td>{{ role }}</td>
+            <td><a class="btn btn-outline-secondary btn-sm"
+                   href="{{ url_for('courses.adopt_assignments', course_id=course_id, source_course_id=other_course.id) }}">Browse Assignments</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>You do not have an adopter-level role in any other course.</p>
+    {% endif %}
+
+    {% if public_courses %}
+    <details>
+        <summary><h5 style="display: inline">Public courses</h5> ({{ public_courses|length }})</summary>
+        <table class="table table-condensed table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Course</th>
+                <th>URL</th>
+                <th>Term</th>
+                <th>Owner</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for other_course, role in public_courses %}
+            <tr>
+                <td>{{ other_course.name }} <small class="text-muted">({{ other_course.id }})</small></td>
+                <td><code>{{ other_course.url or "" }}</code></td>
+                <td>{{ other_course.term or "" }}</td>
+                <td>{{ other_course.owner.name() if other_course.owner else "" }}</td>
+                <td><a class="btn btn-outline-secondary btn-sm"
+                       href="{{ url_for('courses.adopt_assignments', course_id=course_id, source_course_id=other_course.id) }}">Browse Assignments</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% endif %}
+
+{% else %}
+
+    <h3>Adopting from: {{ source_course.name }} <small class="text-muted">(<code>{{ source_course.url }}</code>, ID {{ source_course.id }})</small></h3>
+
+    {% if not adoption_groups %}
+        <p>That course does not own any assignments.</p>
+    {% endif %}
+
+    {% for group, rows in adoption_groups %}
+        {% set adopted_count = rows|selectattr("adopted")|list|length %}
+        {% set own_count = rows|selectattr("submission")|list|length %}
+        {% set unadoptable = rows|selectattr("can_unadopt")|list %}
+        {% set changed_titles = unadoptable|selectattr("has_changes")|map(attribute="title")|list %}
+        {% set group_title = group.name if group else "Ungrouped Assignments" %}
+        <div class="adopt-group-header">
+            <h4 style="margin: 0">
+                {% if group %}
+                    {{ group.name }} <small class="text-muted">(<code>{{ group.url }}</code>, ID {{ group.id }})</small>
+                {% else %}
+                    Ungrouped Assignments
+                {% endif %}
+            </h4>
+            <span>{{ adopted_count }} of {{ rows|length }} adopted</span>
+            {% if group %}
+            <form method="post" action="{{ url_for('courses.adopt_assignments', course_id=course_id) }}">
+                <input type="hidden" name="source_course_id" value="{{ source_course.id }}">
+                <input type="hidden" name="assignment_group_id" value="{{ group.id }}">
+                <input type="hidden" name="action" value="adopt_group">
+                <button type="submit" class="btn btn-success btn-sm"
+                        {{ "disabled" if own_count == rows|length else "" }}
+                        title="Create your instructor submission for every assignment in this group">Adopt Entire Group</button>
+            </form>
+            {% if unadoptable %}
+            <form method="post" action="{{ url_for('courses.adopt_assignments', course_id=course_id) }}"
+                  onsubmit='return confirmUnadoptGroup(this, {{ group_title|tojson }}, {{ changed_titles|tojson }})'>
+                <input type="hidden" name="source_course_id" value="{{ source_course.id }}">
+                <input type="hidden" name="assignment_group_id" value="{{ group.id }}">
+                <input type="hidden" name="action" value="unadopt_group">
+                <input type="hidden" name="force" value="false">
+                <button type="submit" class="btn btn-outline-danger btn-sm"
+                        title="Delete your instructor submissions for the assignments in this group that nobody else has submitted to">Unadopt Group ({{ unadoptable|length }})</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+        <table class="table table-condensed table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Type</th>
+                <th>Assignment</th>
+                <th>URL</th>
+                <th>Points</th>
+                <th>Status in {{ course.name }}</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+            {% set assignment = row.assignment %}
+            <tr>
+                <td title="{{ assignment.type }}">{{ navigation.assignment_type_icon(assignment.type) }}</td>
+                <td>
+                    <a href="{{ url_for('assignments.load', assignment_id=assignment.id, course_id=source_course.id) }}"
+                       target="_blank">{{ assignment.title() }}</a>
+                    <small class="text-muted">({{ assignment.id }})</small>
+                    {% if assignment.hidden %}<span class="badge badge-secondary">Hidden</span>{% endif %}
+                    {% if assignment.status and assignment.status|string|lower != 'published' %}<span class="badge badge-secondary">{{ assignment.status|string|title }}</span>{% endif %}
+                </td>
+                <td><code>{{ assignment.url or "" }}</code></td>
+                <td>{{ assignment.points if assignment.points is not none else "" }}</td>
+                <td>
+                    {% if row.submission %}
+                        <span class="adopt-status-adopted">Adopted</span>
+                        {% if row.has_changes %}
+                            <span class="adopt-status-changed" title="Your submission has been edited since it was adopted">(your submission has changes, version {{ row.submission.version }})</span>
+                        {% else %}
+                            <span class="text-muted">(your submission is unmodified)</span>
+                        {% endif %}
+                        {% if row.other_submissions %}
+                            <br><small>{{ row.other_submissions }} other submission{{ "s" if row.other_submissions != 1 else "" }} in this course</small>
+                        {% endif %}
+                    {% elif row.adopted %}
+                        <span class="adopt-status-adopted">Adopted</span>
+                        <span class="text-muted">({{ row.other_submissions }} submission{{ "s" if row.other_submissions != 1 else "" }} in this course, none of them yours)</span>
+                    {% else %}
+                        <span class="text-muted">Not adopted</span>
+                    {% endif %}
+                </td>
+                <td class="adopt-actions">
+                    {% if not row.submission %}
+                    <form method="post" action="{{ url_for('courses.adopt_assignments', course_id=course_id) }}">
+                        <input type="hidden" name="source_course_id" value="{{ source_course.id }}">
+                        <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                        {% if group %}<input type="hidden" name="assignment_group_id" value="{{ group.id }}">{% endif %}
+                        <input type="hidden" name="action" value="adopt_assignment">
+                        <button type="submit" class="btn btn-success btn-sm"
+                                title="Create your instructor submission for this assignment in this course">Adopt</button>
+                    </form>
+                    {% elif row.can_unadopt %}
+                    <form method="post" action="{{ url_for('courses.adopt_assignments', course_id=course_id) }}"
+                          onsubmit='return confirmUnadopt(this, {{ assignment.title()|tojson }}, {{ row.has_changes|tojson }}, {{ row.submission.version|tojson }})'>
+                        <input type="hidden" name="source_course_id" value="{{ source_course.id }}">
+                        <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                        <input type="hidden" name="action" value="unadopt_assignment">
+                        <input type="hidden" name="force" value="false">
+                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                title="Delete your instructor submission for this assignment in this course">Unadopt</button>
+                    </form>
+                    {% else %}
+                        <small class="text-muted" title="Only assignments that nobody else has submitted to can be unadopted">Cannot unadopt (in use)</small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+
+{% endif %}
+
+{% endblock %}

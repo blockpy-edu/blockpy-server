@@ -32,6 +32,7 @@ from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
 from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent
+from models.enums.roles import RolePermissions
 from models.user import User
 from models.course import Course
 from models.role import Role
@@ -941,6 +942,168 @@ def feedback_editor(course_id):
                            assignment_id=assignment_id,
                            rows=rows,
                            is_instructor=is_grader)
+
+
+def _can_adopt_from(user, source_course):
+    """ Instructors can adopt from public courses and from any course where they have an adopter-level role. """
+    if source_course.visibility == 'public':
+        return True
+    if user.is_grader(source_course.id):
+        return True
+    role_names = {role.name.lower() for role in user.get_course_roles(source_course.id)}
+    return bool(role_names & {str(role) for role in RolePermissions.ADOPTER_ROLES})
+
+
+def _adoptable_courses(user, course_id):
+    """
+    The courses that the user could adopt assignments from, other than the given one.
+    Returns (courses with a role, public courses without a role), each a list of (course, role description).
+    """
+    with_role, roles_by_course = [], defaultdict(list)
+    for course, role in user.get_courses():
+        if course.id != course_id:
+            roles_by_course[course.id].append(role)
+    for roles in roles_by_course.values():
+        course = roles[0].course
+        if _can_adopt_from(user, course):
+            with_role.append((course, ", ".join(sorted({USER_DISPLAY_ROLES.get(role.name, role.name)
+                                                      for role in roles}))))
+    public = [(course, "Public") for course in Course.get_public()
+              if course.id != course_id and course.id not in roles_by_course]
+    key = lambda pair: (pair[0].name or "", pair[0].id)
+    return natsorted(with_role, key=key), natsorted(public, key=key)
+
+
+def _adoption_rows(user_id, course_id, source_course):
+    """
+    Describe every assignment of the source course (grouped) along with its adoption status in the
+    target course. Returns a list of (group, [row]) where each row has the assignment and status.
+    """
+    grouped = natsorted(source_course.get_assignments_grouped(),
+                        key=lambda r: (r.AssignmentGroup.name if r.AssignmentGroup is not None else "~~~~~~~~",
+                                       r.Assignment.title()))
+    assignment_ids = [row.Assignment.id for row in grouped]
+    counts = Submission.count_by_assignments(course_id, assignment_ids)
+    own = Submission.by_user_and_assignments(user_id, course_id, assignment_ids)
+    groups = {}
+    for assignment, group in grouped:
+        submission = own.get(assignment.id)
+        total = counts.get(assignment.id, 0)
+        others = total - (1 if submission is not None else 0)
+        groups.setdefault(group, []).append({
+            "assignment": assignment,
+            "title": assignment.title(),
+            "submission": submission,
+            "adopted": total > 0,
+            "other_submissions": others,
+            "can_unadopt": submission is not None and others == 0,
+            "has_changes": submission is not None and submission.has_changes(),
+        })
+    return list(groups.items())
+
+
+@courses.route('/adopt_assignments/<course_id>/', methods=['GET', 'POST'])
+@courses.route('/adopt_assignments/<course_id>', methods=['GET', 'POST'])
+@login_required
+def adopt_assignments(course_id):
+    """
+    Let an instructor "adopt" assignments (or whole assignment groups) from other courses into this one.
+    Adopting just creates an instructor submission for the assignment in this course, which is enough
+    for it to show up in the course's views. Unadopting deletes that instructor submission again, as
+    long as nobody else has submitted to the assignment in this course.
+    """
+    course_id = int(course_id)
+    user, user_id = get_user()
+    if not user.is_instructor(course_id):
+        return "You are not an instructor in this course!"
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    source_course_id = maybe_int(request.values.get("source_course_id"))
+    source_course = None
+    if source_course_id is not None:
+        source_course = Course.by_id(source_course_id)
+        check_resource_exists(source_course, "Course", source_course_id)
+        if source_course_id == course_id:
+            return "You cannot adopt assignments from the course itself!"
+        if not _can_adopt_from(user, source_course):
+            return "You do not have permission to adopt assignments from that course (course ID {})!".format(
+                source_course_id)
+
+    if request.method == 'POST':
+        if source_course is None:
+            return "You must choose a course to adopt assignments from first."
+        check_course_unlocked(course)
+        action = request.values.get("action", "")
+        force = maybe_bool(request.values.get("force", "false"))
+        assignment_id = maybe_int(request.values.get("assignment_id"))
+        assignment_group_id = maybe_int(request.values.get("assignment_group_id"))
+        group = None
+        if assignment_group_id is not None:
+            group = AssignmentGroup.by_id(assignment_group_id)
+            check_resource_exists(group, "Assignment Group", assignment_group_id)
+        # Figure out which assignments the action applies to
+        rows_by_group = dict(_adoption_rows(user_id, course_id, source_course))
+        if action in ("adopt_assignment", "unadopt_assignment"):
+            targets = [row for rows in rows_by_group.values() for row in rows
+                       if row["assignment"].id == assignment_id]
+            if not targets:
+                return "That assignment (ID {}) is not part of the source course!".format(assignment_id)
+        elif action in ("adopt_group", "unadopt_group"):
+            targets = [row for rows_group, rows in rows_by_group.items()
+                       if rows_group is not None and rows_group.id == assignment_group_id
+                       for row in rows]
+            if group is None or not targets:
+                return "That assignment group (ID {}) is not part of the source course!".format(assignment_group_id)
+        else:
+            return "Unknown action: {}".format(action)
+        messages = []
+        if action.startswith("adopt"):
+            adopted = 0
+            for row in targets:
+                _, created = Submission.adopt(row["assignment"], user_id, course_id,
+                                              assignment_group_id=group.id if group else None)
+                if created:
+                    adopted += 1
+            messages.append("Adopted {} assignment(s).".format(adopted))
+            if adopted < len(targets):
+                messages.append("{} were already adopted.".format(len(targets) - adopted))
+        else:
+            blocked = [row for row in targets if row["submission"] is not None and not row["can_unadopt"]]
+            changed = [row for row in targets if row["can_unadopt"] and row["has_changes"]]
+            if blocked:
+                messages.append("Cannot unadopt {} assignment(s) because other users have submissions: {}".format(
+                    len(blocked), ", ".join(row["assignment"].title() for row in blocked)))
+            if changed and not force:
+                flash("Your submission has changes (version {}) for: {}. Unadopting will delete those changes; "
+                      "confirm the unadopt to proceed anyway.".format(
+                          ", ".join(str(row["submission"].version) for row in changed),
+                          ", ".join(row["assignment"].title() for row in changed)))
+                return redirect(url_for('courses.adopt_assignments', course_id=course_id,
+                                        source_course_id=source_course_id))
+            removed = 0
+            for row in targets:
+                if row["can_unadopt"]:
+                    row["submission"].delete_completely()
+                    removed += 1
+            messages.append("Unadopted {} assignment(s).".format(removed))
+        flash(" ".join(messages))
+        return redirect(url_for('courses.adopt_assignments', course_id=course_id,
+                                source_course_id=source_course_id))
+
+    courses_with_role, public_courses = [], []
+    adoption_groups = []
+    if source_course is None:
+        courses_with_role, public_courses = _adoptable_courses(user, course_id)
+    else:
+        adoption_groups = _adoption_rows(user_id, course_id, source_course)
+    return render_template('courses/adopt_assignments.html',
+                           course_id=course_id,
+                           course=course,
+                           source_course=source_course,
+                           courses_with_role=courses_with_role,
+                           public_courses=public_courses,
+                           adoption_groups=adoption_groups,
+                           is_instructor=True)
 
 
 @courses.route('/submissions_specific/<submission_id>/', methods=['GET', 'POST'])
