@@ -65,6 +65,9 @@ def fork_group():
                                                               new_course_id=assignment_group.course_id)
     CourseLog.new(assignment_group.course_id, g.user.id, CourseLogEvent.FORK,
                   "assignment_group_id", str(new_assignment_group.id), *client_time_fields())
+    for new_assignment in assignments:
+        AssignmentLog.new(new_assignment.id, new_assignment.version, assignment_group.course_id, g.user.id,
+                          AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id), *client_time_fields())
     # Result
     select_url = get_select_menu_link(new_assignment_group.id, new_assignment_group.name, is_embedded, True)
     return jsonify(success=True, id=new_assignment_group.id,
@@ -315,6 +318,10 @@ def forking_menu():
             new_assignments.append(new_assignment)
         CourseLog.new(target_course_id, g.user.id, CourseLogEvent.FORK,
                       "assignment_group_id", str(forked_group.id), *client_time_fields())
+        for new_assignment in new_assignments:
+            AssignmentLog.new(new_assignment.id, new_assignment.version, target_course_id, g.user.id,
+                              AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id),
+                              *client_time_fields())
         links = "<br>\n".join([
             "<a href='"+url_for('assignments.load', assignment_group_id=forked_group.id,
                                 course_id=target_course_id)

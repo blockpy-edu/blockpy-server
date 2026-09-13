@@ -36,8 +36,8 @@ from models.course import Course
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.submission import Submission
-from models.log_tables import CourseLog
-from models.enums import CourseLogEvent
+from models.log_tables import CourseLog, AssignmentLog
+from models.enums import CourseLogEvent, AssignmentLogEvent
 
 blueprint_assignments = Blueprint('assignments', __name__, url_prefix='/assignments')
 
@@ -165,6 +165,8 @@ def fork():
         db.session.commit()
     CourseLog.new(course_id, g.user.id, CourseLogEvent.FORK,
                   "assignment_id", str(forked_assignment.id), *client_time_fields())
+    AssignmentLog.new(forked_assignment.id, forked_assignment.version, course_id, g.user.id,
+                      AssignmentLogEvent.FORK, "forked_id", str(assignment.id), *client_time_fields())
     # Result
     select_url = get_select_menu_link(forked_assignment.id, forked_assignment.name, is_embedded, False)
     return jsonify(success=True,
@@ -203,6 +205,8 @@ def new_assignment():
     # Perform action
     assignment = Assignment.new(owner_id=g.user.id, course_id=course_id, url=url,
                                 type=assignment_type, name=name, level=level)
+    AssignmentLog.new(assignment.id, assignment.version, course_id, g.user.id,
+                      AssignmentLogEvent.CREATE, None, None, *client_time_fields())
     if group != -1:
         AssignmentGroupMembership.move_assignment(assignment.id, group)
     select_url = get_select_menu_link(assignment.id, assignment.title(), is_embedded, False)
@@ -265,6 +269,9 @@ def remove_assignment():
     check_resource_exists(assignment, "Assignment", assignment_id)
     # Verify permissions
     require_course_instructor(g.user, assignment.course_id)
+    # Log first; the row outlives the assignment (no foreign key, see fall26_audit_log_fk.sql)
+    AssignmentLog.new(assignment.id, assignment.version, assignment.course_id, g.user.id,
+                      AssignmentLogEvent.DELETE, None, None, *client_time_fields())
     Assignment.remove(assignment.id)
     return jsonify(success=True)
 
@@ -283,7 +290,10 @@ def move_course():
     require_course_instructor(g.user, assignment.course_id)
     require_course_instructor(g.user, new_course_id)
     # Perform action
+    old_course_id = assignment.course_id
     assignment.move_course(new_course_id)
+    AssignmentLog.new(assignment.id, assignment.version, old_course_id, g.user.id,
+                      AssignmentLogEvent.EDIT, "course_id", str(new_course_id), *client_time_fields())
     return jsonify(success=True)
 
 

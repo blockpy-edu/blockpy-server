@@ -9,6 +9,7 @@ group 1; user 1 is the admin.
 """
 import html as html_module
 import json
+import os
 import re
 
 import pytest
@@ -18,9 +19,9 @@ from models import db
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.course import Course
-from models.enums import CourseLogEvent, RoleLogEvent, UserRoles
+from models.enums import CourseLogEvent, RoleLogEvent, UserRoles, AssignmentLogEvent
 from models.generics.definitions import LogEventType
-from models.log_tables import CourseLog, RoleLog
+from models.log_tables import CourseLog, RoleLog, AssignmentLog
 from models.role import Role
 from models.submission import Submission
 from models.user import User
@@ -35,6 +36,10 @@ def course_logs(course_id, event_type=None):
 
 def role_logs(**filters):
     return RoleLog.query.filter_by(**filters).order_by(RoleLog.id).all()
+
+
+def assignment_logs(assignment_id):
+    return AssignmentLog.query.filter_by(assignment_id=assignment_id).order_by(AssignmentLog.id).all()
 
 
 def scrape_form(page):
@@ -343,3 +348,72 @@ class TestAdminCourseEdits:
         form = scrape_form(client.get('/admin/course/edit/?id=6').data.decode())
         client.post('/admin/course/edit/?id=6', data=form)
         assert len(course_logs(6)) == 2
+
+
+class TestAssignmentLog:
+
+    def test_new_assignment_logs_create(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/assignments/new', data={"course_id": 6, "name": "Logged", "type": "blockpy"})
+        data = response.get_json()
+        assert data["success"] is True
+        logs = assignment_logs(data["id"])
+        assert [(log.event_type, log.field, log.value, log.course_id, log.subject_id) for log in logs] == \
+               [(AssignmentLogEvent.CREATE, None, None, 6, 10)]
+
+    def test_remove_assignment_logs_delete(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/assignments/remove', data={"assignment_id": 100})
+        assert response.get_json()["success"] is True
+        assert Assignment.by_id(100) is None
+        logs = assignment_logs(100)
+        assert [(log.event_type, log.course_id, log.subject_id) for log in logs] == [(AssignmentLogEvent.DELETE, 6, 10)]
+
+    def test_move_course_logs_edit(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/assignments/move_course', data={"assignment_id": 100, "new_course_id": 8})
+        assert response.get_json()["success"] is True
+        assert Assignment.by_id(100).course_id == 8
+        logs = assignment_logs(100)
+        assert [(log.event_type, log.field, log.value, log.course_id) for log in logs] == \
+               [(AssignmentLogEvent.EDIT, "course_id", "8", 6)]
+
+    def test_fork_logs_on_new_assignment(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/assignments/fork', data={"assignment_id": 120, "course_id": 6})
+        new_id = response.get_json()["id"]
+        logs = assignment_logs(new_id)
+        assert [(log.event_type, log.field, log.value, log.course_id) for log in logs] == \
+               [(AssignmentLogEvent.FORK, "forked_id", "120", 6)]
+        assert assignment_logs(120) == []
+
+    def test_fork_group_logs_each_new_assignment(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/assignment_group/fork', data={"assignment_group_id": 1})
+        forked = AssignmentGroup.by_id(response.get_json()["id"]).get_assignments()
+        assert len(forked) == 3
+        for new_assignment in forked:
+            logs = assignment_logs(new_assignment.id)
+            assert [(log.event_type, log.field, log.value) for log in logs] == \
+                   [(AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id))]
+
+    def test_blockpy_fork_logs_each_new_assignment(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        client.post('/blockpy/fork_assignment', data={"assignment_id": 120, "course_id": 6})
+        logs = AssignmentLog.query.filter_by(event_type=AssignmentLogEvent.FORK).all()
+        assert [(log.field, log.value, log.course_id) for log in logs] == [("forked_id", "120", 6)]
+
+    def test_rename_instructor_file_logs_rename(self, client, test_data, act_as, app, tmp_path):
+        app.config['UPLOADS_DIR'] = str(tmp_path)
+        folder = tmp_path / 'files' / 'assignment' / '100'
+        folder.mkdir(parents=True)
+        (folder / 'old.txt').write_text('data')
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.post('/blockpy/rename_file',
+                               data={"placement": "assignment", "directory": "100", "course_id": 6,
+                                     "old_filename": "old.txt", "new_filename": "new.txt"})
+        assert response.get_json()["success"] is True
+        assert (folder / 'new.txt').exists()
+        logs = assignment_logs(100)
+        assert [(log.event_type, log.field, log.value, log.course_id, log.subject_id) for log in logs] == \
+               [(AssignmentLogEvent.RENAME, "old.txt", "new.txt", 6, 10)]

@@ -778,6 +778,11 @@ def rename_file():
         except Exception as e:
             current_app.logger.info(f"Could not rename file `{old_file_path}` to `{new_file_path}` because: {e}")
             return ajax_failure(f"Could not rename the file!")
+        if placement == "assignment":
+            assignment = Assignment.by_id(directory)
+            AssignmentLog.new(assignment.id, assignment.version,
+                              get_course_id(True) or assignment.course_id, user_id,
+                              AssignmentLogEvent.RENAME, old_filename, new_filename, *client_time_fields())
         endpoint = url_for("blockpy.download_file", _external=True,_scheme="https",
                            placement=placement, directory=directory, filename=new_filename)
         return jsonify(success=True, ip=request.remote_addr, endpoint=endpoint)
@@ -1205,6 +1210,9 @@ def fork_assignment():
         new_assignments = [assignment.fork(user_id, course_id)]
         CourseLog.new(course_id, user_id, CourseLogEvent.FORK,
                       "assignment_id", str(new_assignments[0].id), *client_time_fields())
+    for new_assignment in new_assignments:
+        AssignmentLog.new(new_assignment.id, new_assignment.version, course_id, user_id,
+                          AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id), *client_time_fields())
     # Transfer all submissions, if desired
     if transfer_submissions:
         for new_assignment in new_assignments:
