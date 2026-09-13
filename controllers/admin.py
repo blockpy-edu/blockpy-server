@@ -16,7 +16,7 @@ from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from flask_admin.model.filters import BaseFilter
 from markupsafe import Markup
 
-from sqlalchemy import func, text as sql_text, Date, cast
+from sqlalchemy import func, text as sql_text, Date, cast, inspect as sqlalchemy_inspect
 from sqlalchemy_utc import UtcDateTime
 from wtforms import StringField
 
@@ -26,6 +26,7 @@ from models.course import Course
 from models.role import Role
 from models.authentication import Authentication
 from models.log_tables import RoleLog, AccessLog, ErrorLog, CourseLog, AssignmentLog, SubmissionLog
+from models.enums import CourseLogEvent
 from models.submission import Submission
 from models.sample_submission import SampleSubmission
 from models.review import Review
@@ -250,6 +251,23 @@ class CourseView(RegularView):
     form_ajax_refs = {
         'owner': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
     }
+
+    def on_model_change(self, form, model, is_created):
+        super().on_model_change(form, model, is_created)
+        if is_created:
+            return
+        # Owner transfers and locking only happen through this panel, so they are logged here.
+        attrs = sqlalchemy_inspect(model).attrs
+        owner_changed = attrs.owner.history.has_changes() or attrs.owner_id.history.has_changes()
+        locked_changed = attrs.locked.history.has_changes()
+        if not (owner_changed or locked_changed):
+            return
+        # Flush so owner_id reflects a newly selected owner before it is logged
+        db.session.flush()
+        if owner_changed:
+            CourseLog.new(model.id, g.user.id, CourseLogEvent.TRANSFER, value=str(model.owner_id))
+        if locked_changed:
+            CourseLog.new(model.id, g.user.id, CourseLogEvent.EDIT, field="locked", value=str(model.locked))
 
 
 class AssignmentView(RegularView):

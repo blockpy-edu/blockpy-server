@@ -5,7 +5,8 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Enum, Index
 
 from common.maybe import maybe_int
 from common.databases import get_enum_values
-from models.enums import UserRoles
+import models
+from models.enums import UserRoles, RoleLogEvent
 from models.generics.models import db, ma
 from models.generics.base import Base
 
@@ -27,7 +28,7 @@ class Role(Base):
 
     user: Mapped["User"] = db.relationship(back_populates='roles')
     course: Mapped["Course"] = db.relationship(back_populates='roles')
-    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="role")
+    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="role", passive_deletes=True)
 
     __table_args__ = (Index('role_user_id', "user_id",),
                       Index('role_course_id', "course_id"),)
@@ -44,32 +45,50 @@ class Role(Base):
             'course_id': self.course_id
         }
 
-    def update_role(self, new_role):
-        """ Change this role's name. Returns the new name, or None if it was not a valid role. """
+    def update_role(self, new_role, authorizer_id=None):
+        """
+        Change this role's name. Returns the new name, or None if it was not a valid role.
+        The authorizer is the user making the change; None means the subject did it themselves.
+        """
         try:
             new_role = UserRoles(new_role)
         except ValueError:
             return None
         self.name = new_role
         db.session.commit()
+        self.log_event(RoleLogEvent.CHANGED, str(new_role), authorizer_id)
         return new_role
+
+    def log_event(self, event_type: RoleLogEvent, event_value: str, authorizer_id=None):
+        """
+        Record a RoleLog row for this role. Global roles (no course) are not logged, since
+        role_log.course_id is NOT NULL. A missing authorizer means the subject acted on themselves.
+        """
+        if self.course_id is None:
+            return None
+        if authorizer_id is None:
+            authorizer_id = self.user_id
+        return models.RoleLog.new(self.id, self.course_id, self.user_id, authorizer_id,
+                                  event_type, event_value)
 
     def __str__(self):
         return '<User {} is {}>'.format(self.user_id, self.name)
 
     @classmethod
-    def new(cls, name: UserRoles, user_id: int, course_id: Optional[int] = None, subname: str = "", external_id: Optional[int] = None, description: Optional[str] = None) -> "Role":
+    def new(cls, name: UserRoles, user_id: int, course_id: Optional[int] = None, subname: str = "",
+            external_id: Optional[int] = None, description: Optional[str] = None,
+            authorizer_id: Optional[int] = None) -> "Role":
         instance = cls(name=name, user_id=user_id, course_id=course_id, subname=subname, external_id=external_id, description=description)
         db.session.add(instance)
         db.session.commit()
-        # counters.track_new_role(instance)
+        instance.log_event(RoleLogEvent.GIVEN, str(instance.name), authorizer_id)
         return instance
 
-    def remove(self):
-        course_id, user_id, name = self.course_id, self.user_id, self.name
+    def remove(self, authorizer_id: Optional[int] = None):
+        # Log first, while the role row still exists to describe
+        self.log_event(RoleLogEvent.REMOVED, str(self.name), authorizer_id)
         Role.query.filter_by(id=self.id).delete()
         db.session.commit()
-        # counters.track_removed_role(course_id, user_id, name)
 
     @staticmethod
     def by_course(course_id):

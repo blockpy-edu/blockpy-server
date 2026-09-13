@@ -22,6 +22,11 @@ class CourseLogEvent(StrEnum):
     EDIT = "edit"
     ARCHIVE = "archive"
     CORRUPTED = "corrupted"
+    # Assignment-level events that belong to the course rather than the assignment.
+    # field is "assignment_id" or "assignment_group_id"; value is the id.
+    ADOPT = "adopt"
+    UNADOPT = "unadopt"
+    FORK = "fork"
 
 
 class RoleLogEvent(StrEnum):

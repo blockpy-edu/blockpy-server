@@ -188,7 +188,11 @@ def import_course(owner_id, course_data_path):
 def delete_course(course_id):
     """Deletes a specific course"""
     from models.course import Course
+    from models.log_tables import CourseLog
+    from models.enums import CourseLogEvent
     if click.confirm("Are you sure you want to delete this course?"):
+        # Command-line deletions are attributed to the seeded admin user (id 1)
+        CourseLog.new(int(course_id), 1, CourseLogEvent.DELETE)
         Course.remove(int(course_id), True)
 
 

@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 import models
 from common.maybe import maybe_int
-from models.enums import RolePermissions, USER_DISPLAY_ROLES, UserRoles
+from models.enums import RolePermissions, USER_DISPLAY_ROLES, UserRoles, RoleLogEvent
 from models.generics.models import db, ma
 from models.generics.base import Base
 
@@ -240,30 +240,43 @@ class User(Base, UserMixin):
 
     ### Adding and updating roles ###
 
-    def add_role(self, name, course_id):
+    def add_role(self, name, course_id, authorizer_id=None):
         if name in [id for id, _ in USER_DISPLAY_ROLES.items()]:
             new_role = models.Role.new(name=name, user_id=self.id,
-                                   course_id=maybe_int(course_id))
+                                       course_id=maybe_int(course_id),
+                                       authorizer_id=authorizer_id)
             return new_role
         return None
 
     def update_roles(self, new_roles, course_id):
+        """
+        Make this user's roles in the course match `new_roles` (used by LTI launches).
+        Each removed and added role is logged, with the user as their own authorizer.
+        """
         course_id = maybe_int(course_id)
         old_roles = [role for role in self.roles if role.course_id == course_id]
         new_role_names = set(new_role_name.lower() for new_role_name in new_roles)
-        stale_role_ids = [old_role.id for old_role in old_roles
-                          if old_role.name.lower() not in new_role_names]
-        if stale_role_ids:
-            models.Role.query.filter(models.Role.id.in_(stale_role_ids)).delete()
+        stale_roles = [old_role for old_role in old_roles
+                       if old_role.name.lower() not in new_role_names]
         old_role_names = set(role.name.lower() for role in old_roles)
-        added_roles = False
+        added_roles = []
         for new_role_name in new_roles:
             if new_role_name.lower() not in old_role_names:
-                db.session.add(models.Role(name=new_role_name.lower(), user_id=self.id,
-                                           course_id=course_id))
-                added_roles = True
-        if stale_role_ids or added_roles:
-            db.session.commit()
+                new_role = models.Role(name=new_role_name.lower(), user_id=self.id,
+                                       course_id=course_id)
+                db.session.add(new_role)
+                added_roles.append(new_role)
+        if not stale_roles and not added_roles:
+            return
+        for stale_role in stale_roles:
+            stale_role.log_event(RoleLogEvent.REMOVED, str(stale_role.name), self.id)
+            # Delete by query so the ORM never nulls out the role\'s log rows
+            models.Role.query.filter_by(id=stale_role.id).delete()
+        # Flush so the new roles have ids to log against
+        db.session.flush()
+        for new_role in added_roles:
+            new_role.log_event(RoleLogEvent.GIVEN, str(new_role.name), self.id)
+        db.session.commit()
 
     def determine_role(self, assignments, submissions):
         '''

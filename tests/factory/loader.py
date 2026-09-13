@@ -104,10 +104,10 @@ def convert_value(value, type_name):
             return generate_uuid()
     if type_name == "string":
         return value
-    if value == "":
+    if value is None or value == "":
         return None
     try:
-        if type_name == 'int':
+        if type_name in ('int', 'integer', 'index'):
             return int(value)
         elif type_name == 'float':
             return float(value)

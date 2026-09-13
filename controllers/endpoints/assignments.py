@@ -24,7 +24,7 @@ from controllers.helpers import (get_lti_property, require_request_parameters, l
                                  require_course_instructor, get_select_menu_link,
                                  check_resource_exists, parse_assignment_load, get_course_id, ajax_success,
                                  ajax_failure, maybe_int, maybe_bool, require_course_grader,
-                                 get_assignments_in_groups)
+                                 get_assignments_in_groups, client_time_fields)
 
 import controllers.endpoints.maze as maze
 import controllers.endpoints.blockpy as blockpy
@@ -36,6 +36,8 @@ from models.course import Course
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.submission import Submission
+from models.log_tables import CourseLog
+from models.enums import CourseLogEvent
 
 blueprint_assignments = Blueprint('assignments', __name__, url_prefix='/assignments')
 
@@ -161,6 +163,8 @@ def fork():
     if new_url is not None:
         forked_assignment.url = new_url
         db.session.commit()
+    CourseLog.new(course_id, g.user.id, CourseLogEvent.FORK,
+                  "assignment_id", str(forked_assignment.id), *client_time_fields())
     # Result
     select_url = get_select_menu_link(forked_assignment.id, forked_assignment.name, is_embedded, False)
     return jsonify(success=True,
@@ -598,6 +602,18 @@ def bulk_transfer_course():
                     new_submission.copy_from(old_submission, overwrite_endpoints)
                 else:
                     skipped_subs.append((user, assignment, old_submission, new_submission))
+
+            moved = len(copied_subs) + len(overwritten_subs)
+            if moved:
+                # One TRANSFER row on each side. (The loop above shadows `user`; user_id is the instructor.)
+                for logged_course_id, other_course_id in ((source_course_id, destination_course_id),
+                                                          (destination_course_id, source_course_id)):
+                    CourseLog.new(logged_course_id, user_id, CourseLogEvent.TRANSFER,
+                                  "assignment_group_id",
+                                  json.dumps({"assignment_group_id": assignment_group_id,
+                                              "other_course_id": other_course_id,
+                                              "submissions": moved}),
+                                  *client_time_fields())
 
             message_parts = ["Submission transfer complete.<br>"]
             for kind, subs in [("copied", copied_subs), ("overwritten", overwritten_subs)]:

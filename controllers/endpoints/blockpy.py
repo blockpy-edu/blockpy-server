@@ -24,8 +24,8 @@ from models.counters import SubmissionCounts
 from models.course import Course
 
 from models import db
-from models.log_tables import SubmissionLog as Log, AssignmentLog
-from models.enums import SubmissionStatuses, AssignmentLogEvent, SubmissionLogEvent, AssignmentTypes
+from models.log_tables import SubmissionLog as Log, AssignmentLog, CourseLog
+from models.enums import SubmissionStatuses, AssignmentLogEvent, SubmissionLogEvent, AssignmentTypes, CourseLogEvent
 from models.submission import Submission, GradingStatuses
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
@@ -36,7 +36,7 @@ from controllers.auth import get_user, get_consumer_secrets
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
-                                 make_log_entry, check_permissions)
+                                 make_log_entry, check_permissions, client_time_fields)
 from common.highlighters import highlight_python_code
 from tasks.tasks import queue_lti_post_grade
 from models.user import User
@@ -1195,12 +1195,16 @@ def fork_assignment():
         check_resource_exists(group, "AssignmentGroup", assignment_group_id)
         # Create forked group, assignment, memberships
         new_group, new_assignments = group.fork(user_id, course_id)
+        CourseLog.new(course_id, user_id, CourseLogEvent.FORK,
+                      "assignment_group_id", str(new_group.id), *client_time_fields())
         assignment = None
     else:
         assignment = Assignment.query.get(assignment_id)
         check_resource_exists(assignment, "Assignment", assignment_id)
         # Create forked assignment, set it as target
         new_assignments = [assignment.fork(user_id, course_id)]
+        CourseLog.new(course_id, user_id, CourseLogEvent.FORK,
+                      "assignment_id", str(new_assignments[0].id), *client_time_fields())
     # Transfer all submissions, if desired
     if transfer_submissions:
         for new_assignment in new_assignments:

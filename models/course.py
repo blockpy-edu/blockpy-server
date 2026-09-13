@@ -46,9 +46,9 @@ class Course(Base):
     assignments: Mapped[list["Assignment"]] = db.relationship(back_populates="course")
     assignment_groups: Mapped[list["AssignmentGroup"]] = db.relationship(back_populates="course")
     tags: Mapped[list["AssignmentTag"]] = db.relationship(back_populates="course")
-    course_logs: Mapped[list["CourseLog"]] = db.relationship(back_populates="course")
-    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="course")
-    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="course")
+    course_logs: Mapped[list["CourseLog"]] = db.relationship(back_populates="course", passive_deletes=True)
+    role_logs: Mapped[list["RoleLog"]] = db.relationship(back_populates="course", passive_deletes=True)
+    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="course", passive_deletes=True)
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="course")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="course")
     invites: Mapped[list["Invite"]] = db.relationship(back_populates="course")
@@ -166,11 +166,22 @@ class Course(Base):
         db.session.commit()
 
     @staticmethod
-    def change_course_visibility(course_id, visibility):
+    def parse_visibility(visibility) -> Optional[CourseVisibility]:
+        """ Turn user input like "Public" into a CourseVisibility, or None if it is not one. """
+        try:
+            return CourseVisibility(visibility.lower())
+        except (ValueError, AttributeError):
+            return None
+
+    @staticmethod
+    def change_course_visibility(course_id, visibility, subject_id):
         course = Course.query.filter_by(id=course_id).first()
-        if course and visibility and isinstance(visibility.lower(), CourseVisibility):
-            course.visibility = visibility.lower()
+        visibility = Course.parse_visibility(visibility)
+        if course and visibility is not None:
+            course.visibility = visibility
             db.session.commit()
+            models.CourseLog.new(course.id, subject_id, CourseLogEvent.EDIT,
+                                 field="visibility", value=str(course.visibility))
             return True
         return False
 
@@ -341,39 +352,35 @@ class Course(Base):
                 for course in courses]
 
     @staticmethod
-    def rename(course_id, name=None):
+    def rename(course_id, name, subject_id):
         course = Course.by_id(course_id)
-        if name is not None:
-            course.name = name
+        course.name = name
         db.session.commit()
+        models.CourseLog.new(course.id, subject_id, CourseLogEvent.RENAME, value=name)
         return course
 
-    def edit(self, name=None, url=None, visibility=None, term=None, settings=None):
-        modified = False
-        if name is not None:
-            self.name = name
-            modified = True
-        if url is not None:
-            self.url = url
-            modified = True
-        if visibility is not None:
-            self.visibility = visibility
-            modified = True
-        if term is not None:
-            self.term = term
-            modified = True
-        if settings is not None:
-            self.settings = settings
-            modified = True
+    def edit(self, subject_id, name=None, url=None, visibility=None, term=None, settings=None):
+        """
+        Update any of the given fields that actually differ from their current value,
+        logging one EDIT row per changed field. Returns whether anything changed.
+        """
+        changes = {}
+        for field, value in (("name", name), ("url", url), ("visibility", visibility),
+                             ("term", term), ("settings", settings)):
+            if value is not None and getattr(self, field) != value:
+                setattr(self, field, value)
+                changes[field] = value
+        if not changes:
+            return False
         db.session.commit()
-        return modified
+        for field, value in changes.items():
+            models.CourseLog.new(self.id, subject_id, CourseLogEvent.EDIT,
+                                 field=field, value=str(value))
+        return True
 
     @staticmethod
     def new(name, owner_id, visibility, term, url):
-        if visibility and isinstance(visibility.lower(), CourseVisibility):
-            visibility = visibility.lower()
-        else:
-            visibility = CourseVisibility.PRIVATE
+        visibility = Course.parse_visibility(visibility) or CourseVisibility.PRIVATE
         if url:
             existing_course = Course.by_url(url)
             if existing_course:
@@ -381,7 +388,9 @@ class Course(Base):
         new_course = Course(name=name, owner_id=owner_id, visibility=visibility, term=term, url=url)
         db.session.add(new_course)
         db.session.flush()
-        models.Role.new(name='instructor', user_id=owner_id, course_id=new_course.id)
+        models.CourseLog.new(new_course.id, owner_id, CourseLogEvent.CREATE)
+        models.Role.new(name='instructor', user_id=owner_id, course_id=new_course.id,
+                        authorizer_id=owner_id)
         return new_course
 
     @staticmethod
@@ -391,6 +400,7 @@ class Course(Base):
                             endpoint=endpoint)
         db.session.add(new_course)
         db.session.commit()
+        models.CourseLog.new(new_course.id, user_id, CourseLogEvent.CREATE)
         return new_course
 
     @staticmethod
@@ -416,6 +426,8 @@ class Course(Base):
             if endpoint != "" and lti_course.endpoint != endpoint:
                 lti_course.endpoint = endpoint
                 db.session.commit()
+                models.CourseLog.new(lti_course.id, user_id, CourseLogEvent.EDIT,
+                                     field="endpoint", value=endpoint)
             return lti_course
 
     def grading_grid(self):
@@ -493,6 +505,8 @@ class Course(Base):
         result[key] = value
         self.settings = json.dumps(result)
         db.session.commit()
+        models.CourseLog.new(self.id, user_id, CourseLogEvent.EDIT,
+                             field="settings", value=json.dumps({key: value}))
         return True
 
     def get_textbooks(self):
