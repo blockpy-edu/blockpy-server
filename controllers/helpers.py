@@ -47,7 +47,8 @@ def login_required(f):
 
 def abort_with_failure(code, message, as_html=False):
     if as_html:
-        abort(code, message)
+        # Werkzeug has no exception for 2xx codes, so HTML failures are always Forbidden pages
+        abort(403, message)
     else:
         abort(make_response(jsonify(success=False, message=message), code))
 

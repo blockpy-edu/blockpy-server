@@ -190,7 +190,7 @@ def pin_course():
     check_course_unlocked(course)
     # Perform action
     try:
-        course.set_setting("pinned", pin_status, g.user)
+        course.set_setting("pinned", pin_status, g.user.id)
         return ajax_success({"updatedSettings": course.settings})
     except Exception as e:
         return ajax_failure("Failed to set pinned status:"+str(e))

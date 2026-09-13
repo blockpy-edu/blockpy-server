@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 import models
 from common.maybe import maybe_int
 from common.text import make_flavored_uuid_generator
-from models.enums import CourseVisibility, CourseKind, CourseService
+from models.enums import CourseVisibility, CourseKind, CourseService, CourseLogEvent
 from models.generics.models import db, ma
 from models.generics.base import EnhancedBase, Base, VersionedBase
 from common.dates import datetime_to_string, string_to_datetime
@@ -476,25 +476,24 @@ class Course(Base):
         except (TypeError, json.JSONDecodeError) as e:
             return {}
 
-    def set_setting(self, key, value, user):
+    def set_setting(self, key, value, user_id: int):
+        """
+        Set one key of the course's JSON settings, on behalf of the given user.
+        If the existing settings cannot be parsed, they are logged as CORRUPTED and reset.
+        """
         try:
             result = json.loads(self.settings)
-        except (TypeError, json.JSONDecodeError) as e:
+        except (TypeError, json.JSONDecodeError):
+            result = None
+        if not isinstance(result, dict):
             if self.settings:
-                self.log_action_by_user("set_setting", user,
-                                        "Failed to parse settings (resetting):\n"+self.settings)
+                models.CourseLog.new(self.id, user_id, CourseLogEvent.CORRUPTED,
+                                     field="settings", value=self.settings)
             result = {}
         result[key] = value
         self.settings = json.dumps(result)
         db.session.commit()
         return True
-
-    def log_action_by_user(self, action, user, message: str=""):
-        log = models.Log(course_id=self.id, user_id=user.id,
-                         event_type='X-Blockpy.Action', category='Course',
-                         action=action, message=message)
-        db.session.add(log)
-        db.session.commit()
 
     def get_textbooks(self):
         textbook_urls = self.get_setting('textbooks', [])

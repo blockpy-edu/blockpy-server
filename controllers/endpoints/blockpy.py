@@ -1194,7 +1194,8 @@ def fork_assignment():
         group = AssignmentGroup.query.get(assignment_group_id)
         check_resource_exists(group, "AssignmentGroup", assignment_group_id)
         # Create forked group, assignment, memberships
-        new_group, new_assignments = group.fork()
+        new_group, new_assignments = group.fork(user_id, course_id)
+        assignment = None
     else:
         assignment = Assignment.query.get(assignment_id)
         check_resource_exists(assignment, "Assignment", assignment_id)
@@ -1207,16 +1208,21 @@ def fork_assignment():
             submission = Submission.by_assignment(new_assignment.id, course_id)
             submission.edit({'assignment_id': new_assignment.id})
             # TODO: Also need to grab this for Log, Review
-    # TODO: Parse updated settings for the assignment_id, if it's not None
-
-    # TODO: Perform update
-    modified = assignment.edit(updated_settings)
-    # TODO: Log
-    AssignmentLog.new(assignment.id, assignment.version, course_id,
-                      user.id, "edit",
-                        "assignment_settings.blockpy",
-                      json.dumps(updated_settings),
-                      "", "")
+    # Apply any updated settings to the newly forked assignment (the user has no
+    # verified rights over the source assignment, only over the target course)
+    modified = False
+    if assignment is not None and updated_settings:
+        try:
+            updates = json.loads(updated_settings)
+        except json.JSONDecodeError:
+            return ajax_failure("Could not parse updated_settings as JSON")
+        forked = new_assignments[0]
+        modified = forked.edit(updates)
+        AssignmentLog.new(forked.id, forked.version, course_id,
+                          user.id, AssignmentLogEvent.EDIT,
+                          "assignment_settings.blockpy",
+                          json.dumps(updates),
+                          "", "")
     return ajax_success({"modified": modified})
 
 

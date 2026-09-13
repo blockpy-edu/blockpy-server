@@ -45,11 +45,14 @@ class Role(Base):
         }
 
     def update_role(self, new_role):
-        if new_role in [id for id, name in self.CHOICES]:
-            self.name = new_role
-            db.session.commit()
-            return new_role
-        return None
+        """ Change this role's name. Returns the new name, or None if it was not a valid role. """
+        try:
+            new_role = UserRoles(new_role)
+        except ValueError:
+            return None
+        self.name = new_role
+        db.session.commit()
+        return new_role
 
     def __str__(self):
         return '<User {} is {}>'.format(self.user_id, self.name)
