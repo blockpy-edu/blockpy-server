@@ -46,6 +46,7 @@ function renameCourse() {
     <a href="{{ url_for('courses.adopt_assignments', course_id=course.id) }}" class='btn btn-outline-secondary'>Adopt Assignments</a> Reuse assignments and groups from other courses in this course, without copying them.<br><br>
     <a href="{{ url_for('assignments.bulk_upload', course_id=course.id) }}" class='btn btn-outline-secondary'>Import Assignments</a> Load assignments exported from another course.<br><br>
     <a href="{{ url_for('courses.export', course_id=course.id) }}" class="btn btn-outline-secondary">Export Assignments</a> Export all the assignments and groups owned by this course.<br><br>
+    <a href="{{ url_for('audit.course_page', course_id=course.id) }}" class="btn btn-outline-secondary">Course History</a> Review every change made to this course's settings, roster, and assignments.<br><br>
     </div>
     <h3>Users</h3>
     <div class="instructor-only-tools p-2">

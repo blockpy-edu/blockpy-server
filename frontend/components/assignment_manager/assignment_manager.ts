@@ -371,6 +371,10 @@ export class AssignmentManager {
         return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=assignment&search_key=${assignment.id}`;
     }
 
+    historyUrl(assignment: Assignment): string {
+        return `${this.base()}audit/assignment/${assignment.id}`;
+    }
+
     viewGroupUrl(group: AssignmentGroup): string {
         return `${this.base()}assignments/load?course_id=${this.course.id}&assignment_group_id=${group.id}`;
     }

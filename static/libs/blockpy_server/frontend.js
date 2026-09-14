@@ -1471,7 +1471,7 @@ var EditorMode;
 /***/ ((module) => {
 
 "use strict";
-module.exports = "﻿<style>\n.assignment-manager .btn-group {\n    display: flex;\n}\n\n.assignment-manager .table-hover tbody tr:hover td, .assignment-manager .table-hover tbody tr:hover th {\n    background-color: #e9eaed;\n}\n\n.assignment-manager tr:hover.hover-movers-rows div.mover-buttons,\n.assignment-manager tr:hover.hover-remove-rows div.hide-buttons {\n    visibility: visible;\n}\n\n.assignment-manager tr.hover-movers-rows div.mover-buttons,\n.assignment-manager tr.hover-remove-rows div.hide-buttons {\n    visibility: hidden;\n}\n\n/* Per-type accent colors: the icon takes the color as text, the badge as background */\n.assignment-manager .fas.assignment-type-blockpy { color: #0069d9; }\n.assignment-manager .badge.assignment-type-blockpy { background-color: #0069d9; }\n.assignment-manager .fas.assignment-type-reading { color: #28a745; }\n.assignment-manager .badge.assignment-type-reading { background-color: #28a745; }\n.assignment-manager .fas.assignment-type-textbook { color: #1a9c75; }\n.assignment-manager .badge.assignment-type-textbook { background-color: #1a9c75; }\n.assignment-manager .fas.assignment-type-quiz { color: #6f42c1; }\n.assignment-manager .badge.assignment-type-quiz { background-color: #6f42c1; }\n.assignment-manager .fas.assignment-type-typescript { color: #17a2b8; }\n.assignment-manager .badge.assignment-type-typescript { background-color: #17a2b8; }\n.assignment-manager .fas.assignment-type-java { color: #8d5524; }\n.assignment-manager .badge.assignment-type-java { background-color: #8d5524; }\n.assignment-manager .fas.assignment-type-explain { color: #e83e8c; }\n.assignment-manager .badge.assignment-type-explain { background-color: #e83e8c; }\n.assignment-manager .fas.assignment-type-feedback { color: #e8590c; }\n.assignment-manager .badge.assignment-type-feedback { background-color: #e8590c; }\n.assignment-manager .fas.assignment-type-maze { color: #dc3545; }\n.assignment-manager .badge.assignment-type-maze { background-color: #dc3545; }\n.assignment-manager .fas.assignment-type-default { color: #6c757d; }\n.assignment-manager .badge.assignment-type-default { background-color: #6c757d; }\n\n.assignment-manager .badge.content-badge {\n    background-color: #e9ecef;\n    color: #495057;\n    font-weight: normal;\n}\n\n.assignment-manager .assignment-flags .badge.status-badge {\n    background-color: transparent;\n    border: 1px solid #ced4da;\n    color: #868e96;\n    font-weight: normal;\n}\n\ndiv.overlay {\n    height: 100%;\n    width: 100%;\n    position: fixed;\n    z-index: 1;\n    left: 0;\n    top: 0;\n    background-color: rgba(16, 16, 16, 0.5);\n    overflow-x: hidden;\n    transition: 0.5s;\n}\n</style>\n\n<div class=\"assignment-manager\">\n    <div class=\"overlay\" style=\"display: none;\"></div>\n\n    <div class=\"mb-2\">\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#assignment-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-plus\" aria-hidden=\"true\"></span> Create Assignment</a>\n        &nbsp;\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#group-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-folder-plus\" aria-hidden=\"true\"></span> Create Group</a>\n    </div>\n\n    <div class=\"form-inline mb-3\">\n        <label class=\"mr-1\" for=\"assignment-manager-search\">Search:</label>\n        <input type=\"text\" id=\"assignment-manager-search\" class=\"form-control form-control-sm mr-3\"\n               placeholder=\"Filter by name, url, or type\" data-bind=\"textInput: filterText\">\n        <label class=\"mr-1\" for=\"assignment-manager-sort\">Sort groups by:</label>\n        <select id=\"assignment-manager-sort\" class=\"form-control form-control-sm mr-1\"\n                data-bind=\"options: sortOptions, optionsText: 'label', optionsValue: 'key', value: sortBy, enable: groupByGroup\"></select>\n        <button type=\"button\" class=\"btn btn-outline-secondary btn-sm mr-3\" data-bind=\"click: toggleSortDirection, enable: groupByGroup\">\n            <span class=\"fas\" aria-hidden=\"true\"\n                  data-bind=\"css: sortDescending() ? 'fa-sort-amount-down' : 'fa-sort-amount-up'\"></span>\n            <span data-bind=\"text: sortDescending() ? 'Descending' : 'Ascending'\"></span>\n        </button>\n        <div class=\"form-check mr-3\">\n            <input class=\"form-check-input\" type=\"checkbox\" id=\"assignment-manager-grouped\"\n                   data-bind=\"checked: groupByGroup\">\n            <label class=\"form-check-label\" for=\"assignment-manager-grouped\">Organize by group</label>\n        </div>\n        <span class=\"text-muted small\" data-bind=\"text: countLabel\"></span>\n    </div>\n\n    <div class=\"alert alert-danger\" data-bind=\"visible: errorMessage, text: errorMessage\" style=\"display: none;\"></div>\n\n    <div data-bind=\"visible: isLoading\">\n        <span class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></span> Loading assignments...\n    </div>\n\n    <table class=\"table table-condensed table-hover\" data-bind=\"visible: !isLoading()\" style=\"display: none;\">\n    <tbody data-bind=\"foreach: displayGroups\">\n        <!-- ko if: $component.groupByGroup() -->\n        <tr class=\"table-secondary hover-remove-rows\">\n            <td colspan=\"3\">\n                <!-- ko if: group -->\n                <a href=\"#\" data-bind=\"click: $component.renameGroup.bind($component, group)\">\n                    <strong data-bind=\"text: group.name\"></strong></a><br>\n                <code data-bind=\"text: group.url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <!-- /ko -->\n                <!-- ko ifnot: group -->\n                <strong data-bind=\"text: title\"></strong>\n                <!-- /ko -->\n            </td>\n            <td>\n                <!-- ko if: group -->\n                <div class=\"btn-group hide-buttons\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" class=\"btn btn-primary btn-sm\">View</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.editSecurityUrl(group)}\">Edit Security</a>\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.forkGroupUrl(group)}\">Fork Group</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeGroup.bind($component, group)\">Delete</a>\n                    </div>\n                </div>\n                <!-- /ko -->\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko foreach: assignments -->\n        <tr class=\"hover-movers-rows\">\n            <td style=\"width: 25%\">\n                <strong data-bind=\"text: title\"></strong><br>\n                <span class=\"fas\" aria-hidden=\"true\"\n                      data-bind=\"css: $component.typeIcon($data) + ' ' + $component.typeColorClass($data), attr: {title: type}\"></span>\n                <span class=\"badge text-light\" data-bind=\"text: type, css: $component.typeColorClass($data)\"></span>\n                <code data-bind=\"text: url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.openAssignmentUrl($data)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <br>\n                <span class=\"small\">\n                    <span data-bind=\"text: points() == null ? 1 : points()\"></span> points &mdash;\n                    last modified <span data-bind=\"text: prettyDateModified, attr: {title: dateModified}\"></span>\n                </span>\n            </td>\n            <td style=\"width: 42%\">\n                <!-- ko if: $component.isReading($data) -->\n                <!-- ko with: $component.readingSummary($data) -->\n                <div>\n                    <span data-bind=\"text: header\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: slides\">slides</span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: video\">video</span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: smallLayout\">small layout</span>\n                </div>\n                <span data-bind=\"text: summary\"></span>\n                <!-- /ko -->\n                <!-- /ko -->\n                <!-- ko if: $component.isQuiz($data) -->\n                <!-- ko with: $component.quizSummary($data) -->\n                <div>\n                    <span data-bind=\"text: questionCount\"></span> questions:\n                    <!-- ko foreach: typeCounts -->\n                    <span class=\"badge content-badge\" data-bind=\"text: $data\"></span>\n                    <!-- /ko -->\n                </div>\n                <div class=\"small text-muted\" data-bind=\"text: questionNames\"></div>\n                <div>\n                    <span class=\"badge content-badge\" data-bind=\"text: gradeMode\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"text: feedbackType\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: readingId != null, text: 'reading: ' + readingId\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: feedbackId != null, text: 'feedback: ' + feedbackId\"></span>\n                </div>\n                <!-- /ko -->\n                <!-- /ko -->\n                <!-- ko if: !$component.isReading($data) && !$component.isQuiz($data) -->\n                <span data-bind=\"text: $component.shortInstructions($data)\"></span>\n                <!-- /ko -->\n            </td>\n            <td style=\"width: 16%\">\n                <div class=\"mover-buttons btn-group\">\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm dropdown-toggle\"\n                            data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        Move Group<span class=\"caret\"></span>\n                    </button>\n                    <div class=\"dropdown-menu dropdown-menu-right\">\n                        <!-- ko if: group() != null -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $data, null)\">Ungrouped Assignments</a>\n                        <div class=\"dropdown-divider\"></div>\n                        <!-- /ko -->\n                        <!-- ko foreach: $component.sortedGroups -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $parent, $data), text: name\"></a>\n                        <!-- /ko -->\n                    </div>\n                </div>\n            </td>\n            <td style=\"width: 17%\">\n                <div class=\"btn-group\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.editAssignmentUrl($data)}\" class=\"btn btn-primary btn-sm\">Edit</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeAssignment.bind($component, $data)\">Delete</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, true); }\">Fork (prompt URL)</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, false); }\">Fork</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.exportAssignmentUrl($data)}\">Export Assignment</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.submissionsUrl($data)}\">View Submissions</a>\n                    </div>\n                </div>\n                <div class=\"text-right mt-1 assignment-flags\">\n                    <!-- ko foreach: $component.assignmentFlags($data) -->\n                    <span class=\"badge status-badge\" data-bind=\"text: $data\"></span>\n                    <!-- /ko -->\n                </div>\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko if: assignments.length === 0 -->\n        <tr>\n            <td colspan=\"4\" class=\"text-muted small font-italic\">No assignments here.</td>\n        </tr>\n        <!-- /ko -->\n    </tbody>\n    </table>\n</div>\n";
+module.exports = "﻿<style>\n.assignment-manager .btn-group {\n    display: flex;\n}\n\n.assignment-manager .table-hover tbody tr:hover td, .assignment-manager .table-hover tbody tr:hover th {\n    background-color: #e9eaed;\n}\n\n.assignment-manager tr:hover.hover-movers-rows div.mover-buttons,\n.assignment-manager tr:hover.hover-remove-rows div.hide-buttons {\n    visibility: visible;\n}\n\n.assignment-manager tr.hover-movers-rows div.mover-buttons,\n.assignment-manager tr.hover-remove-rows div.hide-buttons {\n    visibility: hidden;\n}\n\n/* Per-type accent colors: the icon takes the color as text, the badge as background */\n.assignment-manager .fas.assignment-type-blockpy { color: #0069d9; }\n.assignment-manager .badge.assignment-type-blockpy { background-color: #0069d9; }\n.assignment-manager .fas.assignment-type-reading { color: #28a745; }\n.assignment-manager .badge.assignment-type-reading { background-color: #28a745; }\n.assignment-manager .fas.assignment-type-textbook { color: #1a9c75; }\n.assignment-manager .badge.assignment-type-textbook { background-color: #1a9c75; }\n.assignment-manager .fas.assignment-type-quiz { color: #6f42c1; }\n.assignment-manager .badge.assignment-type-quiz { background-color: #6f42c1; }\n.assignment-manager .fas.assignment-type-typescript { color: #17a2b8; }\n.assignment-manager .badge.assignment-type-typescript { background-color: #17a2b8; }\n.assignment-manager .fas.assignment-type-java { color: #8d5524; }\n.assignment-manager .badge.assignment-type-java { background-color: #8d5524; }\n.assignment-manager .fas.assignment-type-explain { color: #e83e8c; }\n.assignment-manager .badge.assignment-type-explain { background-color: #e83e8c; }\n.assignment-manager .fas.assignment-type-feedback { color: #e8590c; }\n.assignment-manager .badge.assignment-type-feedback { background-color: #e8590c; }\n.assignment-manager .fas.assignment-type-maze { color: #dc3545; }\n.assignment-manager .badge.assignment-type-maze { background-color: #dc3545; }\n.assignment-manager .fas.assignment-type-default { color: #6c757d; }\n.assignment-manager .badge.assignment-type-default { background-color: #6c757d; }\n\n.assignment-manager .badge.content-badge {\n    background-color: #e9ecef;\n    color: #495057;\n    font-weight: normal;\n}\n\n.assignment-manager .assignment-flags .badge.status-badge {\n    background-color: transparent;\n    border: 1px solid #ced4da;\n    color: #868e96;\n    font-weight: normal;\n}\n\ndiv.overlay {\n    height: 100%;\n    width: 100%;\n    position: fixed;\n    z-index: 1;\n    left: 0;\n    top: 0;\n    background-color: rgba(16, 16, 16, 0.5);\n    overflow-x: hidden;\n    transition: 0.5s;\n}\n</style>\n\n<div class=\"assignment-manager\">\n    <div class=\"overlay\" style=\"display: none;\"></div>\n\n    <div class=\"mb-2\">\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#assignment-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-plus\" aria-hidden=\"true\"></span> Create Assignment</a>\n        &nbsp;\n        <a href=\"#\" data-toggle=\"modal\" data-target=\"#group-create\" class=\"btn btn-outline-secondary btn-sm\">\n            <span class=\"fas fa-folder-plus\" aria-hidden=\"true\"></span> Create Group</a>\n    </div>\n\n    <div class=\"form-inline mb-3\">\n        <label class=\"mr-1\" for=\"assignment-manager-search\">Search:</label>\n        <input type=\"text\" id=\"assignment-manager-search\" class=\"form-control form-control-sm mr-3\"\n               placeholder=\"Filter by name, url, or type\" data-bind=\"textInput: filterText\">\n        <label class=\"mr-1\" for=\"assignment-manager-sort\">Sort groups by:</label>\n        <select id=\"assignment-manager-sort\" class=\"form-control form-control-sm mr-1\"\n                data-bind=\"options: sortOptions, optionsText: 'label', optionsValue: 'key', value: sortBy, enable: groupByGroup\"></select>\n        <button type=\"button\" class=\"btn btn-outline-secondary btn-sm mr-3\" data-bind=\"click: toggleSortDirection, enable: groupByGroup\">\n            <span class=\"fas\" aria-hidden=\"true\"\n                  data-bind=\"css: sortDescending() ? 'fa-sort-amount-down' : 'fa-sort-amount-up'\"></span>\n            <span data-bind=\"text: sortDescending() ? 'Descending' : 'Ascending'\"></span>\n        </button>\n        <div class=\"form-check mr-3\">\n            <input class=\"form-check-input\" type=\"checkbox\" id=\"assignment-manager-grouped\"\n                   data-bind=\"checked: groupByGroup\">\n            <label class=\"form-check-label\" for=\"assignment-manager-grouped\">Organize by group</label>\n        </div>\n        <span class=\"text-muted small\" data-bind=\"text: countLabel\"></span>\n    </div>\n\n    <div class=\"alert alert-danger\" data-bind=\"visible: errorMessage, text: errorMessage\" style=\"display: none;\"></div>\n\n    <div data-bind=\"visible: isLoading\">\n        <span class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></span> Loading assignments...\n    </div>\n\n    <table class=\"table table-condensed table-hover\" data-bind=\"visible: !isLoading()\" style=\"display: none;\">\n    <tbody data-bind=\"foreach: displayGroups\">\n        <!-- ko if: $component.groupByGroup() -->\n        <tr class=\"table-secondary hover-remove-rows\">\n            <td colspan=\"3\">\n                <!-- ko if: group -->\n                <a href=\"#\" data-bind=\"click: $component.renameGroup.bind($component, group)\">\n                    <strong data-bind=\"text: group.name\"></strong></a><br>\n                <code data-bind=\"text: group.url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <!-- /ko -->\n                <!-- ko ifnot: group -->\n                <strong data-bind=\"text: title\"></strong>\n                <!-- /ko -->\n            </td>\n            <td>\n                <!-- ko if: group -->\n                <div class=\"btn-group hide-buttons\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.viewGroupUrl(group)}\" class=\"btn btn-primary btn-sm\">View</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.editSecurityUrl(group)}\">Edit Security</a>\n                        <a target=\"_blank\" class=\"dropdown-item\" data-bind=\"attr: {href: $component.forkGroupUrl(group)}\">Fork Group</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeGroup.bind($component, group)\">Delete</a>\n                    </div>\n                </div>\n                <!-- /ko -->\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko foreach: assignments -->\n        <tr class=\"hover-movers-rows\">\n            <td style=\"width: 25%\">\n                <strong data-bind=\"text: title\"></strong><br>\n                <span class=\"fas\" aria-hidden=\"true\"\n                      data-bind=\"css: $component.typeIcon($data) + ' ' + $component.typeColorClass($data), attr: {title: type}\"></span>\n                <span class=\"badge text-light\" data-bind=\"text: type, css: $component.typeColorClass($data)\"></span>\n                <code data-bind=\"text: url\" style=\"color: #333\"></code>\n                <a href=\"\" data-bind=\"attr: {href: $component.openAssignmentUrl($data)}\" target=\"_blank\"><small class=\"fas fa-external-link-alt\"></small></a>\n                <br>\n                <span class=\"small\">\n                    <span data-bind=\"text: points() == null ? 1 : points()\"></span> points &mdash;\n                    last modified <span data-bind=\"text: prettyDateModified, attr: {title: dateModified}\"></span>\n                </span>\n            </td>\n            <td style=\"width: 42%\">\n                <!-- ko if: $component.isReading($data) -->\n                <!-- ko with: $component.readingSummary($data) -->\n                <div>\n                    <span data-bind=\"text: header\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: slides\">slides</span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: video\">video</span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: smallLayout\">small layout</span>\n                </div>\n                <span data-bind=\"text: summary\"></span>\n                <!-- /ko -->\n                <!-- /ko -->\n                <!-- ko if: $component.isQuiz($data) -->\n                <!-- ko with: $component.quizSummary($data) -->\n                <div>\n                    <span data-bind=\"text: questionCount\"></span> questions:\n                    <!-- ko foreach: typeCounts -->\n                    <span class=\"badge content-badge\" data-bind=\"text: $data\"></span>\n                    <!-- /ko -->\n                </div>\n                <div class=\"small text-muted\" data-bind=\"text: questionNames\"></div>\n                <div>\n                    <span class=\"badge content-badge\" data-bind=\"text: gradeMode\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"text: feedbackType\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: readingId != null, text: 'reading: ' + readingId\"></span>\n                    <span class=\"badge content-badge\" data-bind=\"visible: feedbackId != null, text: 'feedback: ' + feedbackId\"></span>\n                </div>\n                <!-- /ko -->\n                <!-- /ko -->\n                <!-- ko if: !$component.isReading($data) && !$component.isQuiz($data) -->\n                <span data-bind=\"text: $component.shortInstructions($data)\"></span>\n                <!-- /ko -->\n            </td>\n            <td style=\"width: 16%\">\n                <div class=\"mover-buttons btn-group\">\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm dropdown-toggle\"\n                            data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        Move Group<span class=\"caret\"></span>\n                    </button>\n                    <div class=\"dropdown-menu dropdown-menu-right\">\n                        <!-- ko if: group() != null -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $data, null)\">Ungrouped Assignments</a>\n                        <div class=\"dropdown-divider\"></div>\n                        <!-- /ko -->\n                        <!-- ko foreach: $component.sortedGroups -->\n                        <a href=\"#\" class=\"dropdown-item\" data-bind=\"click: $component.moveMembership.bind($component, $parent, $data), text: name\"></a>\n                        <!-- /ko -->\n                    </div>\n                </div>\n            </td>\n            <td style=\"width: 17%\">\n                <div class=\"btn-group\">\n                    <a target=\"_blank\" data-bind=\"attr: {href: $component.editAssignmentUrl($data)}\" class=\"btn btn-primary btn-sm\">Edit</a>\n                    <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\n                        <span class=\"caret\"></span>\n                        <span class=\"sr-only\">Toggle Dropdown</span>\n                    </button>\n                    <div class=\"dropdown-menu\">\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: $component.removeAssignment.bind($component, $data)\">Delete</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, true); }\">Fork (prompt URL)</a>\n                        <a class=\"dropdown-item\" href=\"#\" data-bind=\"click: function() { $component.forkAssignment($data, false); }\">Fork</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.exportAssignmentUrl($data)}\">Export Assignment</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.submissionsUrl($data)}\">View Submissions</a>\n                        <a class=\"dropdown-item\" target=\"_blank\" data-bind=\"attr: {href: $component.historyUrl($data)}\">History</a>\n                    </div>\n                </div>\n                <div class=\"text-right mt-1 assignment-flags\">\n                    <!-- ko foreach: $component.assignmentFlags($data) -->\n                    <span class=\"badge status-badge\" data-bind=\"text: $data\"></span>\n                    <!-- /ko -->\n                </div>\n            </td>\n        </tr>\n        <!-- /ko -->\n        <!-- ko if: assignments.length === 0 -->\n        <tr>\n            <td colspan=\"4\" class=\"text-muted small font-italic\">No assignments here.</td>\n        </tr>\n        <!-- /ko -->\n    </tbody>\n    </table>\n</div>\n";
 
 /***/ }),
 
@@ -1751,6 +1751,9 @@ class AssignmentManager {
     submissionsUrl(assignment) {
         return `${this.base()}courses/submissions_filter/${this.course.id}?criteria=assignment&search_key=${assignment.id}`;
     }
+    historyUrl(assignment) {
+        return `${this.base()}audit/assignment/${assignment.id}`;
+    }
     viewGroupUrl(group) {
         return `${this.base()}assignments/load?course_id=${this.course.id}&assignment_group_id=${group.id}`;
     }
@@ -1899,6 +1902,482 @@ knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("assignment-manager", 
 
 "use strict";
 module.exports = "<div class=\"modal fade\" id=\"assignment-create\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"assignment-create-label\">\n  <div class=\"modal-dialog\" role=\"document\">\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <h4 class=\"modal-title\" id=\"assignment-create-label\">Create Assignment</h4>\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\n      </div>\n      <div class=\"modal-body\">\n        <div class=\"form-group\">\n            <label for=\"assignment-type\">Type:\n            <select class=\"form-control\" id=\"assignment-type\" data-bind=\"value: createAssignmentType\">\n                <option>BlockPy</option>\n                <option>Reading</option>\n                <option value=\"quiz\">Quiz Questions</option>\n                <option>TypeScript</option>\n                <option>Textbook</option>\n                <option value=\"java\">Java</option>\n                <option value=\"explain\">Code Explanation</option>\n                <option value=\"feedback\">Feedback</option>\n            </select></label>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() != 'Maze'\">\n            <label for=\"assignment-name\">Name:\n            <input type=\"text\" class=\"form-control\" id=\"assignment-name\"\n                   data-bind=\"value: createAssignmentName\" placeholder=\"Day 1 - #1.1\">\n            </label>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() != 'Maze'\">\n            <label for=\"assignment-url\">Unique URL:\n            <input type=\"text\" class=\"form-control\" id=\"assignment-url\"\n                   data-bind=\"value: createAssignmentUrl\" placeholder=\"assignment_url\">\n            </label><br>\n            <small>Recommend format: <code>(course)_(topic name)_(problem_name)</code>, like <code>sneks_loops_convert_temperatures</code></small><br>\n            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>\n        </div>\n        <div class=\"form-group\" data-bind=\"visible: createAssignmentType() == 'Maze'\">\n            <label for=\"assignment-level\">Maze Level:\n            <select class=\"form-control\" id=\"assignment-level\" data-bind=\"value: createAssignmentLevel\">\n                <option value='1'>Level 1</option>\n                <option value='2'>Level 2</option>\n                <option value='3'>Level 3</option>\n                <option value='4'>Level 4</option>\n                <option value='5'>Level 5</option>\n                <option value='6'>Level 6</option>\n                <option value='7'>Level 7</option>\n                <option value='8'>Level 8</option>\n                <option value='9'>Level 9</option>\n                <option value='10'>Level 10</option>\n            </select>\n            </label>\n        </div>\n        <div class=\"form-group\">\n            <label for=\"assignment-group\">Add to group:\n                <select class=\"form-control\" id=\"assignment-group\"\n                        data-bind=\"options: groupSelectOptions, optionsText: 'name', optionsValue: 'id', value: createAssignmentGroupId\"></select>\n            </label>\n        </div>\n      </div>\n      <div class=\"modal-footer\">\n        <button type=\"button\" class=\"btn btn-outline-secondary\" data-dismiss=\"modal\">Cancel</button>\n        <button type=\"button\" class=\"btn btn-primary\" data-bind=\"click: addAssignment\">Create</button>\n      </div>\n    </div>\n  </div>\n</div>\n\n<div class=\"modal fade\" id=\"group-create\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"group-create-label\">\n  <div class=\"modal-dialog\" role=\"document\">\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <h4 class=\"modal-title\" id=\"group-create-label\">Create Assignment Group</h4>\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\n      </div>\n      <div class=\"modal-body\">\n        <div class=\"form-group\">\n            <label for=\"group-name\">Name:\n            <input type=\"text\" class=\"form-control\" id=\"group-name\"\n                   data-bind=\"value: createGroupName\" placeholder=\"Day X - \">\n            </label>\n        </div>\n        <div class=\"form-group\">\n            <label for=\"group-url\">Url:\n            <input type=\"text\" class=\"form-control\" id=\"group-url\"\n                   data-bind=\"value: createGroupUrl\" placeholder=\"unique_group\">\n            </label><br>\n            <small>Recommend format: <code>(course)_(topic name)</code>, like <code>sneks_loops</code></small><br>\n            <small>Make sure this is unique across all courses, and should only use letters, numbers, underscores, and dashes</small>\n        </div>\n      </div>\n      <div class=\"modal-footer\">\n        <button type=\"button\" class=\"btn btn-outline-secondary\" data-dismiss=\"modal\">Cancel</button>\n        <button type=\"button\" class=\"btn btn-primary\" data-bind=\"click: addGroup\">Create</button>\n      </div>\n    </div>\n  </div>\n</div>\n";
+
+/***/ }),
+
+/***/ "./components/audit/audit.html":
+/*!*************************************!*\
+  !*** ./components/audit/audit.html ***!
+  \*************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<style>\n.audit-review .audit-row td { vertical-align: top; }\n.audit-review .audit-value { white-space: pre-wrap; word-break: break-word; max-height: 12em; overflow: auto; font-size: 85%; }\n.audit-review .audit-value.expanded { max-height: none; }\n.audit-review .audit-diff { font-size: 85%; white-space: pre-wrap; word-break: break-word; margin: 0; }\n.audit-review .audit-diff .add { background: #e6ffed; color: #22863a; }\n.audit-review .audit-diff .remove { background: #ffeef0; color: #b31d28; }\n.audit-review .audit-diff .header { color: #6a737d; }\n.audit-review .audit-sparkline { width: 120px; height: 28px; }\n.audit-review .audit-sparkline polyline { fill: none; stroke: #0275d8; stroke-width: 1.5; }\n.audit-review .audit-day { background: #f7f7f9; }\n.audit-review .audit-tile .display-4 { font-size: 2rem; }\n.audit-review .audit-frame { font-family: monospace; font-size: 85%; word-break: break-all; }\n.audit-review .audit-traceback { white-space: pre-wrap; font-size: 80%; max-height: 30em; overflow: auto; }\n</style>\n\n<div class=\"audit-review\">\n\n    <!-- Admin navigation between the review pages -->\n    <!-- ko if: isAdmin -->\n    <nav class=\"mb-3 small\">\n        <a data-bind=\"attr: {href: dashboardUrl()}, css: {'font-weight-bold': page === 'dashboard'}\">Dashboard</a>\n        &middot; <a data-bind=\"attr: {href: feedUrl()}, css: {'font-weight-bold': page === 'feed'}\">Feed</a>\n        &middot; <a data-bind=\"attr: {href: errorsUrl()}, css: {'font-weight-bold': page === 'errors'}\">Errors</a>\n    </nav>\n    <!-- /ko -->\n\n    <!-- ================= Dashboard ================= -->\n    <!-- ko if: page === 'dashboard' -->\n    <div class=\"alert alert-danger\" data-bind=\"visible: summaryError(), text: summaryError()\"></div>\n\n    <form class=\"form-inline mb-3\" data-bind=\"submit: lookup\">\n        <input type=\"text\" class=\"form-control mr-2\" style=\"min-width: 22em\" placeholder=\"user email, course id or url, assignment id or url\"\n               data-bind=\"textInput: lookupQuery\">\n        <button type=\"submit\" class=\"btn btn-outline-secondary\">Find history</button>\n    </form>\n    <ul class=\"list-unstyled\" data-bind=\"foreach: lookupMatches\">\n        <li><span class=\"badge badge-light\" data-bind=\"text: kind\"></span> <a data-bind=\"attr: {href: url}, text: label\"></a></li>\n    </ul>\n    <p class=\"text-muted small\" data-bind=\"visible: lookupSearched() && !lookupMatches().length\">Nothing matched.</p>\n\n    <div class=\"row\" data-bind=\"if: summary()\">\n        <!-- ko foreach: tileTables() -->\n        <div class=\"col-md-3 mb-3\">\n            <div class=\"card audit-tile h-100\" data-bind=\"with: $component.tileFor($data)\">\n                <div class=\"card-body py-2\">\n                    <div class=\"text-muted small\" data-bind=\"text: $component.tableLabels[$parent] + ' events'\"></div>\n                    <div class=\"display-4\" data-bind=\"text: since\"></div>\n                    <div class=\"small\">last 24 hours &middot; <span data-bind=\"text: week\"></span> this week</div>\n                    <svg class=\"audit-sparkline\" viewBox=\"0 0 120 28\"><polyline data-bind=\"attr: {points: $component.sparkline(days)}\"></polyline></svg>\n                </div>\n            </div>\n        </div>\n        <!-- /ko -->\n        <div class=\"col-md-3 mb-3\">\n            <div class=\"card audit-tile h-100\" data-bind=\"with: summary().errors\">\n                <div class=\"card-body py-2\">\n                    <div class=\"text-muted small\">Server errors</div>\n                    <div class=\"display-4\" data-bind=\"text: since\"></div>\n                    <div class=\"small\">last 24 hours &middot; <span data-bind=\"text: week\"></span> this week\n                        &middot; <a data-bind=\"attr: {href: $component.errorsUrl()}\">details</a></div>\n                    <svg class=\"audit-sparkline\" viewBox=\"0 0 120 28\"><polyline data-bind=\"attr: {points: $component.sparkline(days)}\"></polyline></svg>\n                </div>\n            </div>\n        </div>\n    </div>\n\n    <div class=\"row\">\n        <div class=\"col-lg-6 mb-3\">\n            <h4>Recent destructive events</h4>\n            <p class=\"text-muted small\" data-bind=\"visible: summary() && !destructive().length\">Nothing deleted, removed or unadopted recently.</p>\n            <table class=\"table table-sm\" data-bind=\"visible: destructive().length\">\n                <tbody data-bind=\"template: {name: 'audit-event-rows', foreach: destructive}\"></tbody>\n            </table>\n        </div>\n        <div class=\"col-lg-6 mb-3\">\n            <h4>Recent privilege changes</h4>\n            <p class=\"text-muted small\" data-bind=\"visible: summary() && !privilege().length\">No instructor or admin roles given or changed recently.</p>\n            <table class=\"table table-sm\" data-bind=\"visible: privilege().length\">\n                <tbody data-bind=\"template: {name: 'audit-event-rows', foreach: privilege}\"></tbody>\n            </table>\n        </div>\n    </div>\n    <!-- /ko -->\n\n    <!-- ================= Course header ================= -->\n    <!-- ko if: page === 'course' -->\n    <div class=\"card mb-3\">\n        <div class=\"card-body py-2 small\">\n            <span class=\"mr-3\"><strong>Owner:</strong> <span data-bind=\"text: header.owner ? (header.owner.first_name + ' ' + header.owner.last_name + ' <' + header.owner.email + '>') : 'unknown'\"></span></span>\n            <span class=\"mr-3\"><strong>Visibility:</strong> <span data-bind=\"text: header.visibility\"></span></span>\n            <span class=\"mr-3\"><strong>Locked:</strong> <span data-bind=\"text: header.locked ? 'yes' : 'no'\"></span></span>\n            <span><strong>Created:</strong> <span data-bind=\"text: whenString(header.createdAt)\"></span>\n                <!-- ko if: header.createdBy --> by <span data-bind=\"text: header.createdBy.first_name + ' ' + header.createdBy.last_name\"></span><!-- /ko -->\n                <!-- ko ifnot: header.createdBy --> <span class=\"text-muted\">(before audit logging began)</span><!-- /ko -->\n            </span>\n        </div>\n    </div>\n    <ul class=\"nav nav-tabs mb-3\">\n        <li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-bind=\"css: {active: tab() === 'all'}, click: function() { tab('all'); }\">All</a></li>\n        <li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-bind=\"css: {active: tab() === 'settings'}, click: function() { tab('settings'); }\">Settings</a></li>\n        <li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-bind=\"css: {active: tab() === 'roster'}, click: function() { tab('roster'); }\">Roster</a></li>\n        <li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-bind=\"css: {active: tab() === 'assignments'}, click: function() { tab('assignments'); }\">Assignments</a></li>\n    </ul>\n    <!-- /ko -->\n\n    <!-- ================= Assignment header ================= -->\n    <!-- ko if: page === 'assignment' -->\n    <div class=\"card mb-3\">\n        <div class=\"card-body py-2 small\">\n            <span class=\"mr-3\"><strong>Type:</strong> <span data-bind=\"text: header.assignment ? header.assignment.type : ''\"></span></span>\n            <span class=\"mr-3\"><strong>URL:</strong> <code data-bind=\"text: header.assignment ? header.assignment.url : ''\"></code></span>\n            <span class=\"mr-3\"><strong>Owner:</strong> <span data-bind=\"text: header.owner ? (header.owner.first_name + ' ' + header.owner.last_name) : 'unknown'\"></span></span>\n            <span><strong>Course:</strong>\n                <!-- ko if: header.course --><a data-bind=\"attr: {href: courseUrl(header.course.id)}, text: header.course.name\"></a><!-- /ko -->\n                <!-- ko ifnot: header.course --><span class=\"text-muted\">deleted</span><!-- /ko -->\n            </span>\n        </div>\n    </div>\n    <p class=\"text-muted small\">Each edit can be diffed against the previous edit of the same field.</p>\n    <!-- /ko -->\n\n    <!-- ================= Filters (global feed only) ================= -->\n    <!-- ko if: page === 'feed' -->\n    <form class=\"card mb-3\" data-bind=\"submit: function() { feed.reload(); }\">\n        <div class=\"card-body py-2\">\n            <div class=\"form-row align-items-end\">\n                <div class=\"form-group col-md-3 mb-2\">\n                    <label class=\"small mb-0\">Tables</label><br>\n                    <label class=\"mr-2 small\"><input type=\"checkbox\" value=\"course_log\" data-bind=\"checked: feed.tables\"> Course</label>\n                    <label class=\"mr-2 small\"><input type=\"checkbox\" value=\"role_log\" data-bind=\"checked: feed.tables\"> Roster</label>\n                    <label class=\"small\"><input type=\"checkbox\" value=\"assignment_log\" data-bind=\"checked: feed.tables\"> Assignment</label>\n                </div>\n                <div class=\"form-group col-md-2 mb-2\">\n                    <label class=\"small mb-0\">Event types (comma separated)</label>\n                    <input type=\"text\" class=\"form-control form-control-sm\" placeholder=\"edit,delete\" data-bind=\"textInput: feed.eventTypes\">\n                </div>\n                <div class=\"form-group col-md-1 mb-2\">\n                    <label class=\"small mb-0\">Subject id</label>\n                    <input type=\"text\" class=\"form-control form-control-sm\" data-bind=\"textInput: feed.subjectId\">\n                </div>\n                <div class=\"form-group col-md-2 mb-2\">\n                    <label class=\"small mb-0\">Search field/value</label>\n                    <input type=\"text\" class=\"form-control form-control-sm\" data-bind=\"textInput: feed.search\">\n                </div>\n                <div class=\"form-group col-md-2 mb-2\">\n                    <label class=\"small mb-0\">Since</label>\n                    <input type=\"datetime-local\" class=\"form-control form-control-sm\" data-bind=\"value: feed.since\">\n                </div>\n                <div class=\"form-group col-md-2 mb-2\">\n                    <label class=\"small mb-0\">Before</label>\n                    <input type=\"datetime-local\" class=\"form-control form-control-sm\" data-bind=\"value: feed.before\">\n                </div>\n            </div>\n            <button type=\"submit\" class=\"btn btn-sm btn-primary\">Apply</button>\n        </div>\n    </form>\n    <!-- /ko -->\n\n    <!-- ================= Feeds ================= -->\n    <!-- ko if: page === 'user' -->\n    <div class=\"row\">\n        <div class=\"col-lg-6\">\n            <h4>Did</h4>\n            <!-- ko template: {name: 'audit-feed', data: feed} --><!-- /ko -->\n        </div>\n        <div class=\"col-lg-6\">\n            <h4>Received</h4>\n            <!-- ko template: {name: 'audit-feed', data: receivedFeed} --><!-- /ko -->\n        </div>\n    </div>\n    <!-- /ko -->\n\n    <!-- ko if: page === 'feed' || page === 'course' || page === 'assignment' -->\n    <!-- ko template: {name: 'audit-feed', data: feed} --><!-- /ko -->\n    <!-- /ko -->\n\n    <!-- ================= Errors ================= -->\n    <!-- ko if: page === 'errors' -->\n    <p class=\"text-muted small\">\n        Unhandled server errors from the last <span data-bind=\"text: errorDays\"></span> days, grouped by exception type and the\n        innermost frame of the traceback. <span data-bind=\"text: errorTotal\"></span> occurrences in total.\n        <a href=\"#\" data-bind=\"click: function() { errorDays(90); loadErrors(); }\">Show 90 days</a>\n    </p>\n    <div class=\"alert alert-danger\" data-bind=\"visible: errorsError(), text: errorsError()\"></div>\n    <p data-bind=\"visible: errorsLoading()\">Loading&hellip;</p>\n    <p class=\"text-muted\" data-bind=\"visible: !errorsLoading() && !errorGroups().length && !errorsError()\">No errors recorded.</p>\n    <table class=\"table table-sm\" data-bind=\"visible: errorGroups().length\">\n        <thead><tr><th>Error</th><th>Where</th><th class=\"text-right\">24h</th><th class=\"text-right\">7d</th><th class=\"text-right\">Total</th><th>First seen</th><th>Last seen</th><th></th></tr></thead>\n        <tbody data-bind=\"foreach: errorGroups\">\n            <tr>\n                <td><a href=\"#\" data-bind=\"click: $component.toggleGroup.bind($component), text: error_type\"></a></td>\n                <td class=\"audit-frame\" data-bind=\"text: frame\"></td>\n                <td class=\"text-right\" data-bind=\"text: day\"></td>\n                <td class=\"text-right\" data-bind=\"text: week\"></td>\n                <td class=\"text-right\" data-bind=\"text: count\"></td>\n                <td class=\"small\" data-bind=\"text: $component.whenString(first_seen)\"></td>\n                <td class=\"small\" data-bind=\"text: $component.whenString(last_seen)\"></td>\n                <td><svg class=\"audit-sparkline\" viewBox=\"0 0 120 28\"><polyline data-bind=\"attr: {points: $component.sparklineCounts(days)}\"></polyline></svg></td>\n            </tr>\n            <tr data-bind=\"visible: $component.expandedGroup() === $data\">\n                <td colspan=\"8\">\n                    <table class=\"table table-sm mb-0\">\n                        <thead><tr><th>When</th><th>User</th><th>Route</th><th>IP</th><th>Message</th></tr></thead>\n                        <tbody data-bind=\"foreach: occurrences\">\n                            <tr>\n                                <td class=\"small text-nowrap\"><a href=\"#\" data-bind=\"click: $component.toggleOccurrence.bind($component), text: $component.whenString(when)\"></a></td>\n                                <td class=\"small\" data-bind=\"text: $component.occurrenceUser($data)\"></td>\n                                <td class=\"small\"><code data-bind=\"text: method + ' ' + route\"></code></td>\n                                <td class=\"small\" data-bind=\"text: ip_address\"></td>\n                                <td class=\"small\" data-bind=\"text: message\"></td>\n                            </tr>\n                            <tr data-bind=\"visible: $component.expandedOccurrence() === $data\">\n                                <td colspan=\"5\"><pre class=\"audit-traceback\" data-bind=\"text: traceback\"></pre></td>\n                            </tr>\n                        </tbody>\n                    </table>\n                </td>\n            </tr>\n        </tbody>\n    </table>\n    <!-- /ko -->\n\n</div>\n\n<!-- One feed: grouped by day, with load more -->\n<script type=\"text/html\" id=\"audit-feed\">\n    <div class=\"alert alert-danger\" data-bind=\"visible: error(), text: error()\"></div>\n    <p class=\"text-muted\" data-bind=\"visible: hasLoaded() && !rows().length && !error()\">No events.</p>\n    <table class=\"table table-sm\" data-bind=\"visible: rows().length\">\n        <tbody data-bind=\"foreach: groups\">\n            <tr class=\"audit-day\"><th colspan=\"5\" data-bind=\"text: day\"></th></tr>\n            <!-- ko template: {name: 'audit-event-rows', foreach: rows} --><!-- /ko -->\n        </tbody>\n    </table>\n    <p data-bind=\"visible: loading()\">Loading&hellip;</p>\n    <button class=\"btn btn-sm btn-outline-secondary\" data-bind=\"visible: rows().length && !exhausted() && !loading(), click: loadMore\">Load more</button>\n</script>\n\n<!-- One event row (the data is an EventRow) -->\n<script type=\"text/html\" id=\"audit-event-rows\">\n    <tr class=\"audit-row\">\n        <td class=\"text-nowrap small\" data-bind=\"text: $component.when(event)\"></td>\n        <td class=\"small\">\n            <!-- ko if: $component.isAdmin -->\n            <a data-bind=\"attr: {href: $component.userUrl(event.subject_id)}, text: $component.subjectName(event)\"></a>\n            <!-- /ko -->\n            <!-- ko ifnot: $component.isAdmin -->\n            <span data-bind=\"text: $component.subjectName(event)\"></span>\n            <!-- /ko -->\n        </td>\n        <td class=\"small\">\n            <span class=\"badge badge-light\" data-bind=\"text: $component.tableLabel(event)\"></span>\n            <!-- ko if: $component.targetUrl(event) -->\n            <a data-bind=\"attr: {href: $component.targetUrl(event)}, text: $component.targetLabel(event)\"></a>\n            <!-- /ko -->\n            <!-- ko ifnot: $component.targetUrl(event) -->\n            <span class=\"text-muted\" data-bind=\"text: $component.targetLabel(event)\"></span>\n            <!-- /ko -->\n            <span class=\"text-muted\" data-bind=\"text: $component.contextLabel(event), visible: $component.page === 'assignment' || $component.page === 'user'\"></span>\n        </td>\n        <td class=\"small\"><span class=\"badge\" data-bind=\"css: $component.badgeClass(event), text: event.event_type\"></span></td>\n        <td class=\"small\">\n            <!-- ko if: event.table === 'role_log' -->\n            <span data-bind=\"text: $component.sentence(event)\"></span>\n            <!-- /ko -->\n            <!-- ko ifnot: event.table === 'role_log' -->\n            <code data-bind=\"text: $component.fieldLabel(event), visible: event.field\"></code>\n            <!-- ko if: event.value !== null -->\n            <div class=\"audit-value\" data-bind=\"text: shownValue(), css: {expanded: expanded()}\"></div>\n            <a href=\"#\" class=\"small\" data-bind=\"click: toggleValue, text: expanded() ? 'show less' : 'show all', visible: event.value_truncated || (event.value || '').length > 200\"></a>\n            <!-- /ko -->\n            <!-- ko if: canDiff() -->\n            <a href=\"#\" class=\"small ml-2\" data-bind=\"click: toggleDiff, text: diffOpen() ? 'hide diff' : 'diff'\"></a>\n            <!-- ko if: diffOpen() -->\n            <div>\n                <span class=\"text-muted small\" data-bind=\"visible: diffLoading()\">Loading diff&hellip;</span>\n                <span class=\"text-danger small\" data-bind=\"text: diffError(), visible: diffError()\"></span>\n                <span class=\"text-muted small\" data-bind=\"visible: !diffLoading() && diffPreviousId() === null && diffLines().length\">First edit of this field; everything is new.</span>\n                <pre class=\"audit-diff\" data-bind=\"foreach: diffLines\"><div data-bind=\"css: kind, text: (kind === 'add' ? '+ ' : kind === 'remove' ? '- ' : kind === 'context' ? '  ' : '') + text\"></div></pre>\n            </div>\n            <!-- /ko -->\n            <!-- /ko -->\n            <!-- /ko -->\n        </td>\n    </tr>\n</script>\n";
+
+/***/ }),
+
+/***/ "./components/audit/audit.ts":
+/*!***********************************!*\
+  !*** ./components/audit/audit.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   AuditReview: () => (/* binding */ AuditReview),
+/* harmony export */   EventRow: () => (/* binding */ EventRow),
+/* harmony export */   Feed: () => (/* binding */ Feed),
+/* harmony export */   sparklinePoints: () => (/* binding */ sparklinePoints)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _utilities_dates__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utilities/dates */ "./utilities/dates.ts");
+/* harmony import */ var _audit_html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./audit.html */ "./components/audit/audit.html");
+/**
+ * The audit review pages: one Knockout component that renders the dashboard,
+ * the global feed, a course's history, a user's history, an assignment's
+ * history and the server errors page, depending on `config.page`. The page
+ * tells the component which filters are fixed; everything reads through the
+ * JSON endpoints in controllers/endpoints/audit.py, which enforce access
+ * server-side regardless of what this component asks for.
+ */
+
+
+
+
+const DESTRUCTIVE = new Set(['delete', 'removed', 'unadopt', 'unfork']);
+const CREATIVE = new Set(['create', 'given', 'adopt', 'fork']);
+const TABLE_LABELS = {
+    course_log: "Course", role_log: "Roster", assignment_log: "Assignment"
+};
+function base() {
+    return window["$URL_ROOT"] || "/";
+}
+function userName(user, fallbackId) {
+    if (!user) {
+        return fallbackId === null || fallbackId === undefined ? "?" : `user ${fallbackId}`;
+    }
+    const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+    return name || user.email || `user ${user.id}`;
+}
+/** Local-time day label used to group a feed by day. */
+function dayOf(when) {
+    const date = new Date(when);
+    if (isNaN(date.getTime())) {
+        return when.slice(0, 10);
+    }
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+}
+/** "2026-09-13T14:02" from a datetime-local input to the ISO the server parses. */
+function localInputToIso(value) {
+    if (!value) {
+        return "";
+    }
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? "" : date.toISOString();
+}
+/** A polyline for an inline SVG sparkline over daily counts. */
+function sparklinePoints(counts, width = 120, height = 28) {
+    if (!counts.length) {
+        return "";
+    }
+    const max = Math.max(1, ...counts);
+    const step = counts.length > 1 ? width / (counts.length - 1) : 0;
+    return counts.map((count, index) => {
+        const x = counts.length > 1 ? index * step : width / 2;
+        const y = height - 2 - (count / max) * (height - 4);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+}
+/** One rendered event, with its lazily loaded full value and diff. */
+class EventRow {
+    constructor(event) {
+        this.event = event;
+        this.expanded = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.fullValue = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.diffOpen = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.diffLines = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.diffPreviousId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.diffLoading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.diffError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+    }
+    key() {
+        return `${this.event.table}:${this.event.id}`;
+    }
+    shownValue() {
+        const full = this.fullValue();
+        return full !== null ? full : (this.event.value || "");
+    }
+    /** Show the whole value, fetching it once if the feed truncated it. */
+    toggleValue() {
+        if (this.expanded()) {
+            this.expanded(false);
+            return;
+        }
+        this.expanded(true);
+        if (this.event.value_truncated && this.fullValue() === null) {
+            (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)(`audit/event/${this.event.table}/${this.event.id}`, {})
+                .then((data) => {
+                if (data.success) {
+                    this.fullValue(data.event.value);
+                }
+            });
+        }
+    }
+    canDiff() {
+        return this.event.table === 'assignment_log' && this.event.event_type === 'edit'
+            && this.event.field !== null;
+    }
+    toggleDiff() {
+        if (this.diffOpen()) {
+            this.diffOpen(false);
+            return;
+        }
+        this.diffOpen(true);
+        if (this.diffLines().length || this.diffLoading()) {
+            return;
+        }
+        this.diffLoading(true);
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)(`audit/diff/${this.event.table}/${this.event.id}`, {})
+            .then((data) => {
+            if (data.success) {
+                this.diffPreviousId(data.previous_id);
+                this.diffLines(data.lines);
+            }
+            else {
+                this.diffError(data.message || "Could not load the diff.");
+            }
+        })
+            .catch(() => this.diffError("Could not load the diff."))
+            .always(() => this.diffLoading(false));
+    }
+}
+/** One filtered, pageable feed. Fixed filters come from the page and cannot be changed
+ * by the user; the server re-applies them anyway. */
+class Feed {
+    constructor(fixed, pageSize = 50) {
+        this.fixed = fixed;
+        this.pageSize = pageSize;
+        this.tables = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray(['course_log', 'role_log', 'assignment_log']);
+        this.eventTypes = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.subjectId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.search = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.since = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.before = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.rows = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.loading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.error = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.exhausted = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.hasLoaded = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.groups = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const groups = [];
+            this.rows().forEach((row) => {
+                const day = dayOf(row.event.when);
+                const last = groups[groups.length - 1];
+                if (last && last.day === day) {
+                    last.rows.push(row);
+                }
+                else {
+                    groups.push({ day, rows: [row] });
+                }
+            });
+            return groups;
+        });
+    }
+    params(beforeIso) {
+        const params = Object.assign({ limit: String(this.pageSize) }, this.fixed);
+        if (!('tables' in this.fixed)) {
+            params.tables = this.tables().join(",");
+        }
+        if (this.eventTypes().trim()) {
+            params.event_types = this.eventTypes().trim();
+        }
+        if (this.subjectId().trim()) {
+            params.subject_id = this.subjectId().trim();
+        }
+        if (this.search().trim()) {
+            params.search = this.search().trim();
+        }
+        const since = localInputToIso(this.since());
+        if (since) {
+            params.since = since;
+        }
+        const before = beforeIso || localInputToIso(this.before());
+        if (before) {
+            params.before = before;
+        }
+        return params;
+    }
+    reload() {
+        this.rows([]);
+        this.exhausted(false);
+        this.fetch();
+    }
+    loadMore() {
+        const rows = this.rows();
+        if (!rows.length) {
+            return this.fetch();
+        }
+        this.fetch(rows[rows.length - 1].event.when);
+    }
+    fetch(beforeIso) {
+        if (this.loading()) {
+            return;
+        }
+        this.loading(true);
+        this.error("");
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)('audit/feed', this.params(beforeIso))
+            .then((data) => {
+            if (!data.success) {
+                this.error(data.message || "Could not load the audit feed.");
+                return;
+            }
+            const seen = new Set(this.rows().map((row) => row.key()));
+            const fresh = data.events
+                .map((event) => new EventRow(event))
+                .filter((row) => !seen.has(row.key()));
+            this.rows.push(...fresh);
+            if (data.events.length < this.pageSize || !fresh.length) {
+                this.exhausted(true);
+            }
+        })
+            .catch((response) => {
+            const message = response && response.responseJSON && response.responseJSON.message;
+            this.error(message || "Could not load the audit feed.");
+        })
+            .always(() => {
+            this.loading(false);
+            this.hasLoaded(true);
+        });
+    }
+}
+class AuditReview {
+    constructor(params) {
+        this.tableLabels = TABLE_LABELS;
+        this.config = params.config;
+        this.page = this.config.page;
+        this.isAdmin = !!this.config.isAdmin;
+        this.header = this.config.header || {};
+        this.tab = knockout__WEBPACK_IMPORTED_MODULE_0__.observable('all');
+        this.receivedFeed = null;
+        const fixed = {};
+        if (this.page === 'course') {
+            fixed.course_id = String(this.config.courseId);
+        }
+        else if (this.page === 'assignment') {
+            fixed.assignment_id = String(this.config.assignmentId);
+            fixed.tables = 'assignment_log';
+        }
+        else if (this.page === 'user') {
+            fixed.actor_id = String(this.config.userId);
+            this.receivedFeed = new Feed({ tables: 'role_log', subject_id: String(this.config.userId) });
+        }
+        this.feed = new Feed(fixed);
+        this.summary = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.summaryError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.destructive = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.privilege = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.lookupQuery = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.lookupMatches = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.lookupSearched = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.errorGroups = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.errorTotal = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(0);
+        this.errorDays = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(30);
+        this.errorsLoading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.errorsError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.expandedGroup = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.expandedOccurrence = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.tab.subscribe((tab) => {
+            const tables = { all: ['course_log', 'role_log', 'assignment_log'], settings: ['course_log'],
+                roster: ['role_log'], assignments: ['assignment_log'] }[tab];
+            this.feed.tables(tables);
+            this.feed.reload();
+        });
+        if (this.page === 'dashboard') {
+            this.loadSummary();
+        }
+        else if (this.page === 'errors') {
+            this.loadErrors();
+        }
+        else {
+            this.feed.reload();
+            if (this.receivedFeed) {
+                this.receivedFeed.reload();
+            }
+        }
+    }
+    // ------------------------------------------------------------------
+    // Links
+    base() {
+        return base();
+    }
+    dashboardUrl() {
+        return `${base()}audit/`;
+    }
+    feedUrl() {
+        return `${base()}audit/events`;
+    }
+    errorsUrl() {
+        return `${base()}audit/errors`;
+    }
+    courseUrl(courseId) {
+        return `${base()}audit/course/${courseId}`;
+    }
+    userUrl(userId) {
+        return `${base()}audit/user/${userId}`;
+    }
+    assignmentUrl(assignmentId) {
+        return `${base()}audit/assignment/${assignmentId}`;
+    }
+    // ------------------------------------------------------------------
+    // Row rendering
+    when(event) {
+        return (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_2__.prettyPrintDateTime)(event.when);
+    }
+    badgeClass(event) {
+        if (DESTRUCTIVE.has(event.event_type)) {
+            return "badge-danger";
+        }
+        if (CREATIVE.has(event.event_type)) {
+            return "badge-success";
+        }
+        if (event.event_type === 'corrupted') {
+            return "badge-warning";
+        }
+        return "badge-secondary";
+    }
+    tableLabel(event) {
+        return TABLE_LABELS[event.table] || event.table;
+    }
+    subjectName(event) {
+        return userName(event.subject, event.subject_id);
+    }
+    authorizerName(event) {
+        return userName(event.authorizer, event.authorizer_id);
+    }
+    /** Roster rows read as sentences: "Ada gave Lulu learner". */
+    sentence(event) {
+        const subject = this.subjectName(event);
+        const authorizer = this.authorizerName(event);
+        const self = event.authorizer_id === event.subject_id;
+        switch (event.event_type) {
+            case 'given':
+                return self ? `${subject} joined as ${event.value}` : `${authorizer} gave ${subject} ${event.value}`;
+            case 'removed':
+                return self ? `${subject} left (was ${event.value})` : `${authorizer} removed ${subject} (was ${event.value})`;
+            case 'changed':
+                return self ? `${subject} became ${event.value}` : `${authorizer} changed ${subject} to ${event.value}`;
+            default:
+                return `${authorizer} ${event.event_type} ${subject} ${event.value}`;
+        }
+    }
+    targetLabel(event) {
+        if (event.table === 'assignment_log') {
+            return event.assignment ? event.assignment.name : `assignment ${event.assignment_id} (deleted)`;
+        }
+        return event.course ? event.course.name : `course ${event.course_id} (deleted)`;
+    }
+    /** Where the target link goes: only when the target still exists. */
+    targetUrl(event) {
+        if (event.table === 'assignment_log') {
+            return event.assignment ? this.assignmentUrl(event.assignment_id) : null;
+        }
+        return event.course ? this.courseUrl(event.course_id) : null;
+    }
+    /** The course an assignment edit was made from, shown on assignment pages. */
+    contextLabel(event) {
+        if (event.table !== 'assignment_log') {
+            return "";
+        }
+        return event.course ? `from ${event.course.name}` : `from course ${event.course_id}`;
+    }
+    fieldLabel(event) {
+        if (event.table === 'role_log') {
+            return "";
+        }
+        if (event.field === 'assignment_id' || event.field === 'assignment_group_id' || event.field === 'forked_id') {
+            return event.field.replace(/_/g, " ");
+        }
+        return event.field || "";
+    }
+    // ------------------------------------------------------------------
+    // Dashboard
+    loadSummary() {
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)('audit/summary', {})
+            .then((data) => {
+            if (!data.success) {
+                this.summaryError(data.message || "Could not load the summary.");
+                return;
+            }
+            this.summary(data);
+            this.destructive(data.destructive.map((event) => new EventRow(event)));
+            this.privilege(data.privilege.map((event) => new EventRow(event)));
+        })
+            .catch(() => this.summaryError("Could not load the summary."));
+    }
+    tileTables() {
+        return ['course_log', 'role_log', 'assignment_log'];
+    }
+    tileFor(table) {
+        const summary = this.summary();
+        return summary ? summary.tables[table] : null;
+    }
+    sparkline(days) {
+        return sparklinePoints(days.map((day) => day.count));
+    }
+    sparklineCounts(counts) {
+        return sparklinePoints(counts);
+    }
+    lookup() {
+        const query = this.lookupQuery().trim();
+        this.lookupSearched(true);
+        if (!query) {
+            this.lookupMatches([]);
+            return;
+        }
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)('audit/lookup', { q: query })
+            .then((data) => {
+            this.lookupMatches(data.success ? data.matches : []);
+        });
+    }
+    // ------------------------------------------------------------------
+    // Errors page
+    loadErrors() {
+        this.errorsLoading(true);
+        this.errorsError("");
+        (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_get)('audit/error_groups', { days: this.errorDays() })
+            .then((data) => {
+            if (!data.success) {
+                this.errorsError(data.message || "Could not load the errors.");
+                return;
+            }
+            this.errorGroups(data.groups);
+            this.errorTotal(data.total);
+        })
+            .catch(() => this.errorsError("Could not load the errors."))
+            .always(() => this.errorsLoading(false));
+    }
+    toggleGroup(group) {
+        this.expandedOccurrence(null);
+        this.expandedGroup(this.expandedGroup() === group ? null : group);
+    }
+    toggleOccurrence(occurrence) {
+        this.expandedOccurrence(this.expandedOccurrence() === occurrence ? null : occurrence);
+    }
+    occurrenceUser(occurrence) {
+        return userName(occurrence.user, null);
+    }
+    whenString(when) {
+        return when ? (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_2__.prettyPrintDateTime)(when) : "";
+    }
+}
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("audit-review", {
+    viewModel: AuditReview,
+    template: _audit_html__WEBPACK_IMPORTED_MODULE_3__
+});
+
 
 /***/ }),
 
@@ -215312,14 +215791,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_assignment_manager_assignment_manager__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./components/assignment_manager/assignment_manager */ "./components/assignment_manager/assignment_manager.ts");
 /* harmony import */ var _components_submissions_filter_submissions_filter__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./components/submissions_filter/submissions_filter */ "./components/submissions_filter/submissions_filter.ts");
 /* harmony import */ var _components_analytics_analytics__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./components/analytics/analytics */ "./components/analytics/analytics.ts");
-/* harmony import */ var _components_quizzes_quizzer__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./components/quizzes/quizzer */ "./components/quizzes/quizzer.ts");
-/* harmony import */ var _components_reader_reader__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./components/reader/reader */ "./components/reader/reader.ts");
-/* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
-/* harmony import */ var _components_kettle_kettle__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./components/kettle/kettle */ "./components/kettle/kettle.ts");
-/* harmony import */ var _components_explanations_explain__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./components/explanations/explain */ "./components/explanations/explain.ts");
-/* harmony import */ var _components_review_interface__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./components/review_interface */ "./components/review_interface.ts");
-/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
-/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
+/* harmony import */ var _components_audit_audit__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./components/audit/audit */ "./components/audit/audit.ts");
+/* harmony import */ var _components_quizzes_quizzer__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./components/quizzes/quizzer */ "./components/quizzes/quizzer.ts");
+/* harmony import */ var _components_reader_reader__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./components/reader/reader */ "./components/reader/reader.ts");
+/* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
+/* harmony import */ var _components_kettle_kettle__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./components/kettle/kettle */ "./components/kettle/kettle.ts");
+/* harmony import */ var _components_explanations_explain__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./components/explanations/explain */ "./components/explanations/explain.ts");
+/* harmony import */ var _components_review_interface__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./components/review_interface */ "./components/review_interface.ts");
+/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
+/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
 
 
 
@@ -215339,6 +215819,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // These interfaces are just new tags
+
 
 
 
