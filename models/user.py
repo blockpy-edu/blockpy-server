@@ -79,8 +79,8 @@ class User(Base, UserMixin):
         new_user = User(first_name=first_name, last_name=last_name,
                         email=email,
                         fs_uniquifier=uuid.uuid4().hex)
-        if password is not None:
-            new_user.password = hash_password(password)
+        # No password means an unusable one until the user resets it
+        new_user.password = hash_password(password if password is not None else uuid.uuid4().hex)
         db.session.add(new_user)
         db.session.commit()
         return new_user

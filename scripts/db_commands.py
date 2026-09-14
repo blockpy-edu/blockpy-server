@@ -184,16 +184,31 @@ def import_course(owner_id, course_data_path):
 
 
 @cli.command("delete_course")
-@click.option("--course", '-c', "course_id")
-def delete_course(course_id):
-    """Deletes a specific course"""
-    from models.course import Course
+@click.option("--course", '-c', "course_id", required=True, type=int)
+@click.option("--remove-linked", "remove_linked", is_flag=True, default=False,
+              help="Also destroy every submission in the course or to its assignments. "
+                   "Without this, a course with student work is refused.")
+def delete_course(course_id, remove_linked):
+    """Deletes a course and everything it owns. Student work is only deleted with --remove-linked."""
+    from models.course import Course, CourseHasSubmissions
     from models.log_tables import CourseLog
     from models.enums import CourseLogEvent
-    if click.confirm("Are you sure you want to delete this course?"):
+    course = Course.by_id(course_id)
+    if course is None:
+        raise click.ClickException(f"There is no course with id {course_id}.")
+    blocking = Course.count_submissions_blocking_removal(course_id)
+    if blocking and not remove_linked:
+        raise click.ClickException(f"Course {course_id} ({course.name}) has {blocking} submission(s). "
+                                   f"Archive it, or pass --remove-linked to destroy the student work too.")
+    what = f"course {course_id} ({course.name!r})" + (f" and its {blocking} submission(s)" if blocking else "")
+    if click.confirm(f"Are you sure you want to delete {what}?"):
         # Command-line deletions are attributed to the seeded admin user (id 1)
-        CourseLog.new(int(course_id), 1, CourseLogEvent.DELETE)
-        Course.remove(int(course_id), True)
+        CourseLog.new(course_id, 1, CourseLogEvent.DELETE)
+        try:
+            Course.remove(course_id, remove_linked)
+        except CourseHasSubmissions as blocked:
+            raise click.ClickException(str(blocked))
+        click.echo(f"Deleted {what}.")
 
 
 def dump_rows(rows, output, table_name):

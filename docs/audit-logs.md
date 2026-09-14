@@ -29,7 +29,7 @@ Roles without a course (the global `admin` role) are not logged, because
 | `event_type` | `field` | `value` |
 |---|---|---|
 | `create` | | |
-| `delete` | | (written before the row is deleted; the CLI attributes it to user 1) |
+| `delete` | | (written before the row is deleted; the CLI attributes it to user 1). Deleting a course removes its roles, invites, tags, groups, memberships and assignments; from the web it is refused when any student work exists (archive instead), and the CLI needs `--remove-linked` to destroy work |
 | `rename` | | the new name |
 | `edit` | the changed column: `name`, `url`, `visibility`, `term`, `settings`, `endpoint`, `locked` | the new value; for `settings`, a JSON object with the one key that changed |
 | `transfer` | | the new owner's id (Flask-Admin only) |
@@ -81,9 +81,9 @@ Production was created with hand-run SQL, not Alembic. `fall26_audit_log_fk.sql`
 index on `assignment_log.date_created`. **Run it before deploying this code**: until
 then, deleting a course or removing a role fails on the constraint.
 
-The test suite can enforce foreign keys in SQLite with `BLOCKPY_TEST_FOREIGN_KEYS=1`.
-Two pre-existing bugs outside this feature fail with it on: removing an assignment group
-leaves its memberships, and removing a course leaves its roles.
+The test suite enforces foreign keys in SQLite by default (`BLOCKPY_TEST_FOREIGN_KEYS=0`
+turns it off), so a delete that would orphan rows fails in tests the way it would in
+production.
 
 ## Reviewing
 

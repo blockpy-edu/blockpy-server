@@ -1191,7 +1191,6 @@ def fork_assignment():
     user, user_id = get_user()
     course_id = get_course_id()
     updated_settings = request.values.get('updated_settings', '')
-    transfer_submissions = maybe_bool(request.values.get('transfer_submissions', False))
     # Verify permissions: They only need to be an instructor in this course
     require_course_instructor(user, course_id)
     # Load and verify resources
@@ -1213,13 +1212,6 @@ def fork_assignment():
     for new_assignment in new_assignments:
         AssignmentLog.new(new_assignment.id, new_assignment.version, course_id, user_id,
                           AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id), *client_time_fields())
-    # Transfer all submissions, if desired
-    if transfer_submissions:
-        for new_assignment in new_assignments:
-            # TODO: Need old assignment IDs
-            submission = Submission.by_assignment(new_assignment.id, course_id)
-            submission.edit({'assignment_id': new_assignment.id})
-            # TODO: Also need to grab this for Log, Review
     # Apply any updated settings to the newly forked assignment (the user has no
     # verified rights over the source assignment, only over the target course)
     modified = False

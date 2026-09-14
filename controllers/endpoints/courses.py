@@ -1,5 +1,6 @@
 import io
 import csv
+import uuid
 import statistics
 from datetime import datetime, timezone
 from pprint import pprint
@@ -9,6 +10,7 @@ from natsort import natsorted
 from sqlalchemy import func, case, select
 from sqlalchemy.orm import undefer
 
+from flask_security.utils import hash_password
 from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
 
@@ -34,7 +36,7 @@ from models.data_formats.portation import export_bundle
 from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent, CourseLogEvent
 from models.enums.roles import RolePermissions
 from models.user import User
-from models.course import Course
+from models.course import Course, CourseHasSubmissions
 from models.role import Role
 from models.submission import Submission
 from models.assignment import Assignment
@@ -149,9 +151,19 @@ def remove_course():
     # Verify permissions
     require_admin(g.user)
     check_course_unlocked(course)
-    # Perform action; log first, since the course row is about to go away
+    # Courses with student work are archived, never deleted, from the web
+    blocking = Course.count_submissions_blocking_removal(course_id)
+    if blocking:
+        flash(f"Course not removed: it has {blocking} submission(s). Set its visibility to archived instead; "
+              f"an administrator can delete it completely from the command line.")
+        return redirect(url_for('courses.index'))
+    # Log first, since the course row is about to go away
     CourseLog.new(course_id, g.user.id, CourseLogEvent.DELETE, None, None, *client_time_fields())
-    Course.remove(course_id)
+    try:
+        Course.remove(course_id)
+    except CourseHasSubmissions as blocked:
+        flash(str(blocked))
+        return redirect(url_for('courses.index'))
     flash('Course removed')
     return redirect(url_for('courses.index'))
 
@@ -427,7 +439,11 @@ def add_users(course_id):
                 new_user = current_app.user_datastore.create_user(first_name=first_name,
                                                                   last_name=last_name,
                                                                   email=new_email,
+                                                                  # Unusable until they reset it
+                                                                  password=hash_password(uuid.uuid4().hex),
                                                                   confirmed_at=datetime.now(timezone.utc))
+                # The datastore only adds to the session; the user needs an id before it gets a role
+                current_app.user_datastore.commit()
                 newly_created.append(new_user)
             new_role = add_form.role.data
             # TODO: Update this to reflect new enums

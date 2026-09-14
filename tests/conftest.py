@@ -6,7 +6,7 @@ import tempfile
 from contextlib import contextmanager
 
 import pytest
-from flask import Flask
+from flask import Flask, g
 from sqlalchemy import event
 from tests.factory.loader import test_data
 
@@ -44,12 +44,9 @@ def run_server():
 
         with app.app_context():
             # SQLite ignores foreign keys unless told otherwise, while production Postgres
-            # enforces them. Opt in with BLOCKPY_TEST_FOREIGN_KEYS=1. It is off by default
-            # because two pre-existing bugs violate constraints unrelated to audit logging:
-            # removing an assignment group leaves its memberships behind, and removing a
-            # course leaves its roles behind (test_remove_group_instructor_allowed and
-            # test_remove_logs_delete fail with it on).
-            if os.environ.get('BLOCKPY_TEST_FOREIGN_KEYS', '').lower() in ('1', 'true', 'yes'):
+            # enforces them. Enforced by default so tests catch orphaned rows; opt out with
+            # BLOCKPY_TEST_FOREIGN_KEYS=0 when triaging a deliberate violation.
+            if os.environ.get('BLOCKPY_TEST_FOREIGN_KEYS', '1').lower() not in ('0', 'false', 'no'):
                 @event.listens_for(db.engine, 'connect')
                 def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
                     cursor = dbapi_connection.cursor()
@@ -98,6 +95,10 @@ def act_as(client):
             # Example for Flask-Login:
             sess["_user_id"] = str(user.get_id())
             sess["_fresh"] = True
+        # Tests keep one app context pushed across requests, so Flask-Login's cached
+        # user on `g` would otherwise survive and the new session would be ignored
+        for key in ('_login_user', 'user', 'safely', 'course', 'roles', 'lti'):
+            g.pop(key, None)
         #from flask import session
         #print(session["_user_id"])
         return client

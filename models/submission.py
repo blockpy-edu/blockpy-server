@@ -921,7 +921,7 @@ class Submission(EnhancedBase):
     def copy_from(self, old_submission, overwrite_endpoints=False):
         self.code = old_submission.code
         self.extra_files = old_submission.extra_files
-        self.url = old_submission.url
+        # url is this submission's own (unique) identity and is not copied
         if overwrite_endpoints or not self.endpoint:
             self.endpoint = old_submission.endpoint
         self.score = old_submission.score

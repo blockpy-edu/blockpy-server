@@ -309,9 +309,6 @@ class TestCourseLevelEvents:
     def test_bulk_transfer_logs_both_courses(self, client, test_data, act_as):
         act_as(test_data.user("ada@blockpy.com"))
         submission = Submission.load_or_new(Assignment.by_id(100), 100, 6)
-        # copy_from copies the (unique) submission url, so clear it on the source first
-        submission.url = None
-        db.session.commit()
         response = client.post('/assignments/bulk_transfer_course',
                                data={"source_course_id": 6, "assignment_group_id": 1, "destination_course_id": 8,
                                      "do-transfer": "1", f"transfer-submission-{submission.id}": "true"})

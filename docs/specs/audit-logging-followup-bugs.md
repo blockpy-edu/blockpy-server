@@ -1,8 +1,10 @@
 # Pre-existing bugs found while building audit logging
 
-Status: for review. Nothing here is implemented; each item has a proposed fix and a
-decision line to fill in. Found 2026-09-13 on the `audit-logging` branch, at
-`dacbbb1e`. None of these are caused by the audit work; they were in the way of it.
+Status: all seven approved and implemented on the `audit-logging` branch on 2026-09-13
+(tests in `tests/controllers/test_followup_bugs.py`; the screen from B5 is specced in
+`move-submissions-to-fork.md`). With every item fixed, the test suite now enforces
+foreign keys by default. Found on the branch at `dacbbb1e`; none of these were caused by
+the audit work, they were in the way of it.
 
 Two kinds of evidence appear below. "Enforced" means the failure was produced by the
 test suite with `BLOCKPY_TEST_FOREIGN_KEYS=1`, which makes SQLite behave like
@@ -38,7 +40,7 @@ assignments behind on purpose.
 **Test:** the existing removal test passes with `BLOCKPY_TEST_FOREIGN_KEYS=1`; add an
 assertion that a submission in the group has `assignment_group_id` set to `None` after.
 
-**Decision:** ______
+**Decision:** Yes, swap.
 
 ---
 
@@ -75,7 +77,7 @@ gone can use the CLI with `--remove-linked` once it works.
 with a membership, and an invite; assert no row anywhere references its id. Assert the
 endpoint refuses a course with submissions.
 
-**Decision:** ______
+**Decision:** Yes. The CLI should still allow a mechanism to delete a course entirely, but that's not the default path; the web interface should favor archiving to prevent accidental data loss.
 
 ---
 
@@ -107,7 +109,7 @@ default.
 **Test:** `POST /courses/add_users/6` with a new email creates the user, gives the role,
 and logs `GIVEN`; the user cannot log in with an empty password.
 
-**Decision:** ______
+**Decision:** Agreed, make it an unusable password by default for new users.
 
 ---
 
@@ -144,7 +146,7 @@ lookup by `url` outside `load_or_new`.
 **Test:** transfer a submission that has a url; the new submission exists, keeps its own
 url, and has the old code. Drop the `submission.url = None` line from the audit test.
 
-**Decision:** ______
+**Decision:** Yes, don't copy the url for submissions. The url for submissions is rarely used.
 
 ---
 
@@ -154,13 +156,13 @@ url, and has the old code. Drop the `submission.url = None` line from the audit 
 `fork_assignment`
 
 **Symptom:** The loop looks up `Submission.by_assignment(new_assignment.id, course_id)`,
-which is the *new* assignment and has no submissions yet, then calls `.edit` on the
+which is the _new_ assignment and has no submissions yet, then calls `.edit` on the
 result, which is `None`, so `transfer_submissions=true` always raises
 `AttributeError`. The `# TODO: Need old assignment IDs` comment says as much. Nothing in
 the frontend sends `transfer_submissions`, so this is dead but reachable.
 
 Phase 1 also changed what this endpoint does with `updated_settings`: it used to apply
-them to the *source* assignment (which the caller may not own) and crashed anyway
+them to the _source_ assignment (which the caller may not own) and crashed anyway
 because it passed a string to `Assignment.edit`. It now applies them to the forked
 copy. That is a behavior decision worth confirming.
 
@@ -177,7 +179,7 @@ decision that deserves its own screen.
 **Test:** `POST /blockpy/fork_assignment` with `transfer_submissions=true` returns
 success and, if kept, the submission's `assignment_id` changes.
 
-**Decision:** ______
+**Decision:** Yes, I agree. Remove that aspect. Might as well also spec out the new screen for moving student work into a fork.
 
 ---
 
@@ -210,7 +212,7 @@ would say yes.
 **Test:** create a course owned by an anonymous user, log a course event on it, run the
 walker; assert the graph contains the log row and `mass_delete` succeeds.
 
-**Decision:** ______
+**Decision:** Yes, replace `"Log": self.logs` with the four real relationships.
 
 ---
 
@@ -231,7 +233,7 @@ one. Worth doing before more tests are written against it.
 
 **Test:** act as Ada, request `/courses/`, act as admin, request `/admin/`; assert 200.
 
-**Decision:** ______
+**Decision:** I'm fine with either, since this is a testing decision. Go with the one that makes the most sense, is least likely to lead to issues down the road, and works most reliably.
 
 ---
 
@@ -240,13 +242,13 @@ one. Worth doing before more tests are written against it.
 These were fixed in the audit commits because the logging could not be tested without
 them. Listed so they can be reverted or reconsidered if any is unwelcome.
 
-| Commit | Fix |
-|---|---|
-| phase 1 | `Role.update_role` referenced a nonexistent `CHOICES`; `/courses/change_role` always 500ed. |
-| phase 1 | `Course.set_setting` built a `models.Log` that does not exist; corrupted settings crashed `edit_textbooks`. |
-| phase 1 | `abort_with_failure(as_html=True)` aborted with a 2xx code, which Werkzeug cannot raise. Now 403. |
-| phase 1 | `blockpy.fork_assignment` called `group.fork()` without arguments and edited an unbound variable in the group branch. |
+| Commit  | Fix                                                                                                                                                                                          |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| phase 1 | `Role.update_role` referenced a nonexistent `CHOICES`; `/courses/change_role` always 500ed.                                                                                                  |
+| phase 1 | `Course.set_setting` built a `models.Log` that does not exist; corrupted settings crashed `edit_textbooks`.                                                                                  |
+| phase 1 | `abort_with_failure(as_html=True)` aborted with a 2xx code, which Werkzeug cannot raise. Now 403.                                                                                            |
+| phase 1 | `blockpy.fork_assignment` called `group.fork()` without arguments and edited an unbound variable in the group branch.                                                                        |
 | phase 2 | Course visibility was never applied on create or change: `isinstance(visibility.lower(), CourseVisibility)` is always false for a string. Every course created through the form was private. |
-| phase 2 | `courses.change_role` reported success for unknown roles. |
-| phase 2 | `tests/factory/data/role.csv` had no types row, so the loader ate the admin role (user 1 was never an admin in tests) and ids were loaded as strings. |
-| phase 3 | The log relationships on Role, Course and Assignment now use `passive_deletes`; an ORM delete used to null out `role_log.role_id` and fail on `NOT NULL`. |
+| phase 2 | `courses.change_role` reported success for unknown roles.                                                                                                                                    |
+| phase 2 | `tests/factory/data/role.csv` had no types row, so the loader ate the admin role (user 1 was never an admin in tests) and ids were loaded as strings.                                        |
+| phase 3 | The log relationships on Role, Course and Assignment now use `passive_deletes`; an ORM delete used to null out `role_log.role_id` and fail on `NOT NULL`.                                    |

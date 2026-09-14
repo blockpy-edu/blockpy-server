@@ -20,6 +20,15 @@ if TYPE_CHECKING:
     from models import *
 
 
+class CourseHasSubmissions(ValueError):
+    """ Raised by Course.remove when student work would be destroyed without remove_linked. """
+    def __init__(self, course_id, count):
+        super().__init__(f"Course {course_id} has {count} submission(s); archive it instead of deleting it, "
+                         f"or delete it from the command line with --remove-linked.")
+        self.course_id = course_id
+        self.count = count
+
+
 class Course(Base):
     __tablename__ = "course"
 
@@ -152,20 +161,64 @@ class Course(Base):
         return Course.query.filter_by(visibility=CourseVisibility.PUBLIC).all()
 
     @staticmethod
-    def remove(course_id, remove_linked=False):
+    def count_submissions_blocking_removal(course_id) -> int:
+        """
+        Submissions that removing this course would destroy: those made in the course, and
+        those made anywhere to assignments the course owns (adopted or forked-from elsewhere).
+        """
         course_id = maybe_int(course_id)
-        Course.query.filter_by(id=course_id).delete()
-        if remove_linked:
-            for m in models.AssignmentGroupMembership.by_course(course_id):
-                db.session.delete(m)
-            for a in models.Assignment.by_course(course_id):
-                for s in a.sample_submissions:
-                    db.session.delete(s)
-                db.session.delete(a)
-            for g in models.AssignmentGroup.by_course(course_id):
-                db.session.delete(g)
-            for r in models.Role.by_course(course_id):
-                db.session.delete(r)
+        owned = db.session.query(models.Assignment.id).filter(models.Assignment.course_id == course_id)
+        return (models.Submission.query
+                .filter(or_(models.Submission.course_id == course_id,
+                            models.Submission.assignment_id.in_(owned)))
+                .count())
+
+    @staticmethod
+    def remove(course_id, remove_linked=False):
+        """
+        Delete a course and everything that belongs to it: roles, invites, tags, groups,
+        memberships and assignments; reports are unlinked. Audit rows are kept.
+
+        Student work is only destroyed when `remove_linked` is set. Without it, a course
+        that has submissions (its own, or to assignments it owns) raises CourseHasSubmissions
+        and nothing is deleted; the web interface archives such courses instead.
+        """
+        course_id = maybe_int(course_id)
+        blocking = Course.count_submissions_blocking_removal(course_id)
+        if blocking and not remove_linked:
+            raise CourseHasSubmissions(course_id, blocking)
+        owned_assignments = db.session.query(models.Assignment.id).filter(models.Assignment.course_id == course_id)
+        owned_groups = db.session.query(models.AssignmentGroup.id).filter(models.AssignmentGroup.course_id == course_id)
+        quietly = dict(synchronize_session=False)
+        # Student work first (only reached with remove_linked, or when there is none)
+        doomed = db.session.query(models.Submission.id).filter(
+            or_(models.Submission.course_id == course_id, models.Submission.assignment_id.in_(owned_assignments)))
+        models.SubmissionCounts.query.filter(models.SubmissionCounts.submission_id.in_(doomed)).delete(**quietly)
+        models.GradeHistory.query.filter(models.GradeHistory.submission_id.in_(doomed)).delete(**quietly)
+        models.Review.query.filter(models.Review.submission_id.in_(doomed)).delete(**quietly)
+        (models.SampleSubmission.query.filter(models.SampleSubmission.forked_id.in_(doomed))
+         .update({"forked_id": None}, **quietly))
+        models.SubmissionLog.query.filter(or_(models.SubmissionLog.submission_id.in_(doomed),
+                                              models.SubmissionLog.course_id == course_id)).delete(**quietly)
+        models.Submission.query.filter(models.Submission.id.in_(doomed)).delete(**quietly)
+        # Assignments the course owns, and what hangs off them
+        models.AssignmentGroupMembership.query.filter(or_(
+            models.AssignmentGroupMembership.assignment_id.in_(owned_assignments),
+            models.AssignmentGroupMembership.assignment_group_id.in_(owned_groups))).delete(**quietly)
+        db.session.execute(models.assignment_tag_membership.delete().where(
+            models.assignment_tag_membership.c.assignment_id.in_(owned_assignments)))
+        models.SampleSubmission.query.filter(models.SampleSubmission.assignment_id.in_(owned_assignments)).delete(**quietly)
+        models.Report.query.filter(models.Report.assignment_id.in_(owned_assignments)).update({"assignment_id": None}, **quietly)
+        models.Assignment.query.filter(models.Assignment.forked_id.in_(owned_assignments)).update({"forked_id": None}, **quietly)
+        models.Assignment.query.filter(models.Assignment.course_id == course_id).delete(**quietly)
+        models.AssignmentGroup.query.filter(models.AssignmentGroup.forked_id.in_(owned_groups)).update({"forked_id": None}, **quietly)
+        models.AssignmentGroup.query.filter(models.AssignmentGroup.course_id == course_id).delete(**quietly)
+        # The course's own rows
+        models.AssignmentTag.query.filter(models.AssignmentTag.course_id == course_id).delete(**quietly)
+        models.Invite.query.filter(models.Invite.course_id == course_id).delete(**quietly)
+        models.Report.query.filter(models.Report.course_id == course_id).update({"course_id": None}, **quietly)
+        models.Role.query.filter(models.Role.course_id == course_id).delete(**quietly)
+        Course.query.filter_by(id=course_id).delete(**quietly)
         db.session.commit()
 
     @staticmethod
@@ -559,7 +612,10 @@ class Course(Base):
             "Assignment": self.assignments,
             "AssignmentGroup": self.assignment_groups,
             "AssignmentTag": self.tags,
-            "Log": self.logs,
+            "SubmissionLog": self.submission_logs,
+            "AssignmentLog": self.assignment_logs,
+            "RoleLog": self.role_logs,
+            "CourseLog": self.course_logs,
             "Submission": self.submissions,
             "Invite": self.invites,
             "Report": self.reports
