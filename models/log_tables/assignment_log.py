@@ -64,5 +64,24 @@ class AssignmentLog(Base):
         # logging.getLogger('Events').info(log.for_file())
         return log
 
+    def encode_json(self):
+        """ The normalized audit event shape shared with CourseLog and RoleLog. """
+        return {
+            'table': 'assignment_log',
+            'id': self.id,
+            'date_created': datetime_to_string(self.date_created),
+            'event_type': str(self.event_type),
+            'subject_id': self.subject_id,
+            'authorizer_id': None,
+            'course_id': self.course_id,
+            'assignment_id': self.assignment_id,
+            'assignment_version': self.assignment_version,
+            'role_id': None,
+            'field': self.field,
+            'value': self.value,
+            'client_timestamp': self.client_timestamp,
+            'client_timezone': self.client_timezone,
+        }
+
     def __str__(self):
         return f'<AssignmentLog {self.event_type} for {self.assignment_id}>'

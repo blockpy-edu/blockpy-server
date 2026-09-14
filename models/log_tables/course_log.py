@@ -60,5 +60,23 @@ class CourseLog(Base):
         db.session.commit()
         return log
 
+    def encode_json(self):
+        """ The normalized audit event shape shared with RoleLog and AssignmentLog. """
+        return {
+            'table': 'course_log',
+            'id': self.id,
+            'date_created': datetime_to_string(self.date_created),
+            'event_type': str(self.event_type),
+            'subject_id': self.subject_id,
+            'authorizer_id': None,
+            'course_id': self.course_id,
+            'assignment_id': None,
+            'role_id': None,
+            'field': self.field,
+            'value': self.value,
+            'client_timestamp': self.client_timestamp,
+            'client_timezone': self.client_timezone,
+        }
+
     def __str__(self):
         return f'<CourseLog {self.event_type} event in {self.course_id}>'
