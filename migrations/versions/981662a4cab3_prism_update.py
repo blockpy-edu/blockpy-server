@@ -1,5 +1,10 @@
 """prism_update
 
+DO NOT RUN THIS MIGRATION AGAINST PRODUCTION. Production was upgraded by hand with
+sum25_upgrade_sql.sql (VARCHAR columns, not the sa.Enum types declared below) and then
+fall26_audit_log_fk.sql (dropped the log tables' foreign keys to course, role and
+assignment). This file is kept only as the record of that revision id.
+
 Revision ID: 981662a4cab3
 Revises: a62e70d564b3
 Create Date: 2025-05-24 00:40:04.295478
