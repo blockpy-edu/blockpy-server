@@ -209,10 +209,34 @@ def _log_for_course(course, output):
     logs = Log.get_logs_for_course(course)
     dump_rows(logs, output, 'log')
 
+@cli.command("prune_error_logs")
+@click.option("--days", "-d", "days", default=90, type=int, show_default=True,
+              help="Delete error records older than this many days")
+def prune_error_logs(days):
+    """Deletes old error_log rows, then the access_log rows no error references any more.
+
+    Not run automatically; run it by hand or from cron. Tracebacks can contain student
+    code, emails and LTI parameters, so there is no reason to keep them forever."""
+    from datetime import datetime, timedelta, timezone
+    from models.log_tables import ErrorLog, AccessLog
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+    errors = (ErrorLog.query.filter(ErrorLog.date_created < cutoff)
+              .delete(synchronize_session=False))
+    still_referenced = db.session.query(ErrorLog.access_log_id)
+    orphans = (AccessLog.query.filter(AccessLog.date_created < cutoff,
+                                      ~AccessLog.id.in_(still_referenced))
+               .delete(synchronize_session=False))
+    db.session.commit()
+    click.echo(f"Deleted {errors} error_log rows and {orphans} orphaned access_log rows "
+               f"older than {cutoff:%Y-%m-%d %H:%M} UTC.")
+
+
 @cli.command("dump_db")
 @click.option('--output', '-o', 'output', default='backups/db/')
 @click.option('--log_for_course', '-l', 'log_for_course', default=None)
 def dump_db(output, log_for_course):
+    # The tables are listed explicitly on purpose. error_log and access_log are left out:
+    # tracebacks and messages can contain student code, emails and LTI parameters.
     if log_for_course:
         return _log_for_course(log_for_course, output)
     from models.assignment_group_membership import AssignmentGroupMembership

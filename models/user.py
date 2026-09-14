@@ -428,5 +428,8 @@ class User(Base, UserMixin):
             "Report": self.reports,
             "GradeHistory": self.grade_history,
             "Invite": self.invites,
+            # Unhandled errors recorded against this user (access_log.subject_id is NOT NULL)
+            "AccessLog": self.access_logs,
+            "ErrorLog": [error for access in self.access_logs for error in access.errors],
         }
         return resources
