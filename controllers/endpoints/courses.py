@@ -501,12 +501,13 @@ def dashboard():
     force_default_assignment = maybe_bool(request.values.get('force_default_assignment', "false"))
     if 'user' not in g and not g.user:
         return "You are not logged in."
+    as_student = maybe_bool(request.values.get('as_student', "false"))
     course_id = get_course_id()
     user, user_id = get_user()
     if course_id is None:
         return "You are not in a course context."
     is_grader = user.is_grader(course_id)
-    if is_grader and not force_default_assignment:
+    if is_grader and not force_default_assignment and not as_student:
         return grader_dashboard(user, course_id)
 
     course = Course.by_id(course_id)
@@ -529,7 +530,8 @@ def dashboard():
                 (row.Submission, row.Assignment, row.AssignmentGroup)
             )
         # Horrifying hack to move Ungrouped elements to end
-        assignments_by_group[None] = assignments_by_group.pop(None, None)
+        if None in assignments_by_group:
+            assignments_by_group[None] = assignments_by_group.pop(None)
         return render_template('courses/dashboard.html', embed=True,
                                course_id=course_id, user=user, textbooks=textbooks,
                                assignments_by_group=assignments_by_group)

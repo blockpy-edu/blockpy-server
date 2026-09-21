@@ -141,6 +141,13 @@ class GradingReport:
             self.log(LogEventType.LMS_FAILURE, error)
             return False
 
+    def first_failure_message(self) -> str:
+        """ The most likely failure reason as a single string (clients display this directly) """
+        if not self.failure_reasons:
+            return ""
+        reason, details = self.failure_reasons[0]
+        return f"{reason}: {details}" if details else reason
+
     def for_ajax(self):
         submission = Submission.by_id(self.submission_id)
         submission_status = submission.submission_status if submission is not None else ""
@@ -149,7 +156,7 @@ class GradingReport:
             "submitted": self.submitted,
             "changed": self.changed,
             "correct": self.correct,
-            "message": self.failure_reasons[0] if self.failure_reasons else "",
+            "message": self.first_failure_message(),
             "feedbacks": self.feedbacks,
             'submission_status': submission_status,
             "grading_status": grading_status

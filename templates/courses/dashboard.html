@@ -29,6 +29,12 @@ Dashboard
                     relaunchInWindow({{ url_for('assignments.load', _external=True, course_id=g.course.id)|tojson }});
                         event.preventDefault();
                 })
+
+                // Submission links need an LTI launch, since cookies may not work from inside the iframe
+                $("a[data-relaunch-url]").click((event) => {
+                    relaunchInWindow($(event.currentTarget).data("relaunch-url"));
+                    event.preventDefault();
+                });
             }
         });
 
@@ -39,8 +45,7 @@ Dashboard
 
     <h1>Dashboard</h1>
 
-    <p>Hello {{ g.user.name() }} ({{ g.user.id }}), you are in "{{ g.course.name }}" ({{g.course.id}}).</p>
-    <p>Welcome to your dashboard!</p>
+    <p>Hello {{ g.user.name() }}, you are in "{{ g.course.name }}".</p>
 
     <div class="row">
 
@@ -52,7 +57,7 @@ Dashboard
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Textbook{{ 's' if textbooks|length > 1 else '' }}</h5>
-                    <p class="card-text">See an overview of the entire textbook, including later chapters!.</p>
+                    <p class="card-text">See an overview of the entire textbook, including later chapters!</p>
                     {% for textbook in textbooks %}
                     <a href="{{ url_for('assignments.load_textbook', path=textbook.url, course_id=g.course.id, embed=True) }}"
                        target="_blank"
@@ -90,9 +95,12 @@ Dashboard
 
     <h2>Previous Submissions</h2>
 
-    <p>Below are all the previously submitted assignments that we have found for you in this course.</p>
+    <p>Below are all the previously submitted assignments that we have found for you in this course. Click one to view the submission you made for it.</p>
 
     {% include "helpers/submission_student_table.html" %}
+
+    <p class="text-muted"><small>If you need help, share these with your instructor:
+        User ID {{ g.user.id }}, Course ID {{ g.course.id }}.</small></p>
 
     <details id="relaunch-login" style="display:none;">
     <summary>Extra Tools for Logging In</summary>

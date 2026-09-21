@@ -1,49 +1,67 @@
-<table class="table table-condensed table-hover table-striped table-bordered">
-<caption>Here are your past submissions.</caption>
-<tbody>
+{# Links carry a data-relaunch-url: the same report as an LTI launch, which the
+   including page can hand to relaunchInWindow() when stuck inside an iframe. #}
+<table class="table table-sm table-hover table-striped table-bordered">
 <thead class="thead-dark">
-    <th>Assignment</th>
-    <th>Status</th>
-    <th>Last Edited</th>
+    <tr>
+        <th>Assignment</th>
+        <th>Status</th>
+        <th>Last Edited</th>
+    </tr>
 </thead>
+<tbody>
 {% for group, rows in assignments_by_group.items() %}
 
+    {% if group %}
+        {% set group_url = url_for('blockpy.view_submissions',
+                                   assignment_group_id=group.id,
+                                   user_id=user.id,
+                                   course_id=course_id,
+                                   embed=True) %}
+        {% set group_relaunch_url = url_for('assignments.load', _external=True,
+                                            grade_mode='group',
+                                            assignment_group_id=group.id,
+                                            graded_user_id=user.id,
+                                            course_id=course_id,
+                                            embed=True) %}
+    {% endif %}
+
     <tr class="table-dark">
-        <td colspan="7"><h6>
+        <td colspan="3"><h6 class="mb-0">
             {% if group %}
-                TODO: Make this an LTI link
-                <a href="{{ url_for('blockpy.view_submissions',
-                                assignment_group_id=group.id,
-                                user_id=user.id,
-                                course_id=course_id,
-                                embed=True) }}"
-                target="_blank">{{ group.name }}</a>
+                <a href="{{ group_url }}" target="_blank"
+                   data-relaunch-url="{{ group_relaunch_url }}">{{ group.name }}</a>
+                <small>(view all)</small>
             {% else %}
                 Stand-alone Assignments
             {% endif %}</h6>
         </td>
     </tr>
 
-    {% if rows %}
     {% for submission, assignment, group in rows %}
 
-    {% set hiding = assignment.hidden or assignment.get_setting('hide_submission', False) %}
-
+    {% set hide_status = assignment.hidden and not is_grader %}
 
     <!-- Row Color based on Assignment status -->
     <tr
         class='{%
-            if submission.correct or (submission.score is defined and submission.score|round(1) >= 100)
+            if hide_status
+        %}{%
+            elif submission.correct or (submission.score is defined and submission.score|round(1) >= 100)
         %}table-success{%
             elif (submission.score is defined and submission.score|round(1) > 0)
         %}table-warning{% endif %}'>
 
         <td>
             {% if group %}
-                {{ assignment.title() }}
+                <a href="{{ group_url }}#{{ assignment.slug() }}" target="_blank"
+                   data-relaunch-url="{{ group_relaunch_url }}">{{ assignment.title() }}</a>
             {% else %}
                 <a href="{{ url_for('blockpy.view_submission', submission_id=submission.id, embed=True) }}"
-            target="_blank">{{ assignment.title() }}</a>
+                   target="_blank"
+                   data-relaunch-url="{{ url_for('assignments.load', _external=True,
+                                                 grade_mode='single',
+                                                 submission_id=submission.id,
+                                                 embed=True) }}">{{ assignment.title() }}</a>
             {% endif %}
         </td>
         <td>
@@ -56,7 +74,12 @@
         </td>
     </tr>
     {% endfor %}
-    {% endif %}
+{% else %}
+    <tr>
+        <td colspan="3" class="text-center text-muted">
+            No submissions yet. Once you start working on assignments, they will show up here.
+        </td>
+    </tr>
 {% endfor %}
 </tbody>
 </table>
