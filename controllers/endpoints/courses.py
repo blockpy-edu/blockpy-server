@@ -921,12 +921,16 @@ def feedback_editor(course_id):
         all_subs = {s[0].user_id: s[0] for s in Submission.by_assignment(assignment_id, course_id)}
         for student in students:
             submission = all_subs.get(student.id)
-            contents, published = "", False
+            contents, published, extra = "", False, {}
             if submission and submission.code:
                 try:
                     data = json.loads(submission.code)
                     contents = data.get("contents", "") or ""
                     published = bool(data.get("published", False))
+                    # Any other fields (e.g., the `cadence` provenance block of an
+                    # uploaded export) ride along so that saving does not drop them
+                    extra = {key: value for key, value in data.items()
+                             if key not in ("contents", "published")}
                 except (ValueError, AttributeError):
                     # Not JSON (or not an object); surface the raw code for repair
                     contents = submission.code
@@ -935,6 +939,7 @@ def feedback_editor(course_id):
                 "submission": submission,
                 "contents": contents,
                 "published": published,
+                "extra": extra,
             })
     return render_template('courses/feedback_editor.html',
                            course_id=course_id,

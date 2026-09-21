@@ -15,6 +15,8 @@ export interface AssignmentInterfaceJson {
     assignmentGroupId: number;
     isInstructor: boolean | ko.Observable<boolean>;
     markCorrect: (id: number) => void;
+    /** Embedded above another assignment (e.g., a quiz's reading/feedback preamble) */
+    asPreamble?: boolean;
 }
 
 function parseTimeLimit(
@@ -81,6 +83,14 @@ export class AssignmentInterface {
         this.assignment = ko.observable(null);
         this.submission = ko.observable(null);
         this.markCorrect = params.markCorrect;
+
+        // A preamble is a guest on its host assignment's page: the host keeps the
+        // page-wide time checker (its time limit) and the IP-change log entries.
+        if (params.asPreamble) {
+            this.timeChecker = null;
+            this.trackWindowFocus();
+            return;
+        }
 
         let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         BlockPyServer.altLogEntry = this.logEvent.bind(this);

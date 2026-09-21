@@ -1,36 +1,55 @@
-import * as ko from 'knockout';
-import {AssignmentInterface, AssignmentInterfaceJson, EditorMode} from "../assignment_interface";
+import * as ko from "knockout";
+import {
+    AssignmentInterface,
+    AssignmentInterfaceJson,
+    EditorMode,
+} from "../assignment_interface";
 import FEEDBACK_HTML from "./feedback.html";
 import EDITOR_HTML from "./editor.html";
+import "./feedback.css";
 
-export const LOG_TIME_RATE = 30000;
+export const LOG_TIME_RATE = 10000;
 
 export interface FeedbackSubmission {
     contents?: string;
     published?: boolean;
+    // Uploaded feedback can carry other fields (e.g., Cadence's `cadence` provenance block)
+    [extra: string]: any;
 }
 
 export const EMPTY_FEEDBACK_SUBMISSION_STRING = JSON.stringify({
     contents: "",
-    published: false
+    published: false,
 });
 
-export function fillInMissingFeedbackSubmissionFields(feedbackSubmission: FeedbackSubmission) {
+export function fillInMissingFeedbackSubmissionFields(
+    feedbackSubmission: FeedbackSubmission,
+) {
     feedbackSubmission.contents ??= "";
     feedbackSubmission.published ??= false;
 }
 
 interface FeedbackInterfaceJson extends AssignmentInterfaceJson {
-    asPreamble: boolean
+    asPreamble: boolean;
 }
 
 export class FeedbackViewer extends AssignmentInterface {
     logTimer: NodeJS.Timeout;
     logCount: number;
+    // Bumped whenever the read-logging chain restarts or stops, so that a
+    // stale chain (previous assignment, disposed viewer) cannot keep logging
+    logGeneration: number;
+    // Other components on the page (a quiz's reading preamble) ask for the window
+    // position too; only react to the answers to our own requests
+    awaitingPosition: boolean;
     oldPosition: number;
 
     contents: ko.Observable<string>;
     published: ko.Observable<boolean>;
+    // Any other fields of the feedback submission, kept so that saving does not drop them
+    extraFields: Record<string, any>;
+    // Instructor-only preview of feedback that has not been published yet
+    showUnpublished: ko.Observable<boolean>;
 
     asPreamble: ko.Observable<boolean>;
 
@@ -38,48 +57,83 @@ export class FeedbackViewer extends AssignmentInterface {
     editorMode: ko.Observable<EditorMode>;
 
     subscriptions: {
-        currentAssignmentId: ko.Subscription,
-        windowPositioning: (event: Event) => void
-    }
+        currentAssignmentId: ko.Subscription;
+        windowPositioning: (event: Event) => void;
+    };
 
     constructor(params: FeedbackInterfaceJson) {
         super(params);
-        this.subscriptions = {currentAssignmentId: null, windowPositioning: null};
+        this.subscriptions = {
+            currentAssignmentId: null,
+            windowPositioning: null,
+        };
         this.logCount = 0;
+        this.logGeneration = 0;
+        this.awaitingPosition = false;
         this.oldPosition = null;
 
         this.contents = ko.observable<string>("");
         this.published = ko.observable<boolean>(false);
+        this.extraFields = {};
+        this.showUnpublished = ko.observable<boolean>(false);
         this.asPreamble = ko.observable<boolean>(params.asPreamble || false);
 
         this.editorMode = ko.observable(EditorMode.SUBMISSION);
         this.errorMessage = ko.observable("");
 
-        this.subscriptions.currentAssignmentId = this.currentAssignmentId.subscribe((newId) => {
-            this.loadFeedback(newId);
-        }, this);
+        this.subscriptions.currentAssignmentId =
+            this.currentAssignmentId.subscribe((newId) => {
+                this.loadFeedback(newId);
+            }, this);
         this.loadFeedback(this.currentAssignmentId());
 
-        this.subscriptions.windowPositioning = this.getWindowPositioning.bind(this)
-        window.addEventListener('message', this.subscriptions.windowPositioning);
+        this.subscriptions.windowPositioning =
+            this.getWindowPositioning.bind(this);
+        window.addEventListener(
+            "message",
+            this.subscriptions.windowPositioning,
+        );
+    }
+
+    stopLoggingReading() {
+        clearTimeout(this.logTimer);
+        this.logGeneration += 1;
+        this.awaitingPosition = false;
     }
 
     loadFeedback(assignmentId: number) {
+        this.stopLoggingReading();
         if (assignmentId != null) {
-            let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+            let BlockPyServer =
+                window["$MAIN_BLOCKPY_EDITOR"].components.server;
             let data = BlockPyServer.createServerData();
             data["assignment_id"] = assignmentId;
             this.assignment(null);
-            BlockPyServer._postBlocking("loadAssignment", data, 4,
+            BlockPyServer._postBlocking(
+                "loadAssignment",
+                data,
+                4,
                 (response: any) => {
                     if (response.success) {
-                        let assignment = this.server.assignmentStore.newInstance(response.assignment);
-                        let submission = response.submission ? this.server.submissionStore.newInstance(response.submission) : null;
+                        let assignment =
+                            this.server.assignmentStore.newInstance(
+                                response.assignment,
+                            );
+                        let submission = response.submission
+                            ? this.server.submissionStore.newInstance(
+                                  response.submission,
+                              )
+                            : null;
                         this.assignment(assignment);
                         this.submission(submission);
                         this.parseSubmission();
+                        this.stopLoggingReading();
                         this.logCount = 1;
-                        this.logTimer = setTimeout(this.logReadingStart.bind(this), 1000);
+                        this.oldPosition = null;
+                        this.logTimer = setTimeout(
+                            this.logReadingStart.bind(this),
+                            1000,
+                        );
                         if (response.submission) {
                             this.markRead();
                         }
@@ -91,16 +145,25 @@ export class FeedbackViewer extends AssignmentInterface {
                     }
                 },
                 (e: any, textStatus: string, errorThrown: any) => {
-                    console.error("Failed to load (HTTP LEVEL)", e, textStatus, errorThrown);
+                    console.error(
+                        "Failed to load (HTTP LEVEL)",
+                        e,
+                        textStatus,
+                        errorThrown,
+                    );
                     this.assignment(null);
-                });
+                },
+            );
         } else {
             this.assignment(null);
         }
     }
 
     parseSubmission() {
-        const code = (this.submission() && this.submission().code()) ? this.submission().code() : EMPTY_FEEDBACK_SUBMISSION_STRING;
+        const code =
+            this.submission() && this.submission().code()
+                ? this.submission().code()
+                : EMPTY_FEEDBACK_SUBMISSION_STRING;
         let feedbackSubmission: FeedbackSubmission;
         try {
             feedbackSubmission = JSON.parse(code) as FeedbackSubmission;
@@ -109,15 +172,22 @@ export class FeedbackViewer extends AssignmentInterface {
             feedbackSubmission = {};
         }
         fillInMissingFeedbackSubmissionFields(feedbackSubmission);
-        this.contents(feedbackSubmission.contents);
-        this.published(feedbackSubmission.published);
+        const { contents, published, ...extraFields } = feedbackSubmission;
+        this.contents(contents);
+        this.published(published);
+        this.extraFields = extraFields;
     }
 
     submissionAsJson(): string {
-        return JSON.stringify({
-            contents: this.contents(),
-            published: this.published()
-        }, null, 2);
+        return JSON.stringify(
+            {
+                contents: this.contents(),
+                published: this.published(),
+                ...this.extraFields,
+            },
+            null,
+            2,
+        );
     }
 
     saveSubmission() {
@@ -135,26 +205,41 @@ export class FeedbackViewer extends AssignmentInterface {
 
     dispose() {
         super.dispose();
+        this.stopLoggingReading();
         this.subscriptions.currentAssignmentId.dispose();
-        window.removeEventListener('message', this.subscriptions.windowPositioning);
+        window.removeEventListener(
+            "message",
+            this.subscriptions.windowPositioning,
+        );
     }
 
     getWindowPositioning(event: any) {
-        let data = (typeof event.data === "string") ? JSON.parse(event.data) : event.data;
-        if (data.subject === "lti.fetchWindowSize" || data.subject === "lti.fetchWindowSize.response") {
+        let data =
+            typeof event.data === "string"
+                ? JSON.parse(event.data)
+                : event.data;
+        if (
+            data.subject === "lti.fetchWindowSize" ||
+            data.subject === "lti.fetchWindowSize.response"
+        ) {
+            if (!this.awaitingPosition) {
+                return;
+            }
+            this.awaitingPosition = false;
             this.logReading(data);
         }
     }
 
     logReadingStart(assignmentId: number) {
-        window.top.postMessage({subject: "lti.fetchWindowSize"}, "*");
+        this.awaitingPosition = true;
+        window.top.postMessage({ subject: "lti.fetchWindowSize" }, "*");
     }
 
     logReading(positionData: any) {
-        this.logCount += 1;
         let delay = this.logCount * LOG_TIME_RATE;
+        this.logCount += 1;
         let position: number, height;
-        if (positionData != null && 'offset' in positionData) {
+        if (positionData != null && "offset" in positionData) {
             position = positionData.scrollY;
             height = $(document).height() + positionData.offset.top;
         } else {
@@ -162,35 +247,57 @@ export class FeedbackViewer extends AssignmentInterface {
             height = $(document).height();
         }
         const moved = position !== this.oldPosition;
-        let progress = 100* position / height;
+        let progress = (100 * position) / height;
+        const generation = this.logGeneration;
         if (this.assignment() && this.submission()) {
             // The `reading` category is retained so that read-time counters
             // (SubmissionCounts) accumulate for feedback assignments too.
-            this.logEvent("Resource.View", "reading", "read",
+            this.logEvent(
+                "Resource.View",
+                "reading",
+                "read",
                 JSON.stringify({
-                    "count": this.logCount,
-                    delay, position, height, progress, moved
-                }), this.assignment().url(), () => {
-                    this.logTimer = setTimeout(this.logReadingStart.bind(this), delay);
+                    count: this.logCount,
+                    delay,
+                    position,
+                    height,
+                    progress,
+                    moved,
+                }),
+                this.assignment().url(),
+                () => {
+                    if (generation !== this.logGeneration) {
+                        return;
+                    }
+                    this.logTimer = setTimeout(
+                        this.logReadingStart.bind(this),
+                        delay,
+                    );
                     this.oldPosition = position;
-                })
+                },
+            );
         } else {
             console.log("Skipping log event");
         }
     }
 
     saveAssignment() {
-        this.saveFile("!instructions.md", this.assignment().instructions(), true, ()=>{});
+        this.saveFile(
+            "!instructions.md",
+            this.assignment().instructions(),
+            true,
+            () => {},
+        );
         this.saveAssignmentSettings({
             settings: this.assignment().settings(),
             points: this.assignment().points(),
             url: this.assignment().url(),
-            name: this.assignment().name()
+            name: this.assignment().name(),
         });
     }
 
     markRead() {
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
         let data = {
             assignment_id: this.assignment().id,
@@ -202,24 +309,42 @@ export class FeedbackViewer extends AssignmentInterface {
             correct: true,
             timestamp: now.getTime(),
             timezone: now.getTimezoneOffset(),
-            passcode: window['$MAIN_BLOCKPY_EDITOR'].model.display.passcode(),
+            passcode: window["$MAIN_BLOCKPY_EDITOR"].model.display.passcode(),
         };
-        BlockPyServer._postBlocking("updateSubmission", data, 3,
-               (response: any) => {
-                    if (!response.success && response.message.message !== "Generic LTI Failure - perhaps not logged into LTI session?") {
-                        console.error(response);
-                        this.errorMessage(response.message.message);
-                    }
-                    this.submission().submissionStatus(response.submission_status);
-                    this.submission().correct(response.correct);
-                    if (response.correct && this.markCorrect) {
-                        this.markCorrect(this.assignment().id);
-                    }
-               },
-               (e: any, textStatus: string, errorThrown: any) => {
-                    console.error("Failed to load (HTTP LEVEL)", e, textStatus, errorThrown);
-                    this.errorMessage("HTTP ERROR (try reloading the page; if still an error, report to instructor!): "+ textStatus+"\n"+errorThrown);
-                });
+        BlockPyServer._postBlocking(
+            "updateSubmission",
+            data,
+            3,
+            (response: any) => {
+                if (
+                    !response.success &&
+                    response.message.message !==
+                        "Generic LTI Failure - perhaps not logged into LTI session?"
+                ) {
+                    console.error(response);
+                    this.errorMessage(response.message.message);
+                }
+                this.submission().submissionStatus(response.submission_status);
+                this.submission().correct(response.correct);
+                if (response.correct && this.markCorrect) {
+                    this.markCorrect(this.assignment().id);
+                }
+            },
+            (e: any, textStatus: string, errorThrown: any) => {
+                console.error(
+                    "Failed to load (HTTP LEVEL)",
+                    e,
+                    textStatus,
+                    errorThrown,
+                );
+                this.errorMessage(
+                    "HTTP ERROR (try reloading the page; if still an error, report to instructor!): " +
+                        textStatus +
+                        "\n" +
+                        errorThrown,
+                );
+            },
+        );
     }
 }
 
@@ -228,9 +353,9 @@ const FULL_HTML = `
     ${EDITOR_HTML}
     ${FEEDBACK_HTML}
 </div>
-`
+`;
 
 ko.components.register("feedback-viewer", {
     viewModel: FeedbackViewer,
-    template: FULL_HTML
+    template: FULL_HTML,
 });

@@ -4,11 +4,25 @@
         <div data-bind="markdowned: {value: assignment().instructions(), assignment: assignment, submission: submission}"
             class="p-4"></div>
         <!-- /ko -->
-        <!-- ko if: published() -->
+        <!-- Instructor preview of unpublished feedback -->
+        <!-- ko if: isInstructor() && !published() -->
+        <div class="form-check px-4 ml-4">
+            <label class="form-check-label">
+                <input type="checkbox" class="form-check-input" data-bind="checked: showUnpublished">
+                Show unpublished feedback (instructor preview)
+            </label>
+        </div>
+        <!-- /ko -->
+        <!-- ko if: published() || (isInstructor() && showUnpublished()) -->
+            <!-- ko ifnot: published() -->
+            <div class="alert alert-warning mx-4 mt-2 mb-0">
+                This feedback is <strong>not published</strong>; the student is told that their feedback is not yet ready.
+            </div>
+            <!-- /ko -->
         <div data-bind="markdowned: {value: contents(), assignment: assignment, submission: submission}"
             class="p-4"></div>
         <!-- /ko -->
-        <!-- ko ifnot: published() -->
+        <!-- ko ifnot: published() || (isInstructor() && showUnpublished()) -->
         <div class="p-4">
             <em>Feedback is not yet ready.</em>
         </div>

@@ -1249,6 +1249,13 @@ class AssignmentInterface {
         this.assignment = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
         this.submission = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
         this.markCorrect = params.markCorrect;
+        // A preamble is a guest on its host assignment's page: the host keeps the
+        // page-wide time checker (its time limit) and the IP-change log entries.
+        if (params.asPreamble) {
+            this.timeChecker = null;
+            this.trackWindowFocus();
+            return;
+        }
         let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         BlockPyServer.altLogEntry = this.logEvent.bind(this);
         if (window["$TIME_CHECKER_ID"]) {
@@ -2938,6 +2945,19 @@ module.exports = "<!-- Errors -->\n<div class=\"alert alert-warning p-1 border r
 
 /***/ }),
 
+/***/ "./components/feedback/feedback.css":
+/*!******************************************!*\
+  !*** ./components/feedback/feedback.css ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ }),
+
 /***/ "./components/feedback/feedback.html":
 /*!*******************************************!*\
   !*** ./components/feedback/feedback.html ***!
@@ -2945,7 +2965,7 @@ module.exports = "<!-- Errors -->\n<div class=\"alert alert-warning p-1 border r
 /***/ ((module) => {
 
 "use strict";
-module.exports = "<!-- Body -->\n    <div style=\"background: #FBFAF7\" class=\"pt-4\">\n        <!-- ko if: assignment().instructions() -->\n        <div data-bind=\"markdowned: {value: assignment().instructions(), assignment: assignment, submission: submission}\"\n            class=\"p-4\"></div>\n        <!-- /ko -->\n        <!-- ko if: published() -->\n        <div data-bind=\"markdowned: {value: contents(), assignment: assignment, submission: submission}\"\n            class=\"p-4\"></div>\n        <!-- /ko -->\n        <!-- ko ifnot: published() -->\n        <div class=\"p-4\">\n            <em>Feedback is not yet ready.</em>\n        </div>\n        <!-- /ko -->\n        <hr>\n    </div>\n";
+module.exports = "<!-- Body -->\n    <div style=\"background: #FBFAF7\" class=\"pt-4\">\n        <!-- ko if: assignment().instructions() -->\n        <div data-bind=\"markdowned: {value: assignment().instructions(), assignment: assignment, submission: submission}\"\n            class=\"p-4\"></div>\n        <!-- /ko -->\n        <!-- Instructor preview of unpublished feedback -->\n        <!-- ko if: isInstructor() && !published() -->\n        <div class=\"form-check px-4 ml-4\">\n            <label class=\"form-check-label\">\n                <input type=\"checkbox\" class=\"form-check-input\" data-bind=\"checked: showUnpublished\">\n                Show unpublished feedback (instructor preview)\n            </label>\n        </div>\n        <!-- /ko -->\n        <!-- ko if: published() || (isInstructor() && showUnpublished()) -->\n            <!-- ko ifnot: published() -->\n            <div class=\"alert alert-warning mx-4 mt-2 mb-0\">\n                This feedback is <strong>not published</strong>; the student is told that their feedback is not yet ready.\n            </div>\n            <!-- /ko -->\n        <div data-bind=\"markdowned: {value: contents(), assignment: assignment, submission: submission}\"\n            class=\"p-4\"></div>\n        <!-- /ko -->\n        <!-- ko ifnot: published() || (isInstructor() && showUnpublished()) -->\n        <div class=\"p-4\">\n            <em>Feedback is not yet ready.</em>\n        </div>\n        <!-- /ko -->\n        <hr>\n    </div>\n";
 
 /***/ }),
 
@@ -2968,14 +2988,27 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _assignment_interface__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../assignment_interface */ "./components/assignment_interface.ts");
 /* harmony import */ var _feedback_html__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feedback.html */ "./components/feedback/feedback.html");
 /* harmony import */ var _editor_html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor.html */ "./components/feedback/editor.html");
+/* harmony import */ var _feedback_css__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./feedback.css */ "./components/feedback/feedback.css");
+var __rest = (undefined && undefined.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 
 
 
 
-const LOG_TIME_RATE = 30000;
+
+const LOG_TIME_RATE = 10000;
 const EMPTY_FEEDBACK_SUBMISSION_STRING = JSON.stringify({
     contents: "",
-    published: false
+    published: false,
 });
 function fillInMissingFeedbackSubmissionFields(feedbackSubmission) {
     var _a, _b;
@@ -2985,35 +3018,54 @@ function fillInMissingFeedbackSubmissionFields(feedbackSubmission) {
 class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.AssignmentInterface {
     constructor(params) {
         super(params);
-        this.subscriptions = { currentAssignmentId: null, windowPositioning: null };
+        this.subscriptions = {
+            currentAssignmentId: null,
+            windowPositioning: null,
+        };
         this.logCount = 0;
+        this.logGeneration = 0;
+        this.awaitingPosition = false;
         this.oldPosition = null;
         this.contents = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
         this.published = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.extraFields = {};
+        this.showUnpublished = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
         this.asPreamble = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(params.asPreamble || false);
         this.editorMode = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(_assignment_interface__WEBPACK_IMPORTED_MODULE_1__.EditorMode.SUBMISSION);
         this.errorMessage = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
-        this.subscriptions.currentAssignmentId = this.currentAssignmentId.subscribe((newId) => {
-            this.loadFeedback(newId);
-        }, this);
+        this.subscriptions.currentAssignmentId =
+            this.currentAssignmentId.subscribe((newId) => {
+                this.loadFeedback(newId);
+            }, this);
         this.loadFeedback(this.currentAssignmentId());
-        this.subscriptions.windowPositioning = this.getWindowPositioning.bind(this);
-        window.addEventListener('message', this.subscriptions.windowPositioning);
+        this.subscriptions.windowPositioning =
+            this.getWindowPositioning.bind(this);
+        window.addEventListener("message", this.subscriptions.windowPositioning);
+    }
+    stopLoggingReading() {
+        clearTimeout(this.logTimer);
+        this.logGeneration += 1;
+        this.awaitingPosition = false;
     }
     loadFeedback(assignmentId) {
+        this.stopLoggingReading();
         if (assignmentId != null) {
-            let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+            let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
             let data = BlockPyServer.createServerData();
             data["assignment_id"] = assignmentId;
             this.assignment(null);
             BlockPyServer._postBlocking("loadAssignment", data, 4, (response) => {
                 if (response.success) {
                     let assignment = this.server.assignmentStore.newInstance(response.assignment);
-                    let submission = response.submission ? this.server.submissionStore.newInstance(response.submission) : null;
+                    let submission = response.submission
+                        ? this.server.submissionStore.newInstance(response.submission)
+                        : null;
                     this.assignment(assignment);
                     this.submission(submission);
                     this.parseSubmission();
+                    this.stopLoggingReading();
                     this.logCount = 1;
+                    this.oldPosition = null;
                     this.logTimer = setTimeout(this.logReadingStart.bind(this), 1000);
                     if (response.submission) {
                         this.markRead();
@@ -3035,7 +3087,9 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
         }
     }
     parseSubmission() {
-        const code = (this.submission() && this.submission().code()) ? this.submission().code() : EMPTY_FEEDBACK_SUBMISSION_STRING;
+        const code = this.submission() && this.submission().code()
+            ? this.submission().code()
+            : EMPTY_FEEDBACK_SUBMISSION_STRING;
         let feedbackSubmission;
         try {
             feedbackSubmission = JSON.parse(code);
@@ -3045,14 +3099,13 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
             feedbackSubmission = {};
         }
         fillInMissingFeedbackSubmissionFields(feedbackSubmission);
-        this.contents(feedbackSubmission.contents);
-        this.published(feedbackSubmission.published);
+        const { contents, published } = feedbackSubmission, extraFields = __rest(feedbackSubmission, ["contents", "published"]);
+        this.contents(contents);
+        this.published(published);
+        this.extraFields = extraFields;
     }
     submissionAsJson() {
-        return JSON.stringify({
-            contents: this.contents(),
-            published: this.published()
-        }, null, 2);
+        return JSON.stringify(Object.assign({ contents: this.contents(), published: this.published() }, this.extraFields), null, 2);
     }
     saveSubmission() {
         const code = this.submissionAsJson();
@@ -3067,23 +3120,32 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
     }
     dispose() {
         super.dispose();
+        this.stopLoggingReading();
         this.subscriptions.currentAssignmentId.dispose();
-        window.removeEventListener('message', this.subscriptions.windowPositioning);
+        window.removeEventListener("message", this.subscriptions.windowPositioning);
     }
     getWindowPositioning(event) {
-        let data = (typeof event.data === "string") ? JSON.parse(event.data) : event.data;
-        if (data.subject === "lti.fetchWindowSize" || data.subject === "lti.fetchWindowSize.response") {
+        let data = typeof event.data === "string"
+            ? JSON.parse(event.data)
+            : event.data;
+        if (data.subject === "lti.fetchWindowSize" ||
+            data.subject === "lti.fetchWindowSize.response") {
+            if (!this.awaitingPosition) {
+                return;
+            }
+            this.awaitingPosition = false;
             this.logReading(data);
         }
     }
     logReadingStart(assignmentId) {
+        this.awaitingPosition = true;
         window.top.postMessage({ subject: "lti.fetchWindowSize" }, "*");
     }
     logReading(positionData) {
-        this.logCount += 1;
         let delay = this.logCount * LOG_TIME_RATE;
+        this.logCount += 1;
         let position, height;
-        if (positionData != null && 'offset' in positionData) {
+        if (positionData != null && "offset" in positionData) {
             position = positionData.scrollY;
             height = $(document).height() + positionData.offset.top;
         }
@@ -3092,14 +3154,22 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
             height = $(document).height();
         }
         const moved = position !== this.oldPosition;
-        let progress = 100 * position / height;
+        let progress = (100 * position) / height;
+        const generation = this.logGeneration;
         if (this.assignment() && this.submission()) {
             // The `reading` category is retained so that read-time counters
             // (SubmissionCounts) accumulate for feedback assignments too.
             this.logEvent("Resource.View", "reading", "read", JSON.stringify({
-                "count": this.logCount,
-                delay, position, height, progress, moved
+                count: this.logCount,
+                delay,
+                position,
+                height,
+                progress,
+                moved,
             }), this.assignment().url(), () => {
+                if (generation !== this.logGeneration) {
+                    return;
+                }
                 this.logTimer = setTimeout(this.logReadingStart.bind(this), delay);
                 this.oldPosition = position;
             });
@@ -3114,11 +3184,11 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
             settings: this.assignment().settings(),
             points: this.assignment().points(),
             url: this.assignment().url(),
-            name: this.assignment().name()
+            name: this.assignment().name(),
         });
     }
     markRead() {
-        let BlockPyServer = window['$MAIN_BLOCKPY_EDITOR'].components.server;
+        let BlockPyServer = window["$MAIN_BLOCKPY_EDITOR"].components.server;
         let now = new Date();
         let data = {
             assignment_id: this.assignment().id,
@@ -3130,10 +3200,12 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
             correct: true,
             timestamp: now.getTime(),
             timezone: now.getTimezoneOffset(),
-            passcode: window['$MAIN_BLOCKPY_EDITOR'].model.display.passcode(),
+            passcode: window["$MAIN_BLOCKPY_EDITOR"].model.display.passcode(),
         };
         BlockPyServer._postBlocking("updateSubmission", data, 3, (response) => {
-            if (!response.success && response.message.message !== "Generic LTI Failure - perhaps not logged into LTI session?") {
+            if (!response.success &&
+                response.message.message !==
+                    "Generic LTI Failure - perhaps not logged into LTI session?") {
                 console.error(response);
                 this.errorMessage(response.message.message);
             }
@@ -3144,7 +3216,10 @@ class FeedbackViewer extends _assignment_interface__WEBPACK_IMPORTED_MODULE_1__.
             }
         }, (e, textStatus, errorThrown) => {
             console.error("Failed to load (HTTP LEVEL)", e, textStatus, errorThrown);
-            this.errorMessage("HTTP ERROR (try reloading the page; if still an error, report to instructor!): " + textStatus + "\n" + errorThrown);
+            this.errorMessage("HTTP ERROR (try reloading the page; if still an error, report to instructor!): " +
+                textStatus +
+                "\n" +
+                errorThrown);
         });
     }
 }
@@ -3156,7 +3231,7 @@ const FULL_HTML = `
 `;
 knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("feedback-viewer", {
     viewModel: FeedbackViewer,
-    template: FULL_HTML
+    template: FULL_HTML,
 });
 
 

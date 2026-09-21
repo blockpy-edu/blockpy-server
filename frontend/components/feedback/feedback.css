@@ -1,0 +1,37 @@
+/*
+ * Cadence feedback messages: a `.cadence-message` wrapping one Bootstrap card
+ * (`.card.cadence-section.cadence-<kind>`) per section, with Markdown bodies.
+ * Kept close to the site's plain Bootstrap look (white boxes, light grey
+ * borders, the body font size); the card basics are repeated here so the
+ * message still reads as boxes on pages without Bootstrap.
+ */
+.cadence-message .cadence-section {
+    margin-bottom: 1rem;
+    background: white;
+    border: 1px solid lightgrey;
+    border-radius: .25rem;
+}
+
+.cadence-message .cadence-section > .card-header {
+    padding: .5rem 1rem;
+    background: #f7f7f7;
+    border-bottom: 1px solid lightgrey;
+    font-size: 16px;
+}
+
+.cadence-message .cadence-section > .card-body {
+    padding: 1rem;
+}
+
+.cadence-message .card-body > :last-child {
+    margin-bottom: 0;
+}
+
+.cadence-message .card-body ul,
+.cadence-message .card-body ol {
+    padding-left: 1.5rem;
+}
+
+.cadence-message .card-body li + li {
+    margin-top: .25rem;
+}

@@ -14,7 +14,8 @@ Feedback Editor: {{ course.name }}
         min-height: 8em;
         font-family: monospace;
     }
-    .feedback-row-dirty {
+    /* Specific enough to beat the .table-striped odd-row background */
+    .table-striped tbody tr.feedback-row-dirty {
         background-color: #fff3cd;
     }
 </style>
@@ -26,12 +27,126 @@ $().ready(function() {
         }
     });
 
-    function markDirty() {
-        $(this).closest("tr").addClass("feedback-row-dirty");
+    function markRowDirty(row) {
+        row.addClass("feedback-row-dirty");
         $(".feedback-save-changes").prop("disabled", false);
+    }
+    function markDirty() {
+        markRowDirty($(this).closest("tr"));
+        updateSelectAll();
     }
     $(".feedback-contents").on("input", markDirty);
     $(".feedback-published").on("change", markDirty);
+
+    // Select/Unselect All only considers students who actually have feedback,
+    // so that nobody gets an empty message published to them.
+    function publishableRows() {
+        return $("tr[data-user-id]").filter(function() {
+            return $(this).find(".feedback-contents").val().trim() !== "";
+        });
+    }
+    function updateSelectAll() {
+        const rows = publishableRows();
+        const allSelected = rows.length > 0 &&
+            rows.find(".feedback-published:not(:checked)").length === 0;
+        $(".feedback-select-all")
+            .prop("disabled", rows.length === 0)
+            .data("select", !allSelected)
+            .text(allSelected ? "Unselect All" : "Select All");
+    }
+    $(".feedback-select-all").click(function() {
+        const select = $(this).data("select");
+        publishableRows().each(function() {
+            const checkbox = $(this).find(".feedback-published");
+            if (checkbox.prop("checked") !== select) {
+                checkbox.prop("checked", select);
+                markRowDirty($(this));
+            }
+        });
+        updateSelectAll();
+    });
+    updateSelectAll();
+
+    // Bulk upload: the file is the same {"updates": [...]} payload that
+    // `api.bulk_update_submissions` accepts (e.g., Cadence's feedback_upload.json).
+    // Entries are loaded into the table as unsaved changes, so they can be
+    // reviewed (and published) before anything is written.
+    const COURSE_ID = {{ course_id|tojson }};
+    const ASSIGNMENT_ID = {{ (assignment.id if assignment else None)|tojson }};
+    function loadUpload(payload) {
+        if (!payload || !Array.isArray(payload.updates)) {
+            return "That file is not a feedback upload: expected a JSON object with an \"updates\" list.";
+        }
+        const keepPublished = $("#feedback-upload-keep-published").prop("checked");
+        const skipped = {target: 0, malformed: 0, users: []};
+        let loaded = 0;
+        payload.updates.forEach(function(update) {
+            let feedback = null;
+            try {
+                feedback = JSON.parse(update.code);
+            } catch (e) {}
+            if (!feedback || typeof feedback !== "object" || typeof feedback.contents !== "string") {
+                skipped.malformed += 1;
+                return;
+            }
+            let row;
+            if (update.submission_id != null) {
+                row = $('tr[data-submission-id="'+parseInt(update.submission_id, 10)+'"]');
+            } else if (parseInt(update.course_id, 10) !== COURSE_ID ||
+                       parseInt(update.assignment_id, 10) !== ASSIGNMENT_ID) {
+                skipped.target += 1;
+                return;
+            } else {
+                row = $('tr[data-user-id="'+parseInt(update.user_id, 10)+'"]');
+            }
+            if (!row.length) {
+                skipped.users.push(update.submission_id != null ? "submission "+update.submission_id : update.user_id);
+                return;
+            }
+            const {contents, published, ...extra} = feedback;
+            row.find(".feedback-contents").val(contents);
+            if (!keepPublished) {
+                row.find(".feedback-published").prop("checked", !!published);
+            }
+            row.data("extra", extra);
+            markRowDirty(row);
+            loaded += 1;
+        });
+        updateSelectAll();
+        let message = "Loaded "+loaded+" of "+payload.updates.length+" entries into the table";
+        message += loaded ? "; review them, then click \"Save Changes\"." : ".";
+        if (skipped.target) {
+            message += " Skipped "+skipped.target+" for a different course or assignment (this page is course "+
+                COURSE_ID+", assignment "+ASSIGNMENT_ID+").";
+        }
+        if (skipped.users.length) {
+            message += " Skipped "+skipped.users.length+" not matching any student listed here: "+
+                skipped.users.join(", ")+".";
+        }
+        if (skipped.malformed) {
+            message += " Skipped "+skipped.malformed+" whose \"code\" was not feedback JSON.";
+        }
+        return message;
+    }
+    $("#feedback-upload-file").change(function() {
+        const file = this.files[0];
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function() {
+            let message;
+            try {
+                message = loadUpload(JSON.parse(reader.result));
+            } catch (e) {
+                message = "Could not read that file as JSON: "+e.message;
+            }
+            $(".feedback-upload-status").text(message);
+        };
+        reader.readAsText(file);
+        // Allow the same file to be chosen again
+        this.value = "";
+    });
 
     $(".feedback-save-changes").click(function() {
         const updates = [];
@@ -41,10 +156,10 @@ $().ready(function() {
                 "course_id": {{ course_id|tojson }},
                 "user_id": parseInt(row.attr("data-user-id"), 10),
                 "assignment_id": {{ (assignment.id if assignment else None)|tojson }},
-                "code": JSON.stringify({
+                "code": JSON.stringify(Object.assign({
                     "contents": row.find(".feedback-contents").val(),
                     "published": row.find(".feedback-published").prop("checked")
-                }, null, 2)
+                }, row.data("extra") || {}), null, 2)
             });
         });
         if (!updates.length) {
@@ -123,6 +238,24 @@ $().ready(function() {
 
 {% if assignment %}
 
+    <div class="card mb-3">
+        <div class="card-body p-3">
+            <label for="feedback-upload-file" class="mb-1"><strong>Bulk Upload</strong></label>
+            <input type="file" id="feedback-upload-file" class="form-control-file" accept=".json,application/json">
+            <small class="form-text text-muted">
+                Accepts a Cadence <code>feedback_upload.json</code> export (the same
+                <code>{"updates": [...]}</code> format as the <code>bulk_update_submissions</code> API).
+                Entries for this course and assignment are loaded into the table below as unsaved changes.
+            </small>
+            <div class="form-check mt-1">
+                <input type="checkbox" class="form-check-input" id="feedback-upload-keep-published" checked>
+                <label class="form-check-label" for="feedback-upload-keep-published">
+                    Keep each student's current Published setting (otherwise, use the file's)</label>
+            </div>
+            <div class="feedback-upload-status mt-1" role="status"></div>
+        </div>
+    </div>
+
     <button class="btn btn-success feedback-save-changes" disabled>Save Changes</button>
     <span class="feedback-save-status"></span>
 
@@ -131,12 +264,16 @@ $().ready(function() {
         <tr>
             <th>Student</th>
             <th style="width: 60%">Feedback Contents (Markdown)</th>
-            <th>Published</th>
+            <th>
+                Published<br>
+                <button type="button" class="btn btn-sm btn-outline-secondary feedback-select-all"
+                        title="Only affects students who have feedback contents">Select All</button>
+            </th>
         </tr>
         </thead>
         <tbody>
         {% for row in rows %}
-        <tr data-user-id="{{ row.student.id }}"
+        <tr data-user-id="{{ row.student.id }}" data-extra='{{ row.extra|tojson }}'
             {% if row.submission %}data-submission-id="{{ row.submission.id }}"{% endif %}>
             <td>
                 {{ row.student.name() }}<br>

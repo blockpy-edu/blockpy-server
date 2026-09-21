@@ -63,6 +63,25 @@ class TestFeedbackEditorPage:
         assert response.status_code == 200
         assert b'Great work on recursion!' in response.data
 
+    def test_offers_select_all_and_bulk_upload(self, client, test_data, act_as, feedback_assignment):
+        act_as(test_data.user("ada@blockpy.com"))
+        response = client.get('/courses/feedback_editor/6',
+                              query_string={"assignment_id": feedback_assignment.id})
+        assert b'feedback-select-all' in response.data
+        assert b'feedback-upload-file' in response.data
+
+    def test_extra_fields_ride_along(self, client, test_data, act_as, feedback_assignment):
+        # Uploaded feedback (e.g., from Cadence) carries provenance next to the
+        # contents; the page hands it back to the save so it is not dropped
+        act_as(test_data.user("ada@blockpy.com"))
+        submission = Submission.load_or_new(feedback_assignment, 100, 6)
+        submission.save_code('answer.py', json.dumps({
+            "contents": "Review loops.", "published": False,
+            "cadence": {"run_id": "20260919T232351-11960"}}))
+        response = client.get('/courses/feedback_editor/6',
+                              query_string={"assignment_id": feedback_assignment.id})
+        assert b'data-extra=\'{"cadence": {"run_id": "20260919T232351-11960"}}\'' in response.data
+
     def test_rejects_non_feedback_assignment(self, client, test_data, act_as, feedback_assignment):
         act_as(test_data.user("ada@blockpy.com"))
         # Assignment 100 is a BlockPy assignment in course 6
@@ -121,6 +140,22 @@ class TestBulkUpdateSubmissions:
         assert submission is not None
         assert submission.code == code
         assert data['updated'][0]['submission_id'] == submission.id
+
+    def test_accepts_cadence_export(self, client, test_data, act_as, feedback_assignment):
+        # Cadence's feedback_upload.json: string ids, and a `cadence` provenance
+        # block next to the contents inside the code
+        act_as(test_data.user("ada@blockpy.com"))
+        code = json.dumps({
+            "contents": '<div class="cadence-message">\n\nReview **loops**.\n\n</div>',
+            "published": False,
+            "cadence": {"run_id": "20260919T232351-11960", "message_hash": "434d51c66db5cf41"}})
+        response = client.post(self.URL, json={"updates": [
+            {"course_id": "6", "user_id": "100", "assignment_id": str(feedback_assignment.id), "code": code}
+        ]})
+        data = response.get_json()
+        assert data['success'] is True
+        assert data['errors'] == []
+        assert Submission.get_submission(feedback_assignment.id, 100, 6).code == code
 
     def test_instructor_updates_by_submission_id(self, client, test_data, act_as, feedback_assignment):
         act_as(test_data.user("ada@blockpy.com"))
