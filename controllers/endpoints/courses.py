@@ -28,6 +28,8 @@ from controllers.submission_search import (parse_submission_search, matches_sear
                                            encode_submission_for_filter, search_load_options,
                                            prefetch_search_relations, VIEW_SUBMISSIONS_SEARCH_FIELDS,
                                            ANALYTICS_SEARCH_FIELDS)
+from models.data_formats.time_analysis import (parse_idle_minutes, load_time_analysis_events, analyze_time,
+                                       format_duration)
 from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
@@ -1134,6 +1136,69 @@ def submissions_specific(submission_id):
                            assignment=assignment,
                            user=user,
                            course_id=course_id)
+
+
+@courses.route('/time_analysis/<int:course_id>/<int:user_id>/', methods=['GET'])
+@courses.route('/time_analysis/<int:course_id>/<int:user_id>', methods=['GET'])
+@login_required
+def time_analysis(course_id, user_id):
+    ''' How a student spent their time on an assignment group (e.g., an exam) or a single
+        assignment: active time vs. idle gaps with no events, work sessions, a per-assignment
+        breakdown, and a minute-by-minute log. Linked from the View Submissions dropdowns. '''
+    viewer, _ = get_user()
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    student = User.by_id(user_id)
+    check_resource_exists(student, "User", user_id)
+    require_course_grader(viewer, course_id)
+    assignment_group_id = maybe_int(request.values.get('assignment_group_id'))
+    assignment_id = maybe_int(request.values.get('assignment_id'))
+    if assignment_group_id is not None:
+        group = AssignmentGroup.by_id(assignment_group_id)
+        check_resource_exists(group, "AssignmentGroup", assignment_group_id)
+        assignments = group.get_assignments()
+        scope_name = group.name
+    elif assignment_id is not None:
+        group = None
+        assignment = Assignment.by_id(assignment_id)
+        check_resource_exists(assignment, "Assignment", assignment_id)
+        assignments = [assignment]
+        scope_name = assignment.name
+    else:
+        return ajax_failure("You must provide either an assignment_group_id or an assignment_id.")
+    # Hidden assignments (typically exams) are for instructors only, like the group report
+    if any(assignment.hidden for assignment in assignments):
+        require_course_instructor(viewer, course_id)
+    idle_minutes = parse_idle_minutes(request.values.get('idle_minutes'))
+    assignment_ids = [assignment.id for assignment in assignments]
+    assignment_names = {assignment.id: assignment.name for assignment in assignments}
+    events = load_time_analysis_events(course_id, user_id, assignment_ids)
+    analysis = analyze_time(events, idle_minutes * 60, assignment_names)
+    submissions = {submission.assignment_id: submission
+                   for submission in Submission.query.filter(
+                       Submission.course_id == course_id, Submission.user_id == user_id,
+                       Submission.assignment_id.in_(assignment_ids)).all()} if assignment_ids else {}
+    # Exam timing: the standard limit and any accommodation, from the first timed assignment
+    time_limit, accommodation, date_started = None, None, None
+    for assignment in assignments:
+        base_limit = assignment.get_setting('time_limit', None)
+        submission = submissions.get(assignment.id)
+        if base_limit is not None and time_limit is None:
+            time_limit, accommodation = _describe_exam_time(
+                base_limit, submission.time_limit if submission else None)
+        if submission is not None and submission.date_started and date_started is None:
+            date_started = submission.date_started
+    date_submitted = max((submission.date_submitted for submission in submissions.values()
+                          if submission.date_submitted), default=None)
+    return render_template('courses/time_analysis.html',
+                           course_id=course_id, course=course, student=student,
+                           group=group, assignments=assignments, submissions=submissions,
+                           assignment_names=assignment_names,
+                           scope_name=scope_name, analysis=analysis, idle_minutes=idle_minutes,
+                           time_limit=time_limit, accommodation=accommodation,
+                           date_started=date_started, date_submitted=date_submitted,
+                           format_duration=format_duration,
+                           is_instructor=True)
 
 
 @courses.route('/submissions_grid/<course_id>/', methods=['GET', 'POST'])

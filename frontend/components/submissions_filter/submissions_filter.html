@@ -233,8 +233,20 @@
                     <strong>Group: <span data-bind="text: groupName"></span></strong></td>
                 <td>
                     <!-- ko if: viewGroupUrl -->
-                    <a data-bind="attr: {href: viewGroupUrl}"
-                       class="btn btn-primary btn-sm" target="_blank">View Group</a>
+                    <div class="btn-group">
+                        <a data-bind="attr: {href: viewGroupUrl}"
+                           class="btn btn-primary btn-sm" target="_blank">View Group</a>
+                        <!-- Dropdown -->
+                        <button type="button" class="btn btn-primary dropdown-toggle btn-sm" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a data-bind="attr: {href: timeAnalysisUrl}"
+                               class="dropdown-item" target="_blank"
+                               title="How the student spent their time across this group's assignments: active work, idle gaps, and a minute-by-minute log">Time Analysis</a>
+                        </div>
+                    </div>
                     <!-- /ko -->
                 </td>
             </tr>
@@ -315,6 +327,17 @@
                             <!---------------------------------------------------------------------->
                             <a data-bind="attr: {href: $component.historyLogUrl($data)}"
                                target="_blank" class="dropdown-item">History Log</a>
+                            <!---------------------------------------------------------------------->
+                            <a data-bind="attr: {href: $component.timeAnalysisUrl($data, 'assignment')}"
+                               target="_blank" class="dropdown-item"
+                               title="How the student spent their time on this assignment: active work, idle gaps, and a minute-by-minute log"
+                            >Time Analysis</a>
+                            <!-- ko if: submission.assignment_group_id != null -->
+                            <a data-bind="attr: {href: $component.timeAnalysisUrl($data, 'group')}"
+                               target="_blank" class="dropdown-item"
+                               title="Time analysis across every assignment in this submission's group"
+                            >Time Analysis (Group)</a>
+                            <!-- /ko -->
                             <!---------------------------------------------------------------------->
                             <a data-bind="attr: {href: $component.transferCourseUrl($data)}"
                                 target="_blank" class="dropdown-item"

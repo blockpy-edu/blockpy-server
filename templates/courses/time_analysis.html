@@ -1,0 +1,383 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Time Analysis: {{ student.name() }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .time-analysis .stat-card .stat-value { font-size: 1.6rem; font-weight: 600; line-height: 1.2; }
+    .time-analysis .stat-card .stat-label { font-size: 0.85rem; color: #6c757d; }
+    .time-analysis .timeline-bar { display: flex; height: 28px; border: 1px solid #ced4da; border-radius: 4px; overflow: hidden; }
+    .time-analysis .timeline-bar .segment { min-width: 4px; }
+    .time-analysis .timeline-bar .segment-session { background-color: #28a745; }
+    .time-analysis .timeline-bar .segment-gap { background-color: #dee2e6; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, #adb5bd 4px, #adb5bd 6px); }
+    .time-analysis .minute-log td { vertical-align: top; }
+    .time-analysis .minute-log tr.row-gap td { background-color: #f1f3f5; font-style: italic; }
+    .time-analysis .minute-log tr.row-quiet td { color: #868e96; }
+    .time-analysis .minute-log tr.row-warning td:first-child { border-left: 4px solid #dc3545; }
+    .time-analysis .minute-log .elapsed { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .time-analysis .minute-log tr.day-header td { background-color: #e9ecef; font-weight: 600; }
+    .time-analysis .flag-badge { margin-right: 0.25rem; }
+</style>
+<script>
+    // Timestamps are stored in UTC; show them in the viewer's local time.
+    document.addEventListener("DOMContentLoaded", function () {
+        const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
+            month: "short", day: "numeric", year: "numeric",
+            hour: "numeric", minute: "2-digit", second: "2-digit"
+        });
+        const timeFormat = new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit"});
+        const timeSecondsFormat = new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit", second: "2-digit"});
+        const dayFormat = new Intl.DateTimeFormat(undefined, {weekday: "short", month: "long", day: "numeric", year: "numeric"});
+        // Naive timestamps are UTC (add the Z); aware ones already end with an offset
+        const parseUtc = function (raw) {
+            return new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(raw) ? raw : raw + "Z");
+        };
+        document.querySelectorAll("time[data-utc]").forEach(function (element) {
+            const when = parseUtc(element.dataset.utc);
+            if (isNaN(when.getTime())) { return; }
+            const format = element.dataset.format;
+            const formatter = format === "time" ? timeFormat : format === "seconds" ? timeSecondsFormat : dateTimeFormat;
+            element.textContent = formatter.format(when);
+            element.title = when.toISOString() + " (UTC)";
+        });
+        // Day headers in the minute log, wherever the (local) day changes
+        const body = document.querySelector(".minute-log tbody");
+        if (body) {
+            let lastDay = null;
+            Array.from(body.querySelectorAll("tr[data-utc]")).forEach(function (row) {
+                const when = parseUtc(row.dataset.utc);
+                const day = dayFormat.format(when);
+                if (day !== lastDay) {
+                    const header = document.createElement("tr");
+                    header.className = "day-header";
+                    header.innerHTML = "<td colspan='5'></td>";
+                    header.firstChild.textContent = day;
+                    body.insertBefore(header, row);
+                    lastDay = day;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+{% macro utc(when, format="datetime") -%}
+    {%- if when -%}
+        <time data-utc="{{ when.isoformat() }}" data-format="{{ format }}">{{ when.strftime("%Y-%m-%d %H:%M:%S") }} UTC</time>
+    {%- else -%}
+        <span class="text-muted">&mdash;</span>
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro elapsed(seconds) -%}
+    {%- set total = (seconds // 60)|int -%}
+    +{{ total // 60 }}:{{ "%02d"|format(total % 60) }}
+{%- endmacro %}
+
+{% block body %}
+<div class="time-analysis">
+
+    <h1>Time Analysis</h1>
+
+    <p class="text-muted small">
+        Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">{{ course.name }}</a>
+        &middot; <a href="{{ url_for('courses.submissions_filter', course_id=course_id, criteria='student', search_key=student.id) }}">{{ student.name() }}'s submissions</a>
+        {% if group %}
+            &middot; <a href="{{ url_for('blockpy.view_submissions', course_id=course_id, user_id=student.id, assignment_group_id=group.id, embed=True) }}" target="_blank">Group report</a>
+        {% else %}
+            &middot; <a href="{{ url_for('blockpy.browse_history', course_id=course_id, user_id=student.id, assignment_id=assignments[0].id) }}" target="_blank">History log</a>
+        {% endif %}
+    </p>
+
+    <dl class="row mb-2">
+        <dt class="col-sm-2">Student</dt>
+        <dd class="col-sm-10">{{ student.name() }} <span class="text-muted">({{ student.email }})</span></dd>
+        <dt class="col-sm-2">{% if group %}Assignment group{% else %}Assignment{% endif %}</dt>
+        <dd class="col-sm-10">
+            {{ scope_name }}
+            {% if group %}
+                <span class="text-muted">({{ assignments|length }} assignment{{ '' if assignments|length == 1 else 's' }})</span>
+            {% endif %}
+        </dd>
+        {% if time_limit %}
+        <dt class="col-sm-2">Time limit</dt>
+        <dd class="col-sm-10">
+            {{ time_limit }}
+            {% if accommodation %}<strong>&middot; accommodation: {{ accommodation }}</strong>{% endif %}
+        </dd>
+        {% endif %}
+        {% if analysis.timer_started or date_started %}
+        <dt class="col-sm-2">Timer</dt>
+        <dd class="col-sm-10">
+            Started {{ utc(analysis.timer_started or date_started) }}
+            {% if analysis.timer_ended %}
+                &middot; {{ analysis.timer_ended_how }} {{ utc(analysis.timer_ended) }}
+                {% if analysis.timer_started %}
+                    ({{ format_duration((analysis.timer_ended - analysis.timer_started).total_seconds()) }} later)
+                {% endif %}
+            {% endif %}
+        </dd>
+        {% endif %}
+        {% if date_submitted %}
+        <dt class="col-sm-2">Last submitted</dt>
+        <dd class="col-sm-10">{{ utc(date_submitted) }}</dd>
+        {% endif %}
+        {% if analysis.client_timezone %}
+        <dt class="col-sm-2">Student's timezone</dt>
+        <dd class="col-sm-10">{{ analysis.client_timezone }} <span class="text-muted">(times on this page are shown in your local timezone)</span></dd>
+        {% endif %}
+    </dl>
+
+    <form method="get" class="form-inline mb-4">
+        {% if group %}<input type="hidden" name="assignment_group_id" value="{{ group.id }}">{% endif %}
+        {% if not group %}<input type="hidden" name="assignment_id" value="{{ assignments[0].id }}">{% endif %}
+        <label for="idle-minutes" class="mr-2">Treat stretches with no events longer than</label>
+        <input type="number" id="idle-minutes" name="idle_minutes" class="form-control form-control-sm mr-2"
+               style="width: 6em" min="0.5" max="1440" step="0.5" value="{{ idle_minutes|round(1) if idle_minutes != idle_minutes|int else idle_minutes|int }}">
+        <span class="mr-2">minutes as idle gaps</span>
+        <button type="submit" class="btn btn-sm btn-outline-primary">Recalculate</button>
+    </form>
+
+    {% if not analysis.student_events %}
+        <div class="alert alert-info">
+            No events were logged for {{ student.name() }} on {{ scope_name }} in this course,
+            so there is nothing to analyze.
+        </div>
+    {% else %}
+
+    <h2 class="h4">Summary</h2>
+    <div class="row mb-3">
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                <div class="stat-value">{{ format_duration(analysis.active_seconds) }}</div>
+                <div class="stat-label">Active time</div>
+            </div></div>
+        </div>
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                <div class="stat-value">{{ format_duration(analysis.idle_seconds) }}</div>
+                <div class="stat-label">Idle time in {{ analysis.gaps|length }} gap{{ '' if analysis.gaps|length == 1 else 's' }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                <div class="stat-value">{{ format_duration(analysis.span_seconds) }}</div>
+                <div class="stat-label">First to last event</div>
+            </div></div>
+        </div>
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                <div class="stat-value">{{ analysis.sessions|length }}</div>
+                <div class="stat-label">Work session{{ '' if analysis.sessions|length == 1 else 's' }}</div>
+            </div></div>
+        </div>
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                <div class="stat-value">{{ analysis.student_events }}</div>
+                <div class="stat-label">Events ({{ analysis.counts.get('edit', 0) }} edits, {{ analysis.counts.get('run', 0) }} runs)</div>
+            </div></div>
+        </div>
+        <div class="col-md-2 col-sm-4 mb-2">
+            <div class="card stat-card h-100"><div class="card-body py-2 px-3">
+                {% if analysis.timer_started %}
+                    <div class="stat-value">{{ format_duration(analysis.timer_active_seconds) }}</div>
+                    <div class="stat-label">
+                        Active while the timer ran
+                        {% if analysis.events_after_timer %}
+                            &middot; {{ analysis.events_after_timer }} event{{ '' if analysis.events_after_timer == 1 else 's' }} after it ended
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="stat-value">{{ (analysis.active_fraction * 100)|round|int }}%</div>
+                    <div class="stat-label">Of the span was active</div>
+                {% endif %}
+            </div></div>
+        </div>
+    </div>
+
+    <p class="mb-1">
+        <strong>{{ utc(analysis.first) }}</strong> to <strong>{{ utc(analysis.last) }}</strong>
+        {% if analysis.longest_gap %}
+            &middot; longest idle gap {{ format_duration(analysis.longest_gap.seconds) }}
+        {% endif %}
+    </p>
+    {% set gap_cap = [analysis.active_seconds, 60]|max %}
+    <div class="timeline-bar mb-1" title="Green: work sessions; striped: idle gaps (long gaps are shortened so sessions stay visible)">
+        {% for session in analysis.sessions %}
+            <div class="segment segment-session"
+                 style="flex-grow: {{ session.seconds|round(1) }}"
+                 title="Session {{ session.index }}: {{ format_duration(session.seconds) }}, {{ session.events }} events"></div>
+            {% if not loop.last %}
+                {% set gap = analysis.gaps[loop.index0] %}
+                <div class="segment segment-gap"
+                     style="flex-grow: {{ [gap.seconds, gap_cap]|min|round(1) }}"
+                     title="Idle gap: {{ format_duration(gap.seconds) }}"></div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <p class="text-muted small mb-3">
+        Active time is the time between events that are less than {{ idle_minutes|round(1) }} minutes apart.
+        Longer stretches with no events are counted as idle gaps, because the student may have been thinking,
+        away, or working somewhere BlockPy could not see.
+    </p>
+
+    {% if analysis.flag_counts %}
+    <p>
+        {% for flag, count in analysis.flag_counts.most_common() %}
+            {% if flag in ('Tab hidden', 'Pasted text', 'IP address changed', 'Fullscreen exited', 'Timer expired') %}
+                <span class="badge badge-danger flag-badge">{{ flag }} &times;{{ count }}</span>
+            {% elif flag not in ('Tab visible',) %}
+                <span class="badge badge-secondary flag-badge">{{ flag }} &times;{{ count }}</span>
+            {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-6">
+            <h2 class="h4">Work sessions</h2>
+            <table class="table table-sm table-striped table-bordered">
+                <thead class="thead-light">
+                    <tr><th>#</th><th>Start</th><th>End</th><th>Length</th><th>Events</th><th>Assignments</th></tr>
+                </thead>
+                <tbody>
+                {% for session in analysis.sessions %}
+                    <tr>
+                        <td>{{ session.index }}</td>
+                        <td>{{ utc(session.start, "seconds") }}</td>
+                        <td>{{ utc(session.end, "seconds") }}</td>
+                        <td>{{ format_duration(session.seconds) }}</td>
+                        <td>{{ session.events }}</td>
+                        <td>
+                            {% for assignment_id in session.assignment_ids %}
+                                {{ assignment_names.get(assignment_id, assignment_id) }}{{ ', ' if not loop.last }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-6">
+            <h2 class="h4">Idle gaps</h2>
+            {% if analysis.gaps %}
+            <table class="table table-sm table-striped table-bordered">
+                <thead class="thead-light">
+                    <tr><th>From</th><th>To</th><th>Length</th><th>Before</th><th>After</th></tr>
+                </thead>
+                <tbody>
+                {% for gap in analysis.gaps %}
+                    <tr>
+                        <td>{{ utc(gap.start, "seconds") }}</td>
+                        <td>{{ utc(gap.end, "seconds") }}</td>
+                        <td>{{ format_duration(gap.seconds) }}</td>
+                        <td>{{ assignment_names.get(gap.before_assignment_id, gap.before_assignment_id) }}</td>
+                        <td>{{ assignment_names.get(gap.after_assignment_id, gap.after_assignment_id) }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="text-muted">No stretches longer than {{ idle_minutes|round(1) }} minutes without events.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2 class="h4">Time per assignment</h2>
+    <table class="table table-sm table-striped table-bordered table-hover">
+        <thead class="thead-light">
+            <tr>
+                <th>Assignment</th><th>Active time</th><th>Share</th><th>Events</th><th>Edits</th><th>Runs</th>
+                <th>First event</th><th>Last event</th><th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for summary in analysis.assignments %}
+            {% set submission = submissions.get(summary.assignment_id) %}
+            <tr>
+                <td>{{ summary.name }}</td>
+                <td>{{ format_duration(summary.active_seconds) }}</td>
+                <td>{{ ((summary.active_seconds / analysis.active_seconds * 100) if analysis.active_seconds else 0)|round|int }}%</td>
+                <td>{{ summary.events }}</td>
+                <td>{{ summary.counts.get('edit', 0) }}</td>
+                <td>{{ summary.counts.get('run', 0) }}</td>
+                <td>{{ utc(summary.first, "seconds") }}</td>
+                <td>{{ utc(summary.last, "seconds") }}</td>
+                <td>
+                    {% if submission %}
+                        {% if submission.correct %}<span class="text-success">Correct</span>
+                        {% else %}{{ (submission.score or 0)|round(1) }}%{% endif %}
+                    {% else %}<span class="text-muted">&mdash;</span>{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        {% for assignment in assignments if assignment.id not in analysis.assignments|map(attribute='assignment_id')|list %}
+            <tr class="text-muted">
+                <td>{{ assignment.name }}</td>
+                <td colspan="8">No events</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h4">Minute by minute</h2>
+    <p class="text-muted small">
+        One row per minute with activity. Elapsed time counts from the first event.
+        Rows with a red edge have something worth a look (tab hidden, pasted text, IP change, fullscreen exit, timer expired).
+    </p>
+    <table class="table table-sm table-bordered minute-log">
+        <thead class="thead-dark">
+            <tr><th>Time</th><th>Elapsed</th><th>Events</th><th>Activity</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+        {% for row in analysis.minutes %}
+            {% if row.kind == 'gap' %}
+                <tr class="row-gap" data-utc="{{ row.start.isoformat() }}">
+                    <td>{{ utc(row.start, "seconds") }}</td>
+                    <td class="elapsed">{{ elapsed(row.elapsed_seconds) }}</td>
+                    <td></td>
+                    <td colspan="2">
+                        Idle gap: no events for <strong>{{ format_duration(row.seconds) }}</strong>,
+                        until {{ utc(row.end, "seconds") }}.
+                        Last activity was on {{ assignment_names.get(row.gap.before_assignment_id, row.gap.before_assignment_id) }};
+                        resumed on {{ assignment_names.get(row.gap.after_assignment_id, row.gap.after_assignment_id) }}.
+                    </td>
+                </tr>
+            {% elif row.kind == 'quiet' %}
+                <tr class="row-quiet" data-utc="{{ row.start.isoformat() }}">
+                    <td>{{ utc(row.start, "time") }}</td>
+                    <td class="elapsed">{{ elapsed(row.elapsed_seconds) }}</td>
+                    <td>0</td>
+                    <td colspan="2">
+                        {% if row.seconds > 60 %}No events for {{ format_duration(row.seconds) }}{% else %}&mdash;{% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr class="{{ 'row-warning' if row.has_warning }}" data-utc="{{ row.start.isoformat() }}">
+                    <td>{{ utc(row.start, "time") }}</td>
+                    <td class="elapsed">{{ elapsed(row.elapsed_seconds) }}</td>
+                    <td>{{ row.events }}</td>
+                    <td>
+                        {% for part in row.assignments %}
+                            <div><strong>{{ part.name }}</strong>: {{ part.summary() }}</div>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for flag in row.flags %}
+                            <span class="badge flag-badge {{ 'badge-danger' if flag in ('Tab hidden', 'Pasted text', 'IP address changed', 'Fullscreen exited', 'Timer expired') else 'badge-light border' }}">{{ flag }}</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% endif %}
+</div>
+{% endblock %}

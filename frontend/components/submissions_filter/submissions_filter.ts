@@ -73,6 +73,7 @@ export interface GroupHeaderRow {
     isGroupHeader: true;
     groupName: string;
     viewGroupUrl: string | null;
+    timeAnalysisUrl: string | null;
 }
 
 export type DisplayRow = SubmissionRow | GroupHeaderRow;
@@ -638,7 +639,9 @@ export class SubmissionsFilter {
                     isGroupHeader: true,
                     groupName: group != null ? group.name() : "Ungrouped Assignments",
                     viewGroupUrl: row.submission != null && row.submission.assignment_group_id != null
-                        ? this.viewGroupUrl(row) : null
+                        ? this.viewGroupUrl(row) : null,
+                    timeAnalysisUrl: row.submission != null && row.submission.assignment_group_id != null
+                        ? this.timeAnalysisUrl(row, "group") : null
                 });
                 lastGroupId = groupId;
             }
@@ -847,6 +850,15 @@ export class SubmissionsFilter {
     historyLogUrl(row: SubmissionRow): string {
         return `${this.base()}blockpy/browse_history?assignment_id=${row.submission.assignment_id}`
             + `&user_id=${row.submission.user_id}&course_id=${this.course.id}`;
+    }
+
+    /** How the student spent their time (active vs. idle) on this assignment, or on
+     * the whole assignment group when scope is "group". */
+    timeAnalysisUrl(row: SubmissionRow, scope: "assignment" | "group"): string {
+        const target = scope === "group"
+            ? `assignment_group_id=${row.submission.assignment_group_id}`
+            : `assignment_id=${row.submission.assignment_id}`;
+        return `${this.base()}courses/time_analysis/${this.course.id}/${row.submission.user_id}?${target}`;
     }
 
     transferCourseUrl(row: SubmissionRow): string {
