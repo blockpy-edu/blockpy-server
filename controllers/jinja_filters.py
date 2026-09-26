@@ -7,6 +7,7 @@ import datetime as dt
 from natsort import natsorted
 
 from common.text import compare_string_equality
+from models.data_formats.quizzes import check_entered_string, check_quiz_answer
 from common.highlighters import highlight_python_code, highlight_java_code, highlight_javascript_code, highlight_json, \
     highlight_typescript_code
 from flask import request, g
@@ -102,15 +103,6 @@ def make_readonly_form(assignment, submission, is_grader):
 # export const matchKeyInBrackets = (key: string) => new RegExp(`(?<!\\\))(\\[${key}\\])(?!\\()`);
 
 
-def check_entered_string(value, check, key):
-    if 'correct' in check:
-        return compare_string_equality(value, check.get('correct', {}).get(key, []))
-    elif 'correct_exact' in check:
-        return compare_string_equality(value, check.get('correct_exact', {}).get(key, []))
-    elif 'correct_regex' in check:
-        return any(re.match(str(reg), value) for reg in check.get('correct_regex', {}).get(key, ""))
-
-
 def make_readonly_quiz_body(question, feedback, student, check, is_grader):
     text = question['body']
     if question['type'] in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
@@ -123,35 +115,6 @@ def make_readonly_quiz_body(question, feedback, student, check, is_grader):
         text = re.sub(r"\[\[", r"[", text)
         text = re.sub(r"\]\]", r"]", text)
     return Markdown(extensions=['fenced_code']).convert(text)
-
-
-def check_matching_question(student, check):
-    if isinstance(check, str):
-        return student == check
-    return student in check
-
-
-def check_quiz_answer(question, feedback, student, check, is_grader, part=None):
-    if question['type'] == 'true_false_question':
-        return student.lower() == str(check.get('correct')).lower() if is_grader else 'unknown'
-    elif question['type'] == 'multiple_answers_question':
-        return (part in check.get('correct', [])) == (part in student)
-    elif question['type'] == 'matching_question':
-        return check_matching_question(student, check.get('correct', [])[part])
-    elif question['type'] == 'multiple_choice_question':
-        if isinstance(check.get('correct'), list):
-            return student in check.get('correct')
-        return student == check.get('correct')
-    elif question['type'] in ("short_answer_question", "numerical_question"):
-        if 'correct_exact' in check:
-            return compare_string_equality(student, check['correct_exact'])
-        elif 'correct_regex' in check:
-            return any(re.match(reg, student) for reg in check['correct_regex'])
-        else:
-            return False
-    elif question['type'] in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
-        return check_entered_string(student, check, part)
-    return False
 
 
 POOL_SEPARATORS = {

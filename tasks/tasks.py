@@ -20,7 +20,8 @@ from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
 from controllers.pylti.post_grade import TransmissionStatuses
 from models import User
-from models.data_formats.quiz_analysis import process_quizzes
+from models.data_formats.quiz_analysis import (process_quizzes, load_roles_by_user_course,
+                                               select_quiz_submissions)
 from models.log_tables import SubmissionLog as Log
 from models.report import Report
 from models.assignment import Assignment
@@ -645,19 +646,9 @@ def quiz_report(user_id, assignment_id, course_id,
     report.update_progress(message="Filtering for the given courses")
     included = [submission for submission in submissions if submission.course_id in adjacent_courses]
     report.update_progress(message="Filtering for the given roles")
-    # print(included, included_roles, adjacent_courses)
-    submissions = []
-    for submission in included:
-        if 'anonymous' not in included_roles and submission.user.anonymous:
-            pass # Do not keep anonymous users in this case
-        if 'test' not in included_roles and submission.user.is_test_user(submission.course_id):
-            pass # Do not include test users
-        elif 'instructors' in included_roles and submission.user.is_instructor(submission.course_id):
-            submissions.append(submission)
-        elif 'students' in included_roles and submission.user.is_student(submission.course_id):
-            submissions.append(submission)
-        elif 'graders' in included_roles and submission.user.is_grader(submission.course_id):
-            submissions.append(submission)
+    roles_by_user_course = load_roles_by_user_course({submission.user_id for submission in included},
+                                                     adjacent_courses)
+    submissions, _excluded = select_quiz_submissions(included, included_roles, roles_by_user_course)
     # TODO: Handle other parameters
     report.update_progress(message="Setting up the final report space")
     directory = report.get_report_folder()

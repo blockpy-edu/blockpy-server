@@ -1,13 +1,14 @@
 import io
 import csv
+import time
 import statistics
 from datetime import datetime, timezone
 from pprint import pprint
-from collections import defaultdict
+from collections import defaultdict, Counter
 import json
 from natsort import natsorted
 from sqlalchemy import func, case, select
-from sqlalchemy.orm import undefer
+from sqlalchemy.orm import undefer, joinedload
 
 from flask_wtf import Form
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
@@ -30,6 +31,8 @@ from controllers.submission_search import (parse_submission_search, matches_sear
                                            ANALYTICS_SEARCH_FIELDS)
 from models.data_formats.time_analysis import (parse_idle_minutes, load_time_analysis_events, analyze_time,
                                        format_duration)
+from models.data_formats.quiz_analysis import (analyze_quiz, load_roles_by_user_course, select_quiz_submissions,
+                                               QUIZ_ROLE_OPTIONS, QUIZ_ROLE_CODES, DEFAULT_QUIZ_ROLES)
 from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
@@ -1199,6 +1202,94 @@ def time_analysis(course_id, user_id):
                            date_started=date_started, date_submitted=date_submitted,
                            format_duration=format_duration,
                            is_instructor=True)
+
+
+@courses.route('/quiz_analysis/<int:course_id>/', methods=['GET'])
+@courses.route('/quiz_analysis/<int:course_id>', methods=['GET'])
+@login_required
+def quiz_analysis(course_id):
+    ''' Item analysis of one quiz's submissions, computed on request instead of by
+        the background quiz report: score distribution, per-question difficulty and
+        discrimination, and how often each answer was chosen. Without an assignment
+        it lists the course's quizzes to pick from. Cheap enough to run inline: the
+        submissions load in one query (with their owners), roles in one more, and
+        the grading itself is pure Python over the answer JSON (about 50ms for a
+        thousand submissions). '''
+    started = time.perf_counter()
+    viewer, viewer_id = get_user()
+    course = Course.by_id(course_id)
+    check_resource_exists(course, "Course", course_id)
+    require_course_grader(viewer, course_id)
+    # The course's quizzes with submissions, grouped, plus how many submissions each has here
+    quizzes = course.get_submitted_assignments_grouped('quiz').all()
+    quiz_ids = [quiz.id for quiz, _ in quizzes]
+    submission_counts = dict(
+        db.session.query(Submission.assignment_id, func.count(Submission.id))
+        .filter(Submission.course_id == course_id, Submission.assignment_id.in_(quiz_ids))
+        .group_by(Submission.assignment_id).all()) if quiz_ids else {}
+    groups = {}
+    for quiz, group in quizzes:
+        groups.setdefault(group, []).append(quiz)
+    context = dict(course_id=course_id, course=course, groups=groups, submission_counts=submission_counts,
+                   role_options=QUIZ_ROLE_OPTIONS, assignment=None, analysis=None,
+                   is_instructor=viewer.is_instructor(course_id))
+    assignment_id = maybe_int(request.values.get('assignment_id'))
+    if assignment_id is None:
+        return render_template('courses/quiz_analysis.html', **context)
+    if assignment_id not in set(quiz_ids):
+        return ajax_failure(f"Assignment {assignment_id} is not a quiz with submissions in this course.")
+    assignment = Assignment.by_id(assignment_id)
+    check_resource_exists(assignment, "Assignment", assignment_id)
+    # Hidden quizzes (typically exams) are for instructors only, like the group report
+    if assignment.hidden:
+        require_course_instructor(viewer, course_id)
+    # Other courses with submissions to this quiz, offered only where the viewer can grade
+    course_rows = (db.session.query(Submission.course_id, func.count(Submission.id))
+                   .filter(Submission.assignment_id == assignment_id)
+                   .group_by(Submission.course_id).all())
+    other_course_ids = [other_id for other_id, _ in course_rows if other_id != course_id]
+    gradable = {role.course_id for role in Role.query.filter(
+        Role.user_id == viewer_id, Role.course_id.in_(other_course_ids),
+        Role.name.in_(RolePermissions.GRADER_ROLES)).all()} if other_course_ids else set()
+    allowed_course_ids = [other_id for other_id, _ in course_rows
+                          if other_id == course_id or other_id in gradable]
+    courses_by_id = {other.id: other for other in
+                     Course.query.filter(Course.id.in_(allowed_course_ids)).all()} if allowed_course_ids else {}
+    available_courses = [(courses_by_id[other_id], count) for other_id, count in course_rows
+                         if other_id in courses_by_id]
+    # Which of those courses, and which kinds of users, to include
+    selected_course_ids = [maybe_int(value) for value in request.values.getlist('course_ids')]
+    if not selected_course_ids:
+        selected_course_ids = [course_id]
+    if any(other_id not in courses_by_id for other_id in selected_course_ids):
+        return ajax_failure("You can only include courses where you are a grader and this quiz has submissions.")
+    if 'roles_set' in request.values:
+        included_roles = set(request.values.getlist('roles'))
+    else:
+        included_roles = set(DEFAULT_QUIZ_ROLES)
+    if not included_roles <= QUIZ_ROLE_CODES:
+        return ajax_failure(f"Unknown roles: {sorted(included_roles - QUIZ_ROLE_CODES)}")
+    # Load, filter, and analyze
+    submissions = (Submission.query
+                   .filter(Submission.assignment_id == assignment_id,
+                           Submission.course_id.in_(selected_course_ids))
+                   .options(joinedload(Submission.user)).all())
+    roles_by_user_course = load_roles_by_user_course({submission.user_id for submission in submissions},
+                                                     selected_course_ids)
+    included, excluded = select_quiz_submissions(submissions, included_roles, roles_by_user_course)
+    analysis = analyze_quiz(assignment, included)
+    users = {submission.user_id: submission.user for submission in included}
+    ranked = sorted(analysis.submissions,
+                    key=lambda summary: (-summary.score, users[summary.user_id].name().lower()
+                                         if summary.user_id in users else ""))
+    skipped_reasons = Counter(reason for _, reason in analysis.skipped)
+    context.update(assignment=assignment, analysis=analysis, ranked=ranked, users=users,
+                   courses_by_id=courses_by_id, available_courses=available_courses,
+                   selected_course_ids=selected_course_ids, included_roles=included_roles,
+                   excluded=excluded, skipped_reasons=skipped_reasons,
+                   loaded_count=len(submissions), included_count=len(included),
+                   elapsed_ms=(time.perf_counter() - started) * 1000)
+    return render_template('courses/quiz_analysis.html', **context)
 
 
 @courses.route('/submissions_grid/<course_id>/', methods=['GET', 'POST'])

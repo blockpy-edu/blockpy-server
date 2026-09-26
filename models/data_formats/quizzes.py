@@ -133,6 +133,44 @@ def check_matching_question(student_part, correct_part):
     return student_part == correct_part
 
 
+def check_entered_string(value, check, key):
+    """ Whether a single blank/dropdown answer is right, under whichever
+    of the check's `correct`, `correct_exact`, or `correct_regex` keys exists. """
+    if 'correct' in check:
+        return compare_string_equality(value, check.get('correct', {}).get(key, []))
+    elif 'correct_exact' in check:
+        return compare_string_equality(value, check.get('correct_exact', {}).get(key, []))
+    elif 'correct_regex' in check:
+        return any(re.match(str(reg), value) for reg in check.get('correct_regex', {}).get(key, ""))
+
+
+def check_quiz_answer(question, feedback, student, check, is_grader, part=None):
+    """ Whether one part of a student's answer to a question is correct: the whole
+    answer for single-valued types, or the `part` (an option, a statement index, or
+    a blank id) for multi-part types. Used by the submission viewer (as a Jinja
+    filter) and the item analysis. """
+    if question['type'] == 'true_false_question':
+        return student.lower() == str(check.get('correct')).lower() if is_grader else 'unknown'
+    elif question['type'] == 'multiple_answers_question':
+        return (part in check.get('correct', [])) == (part in student)
+    elif question['type'] == 'matching_question':
+        return check_matching_question(student, check.get('correct', [])[part])
+    elif question['type'] == 'multiple_choice_question':
+        if isinstance(check.get('correct'), list):
+            return student in check.get('correct')
+        return student == check.get('correct')
+    elif question['type'] in ("short_answer_question", "numerical_question"):
+        if 'correct_exact' in check:
+            return compare_string_equality(student, check['correct_exact'])
+        elif 'correct_regex' in check:
+            return any(re.match(reg, student) for reg in check['correct_regex'])
+        else:
+            return False
+    elif question['type'] in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
+        return check_entered_string(student, check, part)
+    return False
+
+
 def check_quiz_question(question, check, student) -> (float, bool, list):
     if question.get('type') == 'true_false_question':
         correct = student.lower() == str(check.get('correct')).lower()

@@ -2,20 +2,22 @@
 Process canvas quizzes to make them easier to parse
 """
 
-from collections import defaultdict
+from collections import defaultdict, Counter
+from statistics import mean, median
 from textwrap import indent
 from pprint import pprint
 
 from markdown import Markdown
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
 import re
 
 from html.parser import HTMLParser
 from math import isnan
 
 from common.stats import correlation, binconf
-from controllers.jinja_filters import make_readonly_quiz_body, check_quiz_answer
-from models.data_formats.quizzes import process_quiz_str, try_parse_file
+from models.data_formats.quizzes import process_quiz, try_parse_file, check_quiz_answer, is_answer_given
+from models.role import Role
 
 
 
@@ -537,90 +539,453 @@ class QuizQuestionStats:
     parts: list[QuizQuestionPart]
     difficulty = None
     discrimination = None
+    correct_rate = None
     per_part_stats = None
+    # Whether answers are checked against a key. False for surveys, for free-text
+    # questions, and for a quiz question whose checks have no key at all.
+    graded: bool = True
+    # An ordered scale (a horizontal multiple choice, or numbered options like
+    # "(1) Not at all ... (6) Very"): drawn as a diverging stacked bar.
+    likert: bool = False
+    # The question's options in the author's order, per part (None for a single
+    # part), so distributions can be shown in that order with zero counts kept.
+    options: dict = field(default_factory=dict)
+    # {part: [OptionCount, ...]} in option order, plus any unexpected values last
+    distribution: dict = field(default_factory=dict)
+    # Colors aligned with each part's distribution (diverging for Likert scales),
+    # and the text color that reads on each
+    colors: dict = field(default_factory=dict)
+    inks: dict = field(default_factory=dict)
+    # Mean 1-based position on the scale, for Likert questions
+    scale_mean: Optional[float] = None
+    # How many graded submissions gave no answer to this question at all
+    no_answer: int = 0
+    # Free-text answers (essay questions, and ungraded short answers)
+    responses: list = field(default_factory=list)
+
+    @property
+    def points(self):
+        return self.points_possible
+
+    @property
+    def responded(self) -> int:
+        return len(self.scores) - self.no_answer
+
+    @property
+    def response_counts(self) -> list:
+        """ Free-text answers grouped, most common first, as (text, count). """
+        return Counter(response.strip() for response in self.responses if response.strip()).most_common()
+
+    @property
+    def scale_size(self) -> int:
+        return len(self.options.get(None, []))
+
+    @property
+    def chosen_distribution(self) -> list:
+        """ For an ungraded "choose all that apply" question: one row per option
+        with how many respondents chose it, in the author's order. """
+        rows = []
+        for option, part_rows in self.distribution.items():
+            chosen = next((row for row in part_rows if row.label == 'Chosen'), None)
+            rows.append(OptionCount(str(option), chosen.count if chosen else 0, chosen.share if chosen else 0.0))
+        return rows
+
+    @property
+    def plain_text(self) -> str:
+        """ The question body as plain text, for chart row labels. """
+        return " ".join(strip_tags(self.body or "").split())
+
+    @property
+    def single_part(self) -> bool:
+        """ Single-valued question types (multiple choice, true/false, short answer)
+        have exactly one part, keyed by None; everything else has named parts. """
+        return bool(self.per_part_stats) and list(self.per_part_stats) == [None]
 
 
-def process_quizzes(assignment, submissions, directory):
+@dataclass
+class QuizSubmissionSummary:
+    """ One graded quiz submission, for the score distribution and the per-student table. """
+    submission_id: Optional[int]
+    user_id: Optional[int]
+    course_id: Optional[int]
+    score: float
+    correct: bool
+    answered: int
+    attempts: Optional[int] = None
+    date_submitted: Optional[object] = None
+
+
+@dataclass
+class OptionCount:
+    label: str
+    count: int
+    share: float
+    expected: bool = True
+
+
+@dataclass
+class ScoreBin:
+    low: int
+    high: int
+    count: int
+
+    @property
+    def label(self) -> str:
+        return f"{self.low}-{self.high}%"
+
+
+@dataclass
+class QuizAnalysis:
+    """ Everything the quiz analysis page and the background quiz report compute
+    from one quiz's submissions: per-question item statistics, one summary per
+    graded submission, and the submissions that could not be graded (with why). """
+    questions: dict[str, QuizQuestionStats] = field(default_factory=dict)
+    submissions: list[QuizSubmissionSummary] = field(default_factory=list)
+    skipped: list[tuple[Optional[int], str]] = field(default_factory=list)
+    error: Optional[str] = None
+    score_mean: Optional[float] = None
+    score_median: Optional[float] = None
+    score_histogram: list[ScoreBin] = field(default_factory=list)
+    fully_correct: int = 0
+    # Surveys are graded for participation, so scores and correctness mean nothing;
+    # the page shows response distributions instead.
+    is_survey: bool = False
+    # Submissions that answered every answerable (non text-only) question
+    complete_count: int = 0
+    # Runs of consecutive Likert questions sharing one scale, drawn as one chart
+    likert_groups: list = field(default_factory=list)
+
+    @property
+    def student_count(self) -> int:
+        return len({submission.user_id for submission in self.submissions})
+
+    @property
+    def has_scores(self) -> bool:
+        return not self.is_survey and any(question.graded for question in self.questions.values())
+
+
+# The user-role choices on the quiz analysis page and the quiz report form:
+# (code, label, checked by default)
+QUIZ_ROLE_OPTIONS = (
+    ("students", "Students", True),
+    ("test", "Test Student(s)", False),
+    ("instructors", "Instructors", False),
+    ("graders", "Graders (includes TAs and instructors)", True),
+    ("anonymous", "Anonymous Users", False),
+)
+QUIZ_ROLE_CODES = frozenset(code for code, _, _ in QUIZ_ROLE_OPTIONS)
+DEFAULT_QUIZ_ROLES = frozenset(code for code, _, checked in QUIZ_ROLE_OPTIONS if checked)
+GRADER_ROLE_NAMES = frozenset(('admin', 'instructor', 'teachingassistant'))
+
+
+def load_roles_by_user_course(user_ids, course_ids) -> dict:
+    """ One query for every role these users hold in these courses, as
+    {(user_id, course_id): {'learner', 'instructor', ...}}; replaces the
+    per-submission `is_instructor`/`is_student`/`is_grader` lookups. """
+    user_ids, course_ids = list(set(user_ids)), list(set(course_ids))
+    if not user_ids or not course_ids:
+        return {}
+    roles = defaultdict(set)
+    rows = (Role.query.with_entities(Role.user_id, Role.course_id, Role.name)
+            .filter(Role.user_id.in_(user_ids), Role.course_id.in_(course_ids)).all())
+    for user_id, course_id, name in rows:
+        roles[(user_id, course_id)].add(str(name).lower())
+    return dict(roles)
+
+
+def select_quiz_submissions(submissions, included_roles, roles_by_user_course):
+    """ Keep the submissions whose owner has one of the included roles in the
+    submission's course. Anonymous and test users are dropped unless asked for;
+    otherwise a submission is kept when its owner is an instructor, student, or
+    grader there (whichever of those were included). Returns the kept submissions
+    and a Counter of why the others were left out. """
+    included_roles = set(included_roles)
+    kept, excluded = [], Counter()
+    for submission in submissions:
+        user = submission.user
+        roles = roles_by_user_course.get((submission.user_id, submission.course_id), set())
+        if 'anonymous' not in included_roles and getattr(user, 'anonymous', False):
+            excluded['anonymous user'] += 1
+        elif 'test' not in included_roles and user.is_test_user(submission.course_id):
+            excluded['test user'] += 1
+        elif 'instructors' in included_roles and 'instructor' in roles:
+            kept.append(submission)
+        elif 'students' in included_roles and 'learner' in roles:
+            kept.append(submission)
+        elif 'graders' in included_roles and roles & GRADER_ROLE_NAMES:
+            kept.append(submission)
+        else:
+            excluded['no included role in the course'] += 1
+    return kept, excluded
+
+
+FREE_TEXT_TYPES = ('essay_question', 'short_answer_question', 'numerical_question')
+KEY_FIELDS = ('correct', 'correct_exact', 'correct_regex')
+NUMBERED_OPTION = re.compile(r'^\s*\(?\d+[).]')
+
+# Diverging steps (validated as an ordinal ramp on the light surface): red pole,
+# neutral midpoint, blue pole. Arms are taken from the pole inward.
+DIVERGING_LOW = ['#a12a29', '#e34948', '#ee8987']
+DIVERGING_HIGH = ['#184f95', '#3987e5', '#86b6ef']
+DIVERGING_MID = '#b5b4ae'
+# Single-hue blue ramp for longer ordered scales, and for plain distributions
+SEQUENTIAL = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5',
+              '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b']
+BAR_COLOR = '#2a78d6'
+# Fills light enough for dark text; every other fill takes white text
+LIGHT_FILLS = {'#ee8987', '#b5b4ae', '#86b6ef', '#cde2fb', '#b7d3f6', '#9ec5f4', '#6da7ec', '#5598e7'}
+
+
+def ink_for(fill: str) -> str:
+    return '#0b0b0b' if fill in LIGHT_FILLS else '#ffffff'
+
+
+def diverging_palette(size: int) -> list:
+    """ Colors for an ordered scale of `size` steps, low to high: a red arm, a
+    gray midpoint when the count is odd, and a blue arm. Scales longer than seven
+    steps fall back to a light-to-dark blue ramp. """
+    if size <= 0:
+        return []
+    if size > 7:
+        # Light to dark, starting at the lightest step that still clears the surface
+        ramp = SEQUENTIAL[3:]
+        return [ramp[round(index * (len(ramp) - 1) / (size - 1))] for index in range(size)]
+    arms = {0: [], 1: [1], 2: [0, 2], 3: [0, 1, 2]}[size // 2]
+    low = [DIVERGING_LOW[index] for index in arms]
+    high = [DIVERGING_HIGH[index] for index in reversed(arms)]
+    return low + ([DIVERGING_MID] if size % 2 else []) + high
+
+
+def question_options(question) -> dict:
+    """ The answer options an author wrote, keyed by part (None for single-part
+    types): multiple choice/answers lists, matching answers per statement, and
+    dropdown options per blank. """
+    question_type = question.get('type')
+    answers = question.get('answers')
+    if question_type in ('multiple_choice_question',):
+        return {None: [str(answer) for answer in answers]} if isinstance(answers, list) else {}
+    if question_type == 'true_false_question':
+        return {None: ['true', 'false']}
+    if question_type == 'multiple_answers_question':
+        return {str(answer): ['Chosen', 'Not Chosen'] for answer in answers} if isinstance(answers, list) else {}
+    if question_type == 'matching_question':
+        statements = question.get('statements') or []
+        return {str(statement): [str(answer) for answer in answers]
+                for statement in statements} if isinstance(answers, list) else {}
+    if question_type in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
+        if isinstance(answers, dict):
+            return {str(blank): [str(option) for option in options] if isinstance(options, list) else []
+                    for blank, options in answers.items()}
+        return {}
+    return {}
+
+
+def is_likert(question, options) -> bool:
+    """ A single-answer question on an ordered scale: laid out horizontally by
+    the author, or with numbered options like "(1) Not at all" ... "(6) Very". """
+    if question.get('type') != 'multiple_choice_question':
+        return False
+    scale = options.get(None) or []
+    if len(scale) < 3:
+        return False
+    return bool(question.get('horizontal')) or all(NUMBERED_OPTION.match(option) for option in scale)
+
+
+def is_graded(question, check, is_survey) -> bool:
+    if is_survey or question.get('type') in ('essay_question', 'text_only_question'):
+        return False
+    return isinstance(check, dict) and any(key in check for key in KEY_FIELDS)
+
+
+def _describe_error(error: Exception) -> str:
+    return f"{type(error).__name__}: {error}"
+
+
+def _summarize_scores(analysis: QuizAnalysis):
+    scores = [submission.score for submission in analysis.submissions]
+    if not scores:
+        return
+    analysis.score_mean = mean(scores)
+    analysis.score_median = median(scores)
+    analysis.fully_correct = sum(1 for submission in analysis.submissions if submission.correct)
+    counts = [0] * 10
+    for score in scores:
+        counts[max(0, min(int(score * 10), 9))] += 1
+    analysis.score_histogram = [ScoreBin(low=index * 10, high=index * 10 + 9 if index < 9 else 100, count=count)
+                                for index, count in enumerate(counts)]
+
+
+def _attempt_count(submission_body, submission):
+    """ The quiz's own attempt counter (saved in the answer JSON as attempt.count),
+    falling back to the submission row's counter, which quizzes do not maintain. """
+    attempt = submission_body.get('attempt')
+    if isinstance(attempt, dict) and isinstance(attempt.get('count'), int):
+        return attempt['count']
+    return getattr(submission, 'attempts', None)
+
+
+def _collect_parts(question, student):
+    """ Break one student's answer to a question into (key, value, part) triples,
+    one per option, statement, or blank, ready for `check_quiz_answer`. """
+    keys, values, parts = [], [], []
+    question_type = question.get('type')
+    if question_type == 'multiple_answers_question':
+        for potential_answer in question['answers']:
+            keys.append(potential_answer)
+            values.append(tuple(student))
+            parts.append(potential_answer)
+    elif question_type == 'matching_question':
+        for index, (statement, answer) in enumerate(zip(question['statements'], student)):
+            if isinstance(answer, list):
+                for sub_answer in answer:
+                    keys.append(statement)
+                    values.append(sub_answer)
+                    parts.append(index)
+            else:
+                keys.append(statement)
+                values.append(answer)
+                parts.append(index)
+    elif question_type in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
+        for key, value in student.items():
+            keys.append(key)
+            values.append(value)
+            parts.append(key)
+    else:
+        keys, values, parts = [None], [student], [None]
+    return zip(keys, values, parts)
+
+
+def analyze_quiz(assignment, submissions) -> QuizAnalysis:
+    """ Grade every submission against the quiz's current body and checks, then
+    compute item statistics per question: difficulty (mean score), discrimination
+    (correlation of the question's score with the whole-quiz score), how often each
+    answer was given, and a score distribution across submissions.
+
+    A submission that cannot be graded (invalid JSON, no student answers, a crash
+    in one question's check) is recorded in `skipped` and never takes the page
+    down. The body and checks are parsed once, not once per submission. """
+    analysis = QuizAnalysis()
     body_ready, body = try_parse_file(assignment.instructions, "Quiz Body")
     checks_ready, checks = try_parse_file(assignment.on_run, "Quiz Checks")
-    # TODO: Handle errors better
-    if not body_ready and checks_ready:
-        print("Error: instructions or on_run not valid", body, checks)
-        return
+    if not (body_ready and checks_ready):
+        analysis.error = body if not body_ready else checks
+        return analysis
+    if not isinstance(body, dict) or not isinstance(checks, dict):
+        analysis.error = "The quiz body and checks must both be JSON objects."
+        return analysis
     # Setup question information
-    questions = {}
-    checks = checks.get('questions', {})
-    for question_id, question in body.get('questions', {}).items():
-        #check = checks.get(question['id'], {})
-        questions[question_id] = QuizQuestionStats(
+    questions = analysis.questions
+    checks_by_question = checks.get('questions', {}) or {}
+    body_questions = body.get('questions', {}) or {}
+    settings = body.get('settings', {}) or {}
+    analysis.is_survey = str(settings.get('gradeMode', 'QUIZ')).upper() == 'SURVEY'
+    markdown = Markdown(extensions=['fenced_code'])
+    for question_id, question in body_questions.items():
+        if not isinstance(question, dict):
+            continue
+        check = checks_by_question.get(question_id, {})
+        options = question_options(question)
+        stats = QuizQuestionStats(
             question_id=question_id,
-            body=Markdown(extensions=['fenced_code']).convert(question['body']),
+            body=markdown.convert(question.get('body', '') or ''),
             type=question.get('type'),
-            points_possible=question['points'],
+            points_possible=question.get('points', 1),
             scores=[],
             parts=[]
         )
+        stats.options = options
+        stats.graded = is_graded(question, check, analysis.is_survey)
+        stats.likert = not stats.graded and is_likert(question, options)
+        questions[question_id] = stats
+        markdown.reset()
+    answerable = sum(1 for question in body_questions.values()
+                     if isinstance(question, dict) and question.get('type') != 'text_only_question')
     # Iterate through submissions
     for submission in submissions:
-        quiz_result = process_quiz_str(assignment.instructions, assignment.on_run, submission.code)
+        submission_id = getattr(submission, 'id', None)
+        student_ready, student_body = try_parse_file(submission.code or "{}", "Student Submission")
+        if not student_ready:
+            analysis.skipped.append((submission_id, student_body))
+            continue
+        if not isinstance(student_body, dict):
+            analysis.skipped.append((submission_id, "The submission is not a JSON object."))
+            continue
+        try:
+            quiz_result = process_quiz(body, checks, student_body)
+        except Exception as error:
+            analysis.skipped.append((submission_id, "Could not grade: " + _describe_error(error)))
+            continue
         if not quiz_result.graded_successfully:
-            print("Error: quiz submission was not valid", quiz_result)
+            analysis.skipped.append((submission_id, str(quiz_result.error)))
+            continue
+        if 'studentAnswers' not in quiz_result.submission_body:
+            analysis.skipped.append((submission_id, "Never answered (the quiz was opened but nothing was saved)."
+                                     if not quiz_result.submission_body else
+                                     "The submission has no student answers."))
             continue
         # Attach the scores to the question
         feedbacks = quiz_result.feedbacks
         for question_id, feedback in feedbacks.items():
+            if question_id not in questions:
+                # Graded against an older quiz body whose question no longer exists
+                continue
             questions[question_id].scores.append(QuizQuestionAttempt(
                 correct=feedback['correct'],
                 score=feedback['score'],
                 overall_score=quiz_result.score
             ))
-        if 'studentAnswers' not in quiz_result.submission_body:
-            print("Error: quiz submission did not have student answers")
-            continue
         student_answers = quiz_result.submission_body['studentAnswers']
+        if not isinstance(student_answers, dict):
+            student_answers = {}
+        answered = sum(1 for question_id, student in student_answers.items()
+                       if question_id in questions and questions[question_id].type != 'text_only_question'
+                       and is_answer_given(student))
+        analysis.submissions.append(QuizSubmissionSummary(
+            submission_id=submission_id,
+            user_id=getattr(submission, 'user_id', None),
+            course_id=getattr(submission, 'course_id', None),
+            score=quiz_result.score,
+            correct=bool(quiz_result.correct),
+            answered=answered,
+            attempts=_attempt_count(quiz_result.submission_body, submission),
+            date_submitted=getattr(submission, 'date_submitted', None),
+        ))
+        if answered >= answerable:
+            analysis.complete_count += 1
         for question_id, student in student_answers.items():
-            question = body.get('questions', {}).get(question_id, {})
-            if 'type' not in question:
+            question = body_questions.get(question_id, {})
+            if not isinstance(question, dict) or 'type' not in question or question_id not in questions:
                 continue
-            check = checks.get(question_id, {})
+            stats = questions[question_id]
+            if question_id in feedbacks and not is_answer_given(student):
+                stats.no_answer += 1
+                continue
+            check = checks_by_question.get(question_id, {})
             feedback = feedbacks.get(question_id, {})
-            keys, values, parts, s_answers = [], [], [], []
-            if question.get('type') == 'multiple_answers_question':
-                for potential_answer in question['answers']:
-                    keys.append(potential_answer)
-                    values.append(tuple(student))
-                    parts.append(potential_answer)
-            elif question.get('type') == 'matching_question':
-                for index, (statement, answer) in enumerate(zip(question['statements'], student)):
-                    if isinstance(answer, list):
-                        for sub_answer in answer:
-                            keys.append(statement)
-                            values.append(sub_answer)
-                            parts.append(index)
-                    else:
-                        keys.append(statement)
-                        values.append(answer)
-                        parts.append(index)
-            elif question.get('type') in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
-                for key, value in student.items():
-                    keys.append(key)
-                    values.append(value)
-                    parts.append(key)
-            else:
-                keys, values, parts = [None], [student], [None]
-            for key, value, part in zip(keys, values, parts):
-                correctness = check_quiz_answer(question, feedback, value, check, True, part)
-                questions[question_id].parts.append(QuizQuestionPart(
-                    key=key,
-                    value=('Chosen' if part in value else 'Not Chosen')
-                        if question.get('type') == 'multiple_answers_question' else value,
-                    correct=correctness
-                ))
+            if question.get('type') in FREE_TEXT_TYPES and not stats.graded:
+                stats.responses.append(str(student))
+                continue
+            try:
+                for key, value, part in _collect_parts(question, student):
+                    correctness = (check_quiz_answer(question, feedback, value, check, True, part)
+                                   if stats.graded else None)
+                    stats.parts.append(QuizQuestionPart(
+                        key=key,
+                        value=('Chosen' if part in value else 'Not Chosen')
+                            if question.get('type') == 'multiple_answers_question' else value,
+                        correct=correctness
+                    ))
+            except Exception as error:
+                # One malformed answer should not hide the rest of the analysis
+                analysis.skipped.append((submission_id, f"Could not tally question {question_id}: "
+                                                        + _describe_error(error)))
     # Post process for difficulty and discrimination
     for question_id, question in questions.items():
-        if question.scores:
-            question.difficulty = sum(score.score for score in question.scores) / len(question.scores)
-        if len(question.scores) >= 2:
+        attempts = len(question.scores)
+        if question.graded and question.scores:
+            question.difficulty = sum(score.score for score in question.scores) / attempts
+            question.correct_rate = sum(1 for score in question.scores if score.correct) / attempts
+        if question.graded and attempts >= 2:
             question.discrimination = correlation([score.overall_score for score in question.scores],
                                                   [score.score for score in question.scores])
         result = {}
@@ -631,13 +996,81 @@ def process_quizzes(assignment, submissions, directory):
                 result[part.key][part.value] = []
             result[part.key][part.value].append(part.correct or False)
         scored = {}
+        denominator = max(attempts, 1)
         for key, values in result.items():
             scored[key] = {}
             for value, corrects in values.items():
                 scored[key][value] = (str(corrects[0]) if corrects else "Unknown",
                                       len(corrects),
-                                      float(len(corrects))/len(question.scores),
-                                      binconf(len(corrects), len(question.scores))
+                                      float(len(corrects)) / denominator,
+                                      binconf(len(corrects), denominator)
                                       )
         question.per_part_stats = scored
-    return questions
+        _tally_distribution(question)
+    analysis.likert_groups = _group_likert(questions)
+    if analysis.has_scores:
+        _summarize_scores(analysis)
+    return analysis
+
+
+def _tally_distribution(question: QuizQuestionStats):
+    """ Per part, how often each authored option was chosen (in the author's
+    order, zeros kept), followed by any values that are not options at all. Likert
+    questions also get their diverging colors and mean scale position. """
+    counts = defaultdict(Counter)
+    for part in question.parts:
+        counts[part.key][str(part.value)] += 1
+    parts = list(question.options) or list(counts)
+    for key in counts:
+        if key not in parts:
+            parts.append(key)
+    for key in parts:
+        options = question.options.get(key, [])
+        tally = counts.get(key, Counter())
+        total = sum(tally.values()) or 1
+        rows = [OptionCount(option, tally.get(option, 0), tally.get(option, 0) / total) for option in options]
+        rows.extend(OptionCount(value, count, count / total, expected=False)
+                    for value, count in tally.most_common() if value not in options)
+        question.distribution[key] = rows
+        if question.likert:
+            colors = diverging_palette(len(options))
+            question.colors[key] = colors + ['#52514e'] * (len(rows) - len(colors))
+        else:
+            question.colors[key] = [BAR_COLOR] * len(rows)
+        question.inks[key] = [ink_for(color) for color in question.colors[key]]
+    if question.likert:
+        scale = question.options.get(None, [])
+        positions = [(scale.index(row.label) + 1, row.count) for row in question.distribution.get(None, [])
+                     if row.label in scale]
+        responses = sum(count for _, count in positions)
+        if responses:
+            question.scale_mean = sum(position * count for position, count in positions) / responses
+
+
+def _group_likert(questions) -> list:
+    """ Consecutive Likert questions with the same scale, as lists of question
+    ids, so the page can draw them as one chart with a shared legend. """
+    groups, current, scale = [], [], None
+    for question_id, question in questions.items():
+        this_scale = question.options.get(None) if question.likert else None
+        if this_scale is not None and this_scale == scale:
+            current.append(question_id)
+            continue
+        if current:
+            groups.append(current)
+        current, scale = ([question_id], this_scale) if this_scale is not None else ([], None)
+    if current:
+        groups.append(current)
+    return groups
+
+
+def process_quizzes(assignment, submissions, directory):
+    """ The background quiz report's view of `analyze_quiz`: just the per-question
+    statistics, or None when the quiz body or checks are not valid JSON. """
+    analysis = analyze_quiz(assignment, submissions)
+    if analysis.error:
+        print("Error: instructions or on_run not valid", analysis.error)
+        return None
+    for submission_id, reason in analysis.skipped:
+        print("Error: quiz submission was not valid", submission_id, reason)
+    return analysis.questions

@@ -1,0 +1,579 @@
+{% extends 'helpers/layout.html' %}
+{% import 'helpers/navigation.html' as navigation %}
+
+{% block title %}
+Quiz Analysis{% if assignment %}: {{ assignment.title() }}{% endif %}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+    .quiz-analysis .stat-card .stat-value { font-size: 1.6rem; font-weight: 600; line-height: 1.2; }
+    .quiz-analysis .stat-card .stat-label { font-size: 0.85rem; color: #6c757d; }
+    .quiz-analysis .histogram { display: flex; align-items: flex-end; gap: 4px; height: 140px; border-bottom: 1px solid #ced4da; padding: 0 4px; }
+    .quiz-analysis .histogram .bin { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+    .quiz-analysis .histogram .bar { width: 100%; background-color: #2a78d6; border-radius: 3px 3px 0 0; min-height: 1px; }
+    .quiz-analysis .histogram .bin .count { font-size: 0.75rem; color: #495057; margin-bottom: 2px; }
+    .quiz-analysis .histogram-labels { display: flex; gap: 4px; padding: 2px 4px 0; }
+    .quiz-analysis .histogram-labels span { flex: 1; text-align: center; font-size: 0.7rem; color: #6c757d; }
+    .quiz-analysis .question-body { border: 1px solid lightgray; padding: 6px 10px; margin-bottom: 0.5rem; background-color: #fdfdfd; }
+    .quiz-analysis .question-body pre { margin-bottom: 0.5rem; }
+    .quiz-analysis .answer-table td.answer { max-width: 40em; overflow-wrap: anywhere; }
+    .quiz-analysis .overview-table td, .quiz-analysis .overview-table th { vertical-align: middle; }
+    .quiz-analysis .quiet { color: #6c757d; }
+    .quiz-analysis details summary { cursor: pointer; }
+    /* Diverging stacked bars for ordered scales (Likert) */
+    .quiz-analysis .likert-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 6px; }
+    .quiz-analysis .likert-row .row-label { flex: 0 0 34%; font-size: 0.85rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+    .quiz-analysis .likert-row .row-label code { font-size: 0.8em; }
+    .quiz-analysis .likert-row .row-stat { flex: 0 0 7em; font-size: 0.8rem; color: #52514e; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .quiz-analysis .likert-bar { flex: 1; display: flex; gap: 2px; height: 24px; }
+    .quiz-analysis .likert-bar .segment { display: flex; align-items: center; justify-content: center; font-size: 0.72rem; border-radius: 2px; overflow: hidden; white-space: nowrap; min-width: 2px; }
+    .quiz-analysis .likert-bar.empty { border: 1px dashed #ced4da; border-radius: 2px; }
+    .quiz-analysis .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: 0.8rem; color: #52514e; margin: 0.4rem 0 0.6rem; }
+    .quiz-analysis .legend .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+    /* Plain distributions for unordered options */
+    .quiz-analysis .dist-table { max-width: 60em; }
+    .quiz-analysis .dist-table td { vertical-align: middle; }
+    .quiz-analysis .dist-table td.option { max-width: 30em; overflow-wrap: anywhere; }
+    .quiz-analysis .dist-table td.bar-cell { width: 40%; }
+    .quiz-analysis .dist-bar { height: 14px; background-color: #2a78d6; border-radius: 0 3px 3px 0; min-width: 1px; }
+    .quiz-analysis .responses li { margin-bottom: 0.25rem; overflow-wrap: anywhere; }
+</style>
+<script>
+    // Choosing a different quiz resubmits right away, without the course choices
+    // (which belong to the previous quiz) so the page can offer that quiz's courses.
+    document.addEventListener("DOMContentLoaded", function () {
+        const select = document.getElementById("assignment_id");
+        select.addEventListener("change", function () {
+            select.form.querySelectorAll("input[name='course_ids']").forEach(function (box) {
+                box.disabled = true;
+            });
+            select.form.submit();
+        });
+    });
+</script>
+{% endblock %}
+
+{% macro percent(value) -%}
+    {%- if value is none -%}<span class="quiet">&mdash;</span>{%- else -%}{{ '%0.1f'|format(100 * value) }}%{%- endif -%}
+{%- endmacro %}
+
+{% macro plural(count, noun) -%}
+    {{ count }} {{ noun }}{{ '' if count == 1 else 's' }}
+{%- endmacro %}
+
+{% macro difficulty_badge(value) -%}
+    {%- if value is none -%}
+        <span class="quiet">&mdash;</span>
+    {%- elif value < 0.5 -%}
+        <span class="badge badge-danger" title="Mean score below 50%: a hard question">{{ percent(value) }}</span>
+    {%- elif value < 0.8 -%}
+        <span class="badge badge-warning" title="Mean score between 50% and 80%">{{ percent(value) }}</span>
+    {%- elif value < 0.95 -%}
+        <span class="badge badge-success" title="Mean score between 80% and 95%">{{ percent(value) }}</span>
+    {%- else -%}
+        <span class="badge badge-secondary" title="Mean score of 95% or more: nearly everyone got it">{{ percent(value) }}</span>
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro discrimination_badge(value) -%}
+    {%- if value is none -%}
+        <span class="quiet" title="Needs at least two graded submissions">&mdash;</span>
+    {%- elif value >= 0.3 -%}
+        <span class="badge badge-success" title="Students who did well overall tended to get this right (r &ge; 0.3)">{{ '%0.2f'|format(value) }}</span>
+    {%- elif value >= 0.1 -%}
+        <span class="badge badge-warning" title="Weak relationship with the overall score (0.1 &le; r &lt; 0.3)">{{ '%0.2f'|format(value) }}</span>
+    {%- else -%}
+        <span class="badge badge-danger" title="No relationship with the overall score, or a negative one: check the question and its key (r &lt; 0.1)">{{ '%0.2f'|format(value) }}</span>
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro type_name(question) -%}
+    {{ (question.type or 'unknown').replace('_question', '').replace('_', ' ') }}
+{%- endmacro %}
+
+{# Graded questions: every distinct answer with whether it was right #}
+{% macro answer_table(values) %}
+    <table class="table table-striped table-hover table-bordered table-sm answer-table">
+        <thead>
+            <tr>
+                <th>Answer</th>
+                <th>Correct?</th>
+                <th class="text-right">Count</th>
+                <th class="text-right">Share</th>
+                <th class="text-right" title="95% confidence interval for the share, if these submissions were a sample of a larger population">Likely range</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for value, outcome in values.items()|sort(attribute='1.1', reverse=true) %}
+            <tr class="{{ 'table-success' if outcome[0] == 'True' else '' }}">
+                <td class="answer"><code>{{ value }}</code></td>
+                <td>
+                    {%- if outcome[0] == 'True' -%}<span class="text-success">&#10003; Correct</span>
+                    {%- elif outcome[0] == 'False' -%}<span class="text-danger">&#10007; Incorrect</span>
+                    {%- else -%}<span class="quiet">{{ outcome[0] }}</span>{%- endif -%}
+                </td>
+                <td class="text-right">{{ outcome[1] }}</td>
+                <td class="text-right">{{ '%0.1f'|format(100 * outcome[2]) }}%</td>
+                <td class="text-right quiet">{{ '%0.0f'|format(100 * outcome[3][0]) }}&ndash;{{ '%0.0f'|format(100 * outcome[3][1]) }}%</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+{# Ungraded questions: how often each option was chosen, in the author's order #}
+{% macro distribution_table(rows) %}
+    <table class="table table-sm table-hover dist-table">
+        <thead>
+            <tr><th>Option</th><th class="bar-cell"></th><th class="text-right">Count</th><th class="text-right">Share</th></tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+            <tr class="{{ '' if row.expected else 'table-warning' }}">
+                <td class="option"><code>{{ row.label }}</code>{% if not row.expected %} <span class="quiet small">(not one of the options)</span>{% endif %}</td>
+                <td class="bar-cell"><div class="dist-bar" style="width: {{ 100 * row.share }}%" title="{{ plural(row.count, 'response') }}"></div></td>
+                <td class="text-right">{{ row.count }}</td>
+                <td class="text-right">{{ '%0.1f'|format(100 * row.share) }}%</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+{# One diverging stacked bar: segments in scale order, labeled when they fit #}
+{% macro likert_bar(question, rows, colors, inks) %}
+    {% if question.responded %}
+    <div class="likert-bar" role="img" aria-label="{% for row in rows %}{{ row.label }}: {{ row.count }}{{ '; ' if not loop.last }}{% endfor %}">
+        {% for row in rows %}{% if row.count %}
+            <div class="segment" style="width: {{ 100 * row.share }}%; background-color: {{ colors[loop.index0] }}; color: {{ inks[loop.index0] }}"
+                 title="{{ row.label }}: {{ plural(row.count, 'response') }} ({{ '%0.0f'|format(100 * row.share) }}%)">
+                {%- if row.share >= 0.09 %}{{ '%0.0f'|format(100 * row.share) }}%{% endif -%}
+            </div>
+        {% endif %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="likert-bar empty" title="No responses"></div>
+    {% endif %}
+{% endmacro %}
+
+{% macro likert_row(question, label) %}
+    <div class="likert-row">
+        <div class="row-label" title="{{ question.plain_text }}">{{ label }}</div>
+        {{ likert_bar(question, question.distribution[None], question.colors[None], question.inks[None]) }}
+        <div class="row-stat" title="Mean position on the {{ question.scale_size }}-point scale, and how many responded">
+            {% if question.scale_mean is not none %}{{ '%0.2f'|format(question.scale_mean) }} &middot; {% endif %}n={{ question.responded }}
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro likert_legend(rows, colors) %}
+    <div class="legend">
+        {% for row in rows %}
+            <span><span class="swatch" style="background-color: {{ colors[loop.index0] }}"></span>{{ row.label }}</span>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{% macro likert_table(questions_in_group, scale) %}
+    <details class="mt-1">
+        <summary class="small quiet">Table view</summary>
+        <table class="table table-sm table-hover mt-2 dist-table">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    {% for option in scale %}<th class="text-right">{{ option }}</th>{% endfor %}
+                    <th class="text-right">Mean</th>
+                    <th class="text-right">n</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for question in questions_in_group %}
+                <tr>
+                    <td><code>{{ question.question_id }}</code></td>
+                    {% for row in question.distribution[None] if row.expected %}
+                        <td class="text-right" title="{{ '%0.1f'|format(100 * row.share) }}%">{{ row.count }}</td>
+                    {% endfor %}
+                    <td class="text-right">{% if question.scale_mean is not none %}{{ '%0.2f'|format(question.scale_mean) }}{% else %}&mdash;{% endif %}</td>
+                    <td class="text-right">{{ question.responded }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </details>
+{% endmacro %}
+
+{# Free-text answers, grouped when repeated #}
+{% macro responses_list(question) %}
+    {% set grouped = question.response_counts %}
+    {% if not grouped %}
+        <p class="quiet mb-0">No written responses.</p>
+    {% else %}
+    <details>
+        <summary class="small quiet">{{ plural(grouped|length, 'distinct response') }} from {{ plural(question.responded, 'respondent') }}</summary>
+        <ul class="responses mt-2 mb-0">
+            {% for text, count in grouped[:300] %}
+                <li>{% if count > 1 %}<span class="badge badge-light">&times;{{ count }}</span> {% endif %}{{ text }}</li>
+            {% endfor %}
+            {% if grouped|length > 300 %}<li class="quiet">&hellip; and {{ grouped|length - 300 }} more (open the submissions for the rest)</li>{% endif %}
+        </ul>
+    </details>
+    {% endif %}
+{% endmacro %}
+
+{% macro stat_card(value, label) %}
+    <div class="col-6 col-md-2 mb-2">
+        <div class="card stat-card"><div class="card-body p-2 text-center">
+            <div class="stat-value">{{ value }}</div>
+            <div class="stat-label">{{ label }}</div>
+        </div></div>
+    </div>
+{% endmacro %}
+
+{% block body %}
+<div class="quiz-analysis">
+
+    <h1>Quiz Analysis</h1>
+    {{ navigation.navigate_course(course_id) }}
+
+    <p>
+        Item analysis of one quiz's submissions, computed when you load this page:
+        the score distribution, each question's difficulty and discrimination, and which answers students chose.
+        Surveys and questions without an answer key show response distributions instead.
+        {% if is_instructor %}
+            To close open quizzes, regrade, or keep a permanent copy, use the
+            <a href="{{ url_for('quizzes.quiz_report', course_id=course_id) }}">background Quiz Report</a> instead.
+        {% endif %}
+    </p>
+
+    <form method="get" class="mb-4 p-3 border rounded bg-light">
+        <div class="form-group mb-2">
+            <label for="assignment_id"><strong>Quiz</strong></label>
+            <select id="assignment_id" name="assignment_id" class="custom-select">
+                <option value="">Choose a quiz&hellip;</option>
+                {% for group, quizzes in groups.items() %}
+                    <optgroup label="{{ group.name if group else 'Ungrouped' }}">
+                    {% for quiz in quizzes %}
+                        <option value="{{ quiz.id }}" {% if assignment and assignment.id == quiz.id %}selected{% endif %}>
+                            {{ quiz.title() }} ({{ plural(submission_counts.get(quiz.id, 0), 'submission') }})
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if assignment %}
+        <div class="form-group mb-2">
+            <strong>Courses with this quiz</strong><br>
+            {% for other_course, count in available_courses %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="course_ids"
+                           id="course-{{ other_course.id }}" value="{{ other_course.id }}"
+                           {% if other_course.id in selected_course_ids %}checked{% endif %}>
+                    <label class="form-check-label" for="course-{{ other_course.id }}" style="font-weight: normal">
+                        {{ other_course.name }} <span class="quiet">(<code>{{ other_course.url }}</code>, {{ plural(count, 'submission') }})</span>
+                    </label>
+                </div>
+            {% endfor %}
+            <small class="form-text text-muted">Only courses where you are a grader are offered.</small>
+        </div>
+        {% endif %}
+
+        <div class="form-group mb-2">
+            <strong>Include users</strong><br>
+            <input type="hidden" name="roles_set" value="1">
+            {% for role_code, role_name, default_checked in role_options %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="roles"
+                           id="roles-{{ role_code }}" value="{{ role_code }}"
+                           {% if (included_roles is defined and role_code in included_roles) or (included_roles is not defined and default_checked) %}checked{% endif %}>
+                    <label class="form-check-label" for="roles-{{ role_code }}" style="font-weight: normal">{{ role_name }}</label>
+                </div>
+            {% endfor %}
+        </div>
+
+        <button class="btn btn-primary" type="submit">Analyze</button>
+    </form>
+
+    {% if not assignment %}
+        {% if groups %}
+            <h3>Quizzes in this course</h3>
+            <table class="table table-sm table-hover" style="max-width: 60em">
+                <thead><tr><th>Quiz</th><th>Group</th><th class="text-right">Submissions here</th><th></th></tr></thead>
+                <tbody>
+                {% for group, quizzes in groups.items() %}
+                    {% for quiz in quizzes %}
+                    <tr>
+                        <td>{{ quiz.title() }}</td>
+                        <td class="quiet">{{ group.name if group else 'Ungrouped' }}</td>
+                        <td class="text-right">{{ submission_counts.get(quiz.id, 0) }}</td>
+                        <td><a href="{{ url_for('courses.quiz_analysis', course_id=course_id, assignment_id=quiz.id) }}">Analyze</a></td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="quiet">No quizzes in this course have submissions yet.</p>
+        {% endif %}
+    {% else %}
+
+    <h2>
+        {{ assignment.title() }}
+        {% if analysis and analysis.is_survey %}<span class="badge badge-info align-middle" title="Graded for participation: answers are tallied, not checked">Survey</span>{% endif %}
+        <small class="quiet">(<code>{{ assignment.url }}</code>)</small>
+    </h2>
+    <p class="text-muted small">
+        <a href="{{ url_for('courses.submissions_filter', course_id=course_id, criteria='assignment', search_key=assignment.id) }}">View submissions</a>
+        &middot; Analyzed {{ included_count }} of {{ plural(loaded_count, 'loaded submission') }}
+        {% if excluded %}
+            (left out:
+            {% for reason, count in excluded.most_common() %}{{ count }} {{ reason }}{{ '; ' if not loop.last }}{% endfor %})
+        {% endif %}
+        &middot; computed in {{ '%0.0f'|format(elapsed_ms) }} ms
+    </p>
+
+    {% if analysis.error %}
+        <div class="alert alert-danger">
+            This quiz could not be analyzed because its body or checks are not valid JSON:<br>
+            <code>{{ analysis.error }}</code>
+        </div>
+    {% else %}
+
+    {% set has_scores = analysis.has_scores %}
+    {% set has_likert = analysis.questions.values()|selectattr('likert')|list|length > 0 %}
+    {% set grouped_ids = [] %}
+    {% for group in analysis.likert_groups if group|length > 1 %}{% for question_id in group %}{% set _ = grouped_ids.append(question_id) %}{% endfor %}{% endfor %}
+
+    <div class="row mb-3">
+        {% set response_count = analysis.submissions|length %}
+        {{ stat_card(response_count, ('graded submission' if has_scores else 'response') ~ ('' if response_count == 1 else 's')) }}
+        {{ stat_card(analysis.student_count, ('student' if has_scores else 'respondent') ~ ('' if analysis.student_count == 1 else 's')) }}
+        {% if has_scores %}
+            {{ stat_card(percent(analysis.score_mean), 'mean score') }}
+            {{ stat_card(percent(analysis.score_median), 'median score') }}
+            {{ stat_card(analysis.fully_correct, 'fully correct') }}
+        {% else %}
+            {{ stat_card(analysis.complete_count, 'answered everything') }}
+        {% endif %}
+        {{ stat_card(analysis.questions|length, 'question' if analysis.questions|length == 1 else 'questions') }}
+    </div>
+
+    {% if skipped_reasons %}
+        <div class="alert alert-secondary py-2">
+            <strong>Not {{ 'graded' if has_scores else 'counted' }}:</strong>
+            {% for reason, count in skipped_reasons.most_common() %}
+                {{ plural(count, 'submission') }}: {{ reason }}{{ '<br>'|safe if not loop.last }}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if has_scores and analysis.submissions %}
+    <h3>Score distribution</h3>
+    {% set max_count = analysis.score_histogram|map(attribute='count')|max %}
+    <div class="mb-4" style="max-width: 50em">
+        <div class="histogram">
+            {% for bin in analysis.score_histogram %}
+                <div class="bin" title="{{ plural(bin.count, 'submission') }} scored {{ bin.label }}">
+                    <span class="count">{{ bin.count if bin.count else '' }}</span>
+                    <div class="bar" style="height: {{ (100 * bin.count / max_count) if max_count else 0 }}%"></div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="histogram-labels">
+            {% for bin in analysis.score_histogram %}<span>{{ bin.label }}</span>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <h3>Questions</h3>
+    <p class="quiet small">
+        {% if has_scores %}
+        <strong>Difficulty</strong> is the mean score on the question (higher is easier).
+        <strong>Discrimination</strong> is the correlation between a student's score on the question and their score on the whole quiz;
+        a question everyone answers alike, or one where strong students do worse, scores near or below zero.
+        Ranges are 95% confidence intervals for a share, treating these submissions as a sample.
+        Questions without an answer key are tallied instead of scored.
+        {% else %}
+        Answers are tallied, not checked. <strong>Responded</strong> counts submissions that answered the question at all.
+        {% endif %}
+        {% if has_likert %}
+        Ordered scales show the <strong>mean position</strong> on the scale (1 is the first option) and a bar from the low end (red) to the high end (blue).
+        {% endif %}
+    </p>
+    <table class="table table-sm table-hover overview-table" style="max-width: 70em">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Question</th>
+                <th>Type</th>
+                {% if has_scores %}<th class="text-right">Points</th>{% endif %}
+                <th class="text-right">Responded</th>
+                {% if has_scores %}
+                <th class="text-right">Difficulty</th>
+                <th class="text-right">Fully correct</th>
+                <th class="text-right">Discrimination</th>
+                {% endif %}
+                {% if has_likert %}<th class="text-right">Mean position</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for question_id, question in analysis.questions.items() %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><a href="#question-{{ loop.index }}">{{ question_id }}</a></td>
+                <td class="quiet">{{ type_name(question) }}{% if question.likert %} <span class="badge badge-light">scale</span>{% elif not question.graded and has_scores and question.type != 'text_only_question' %} <span class="badge badge-light" title="No answer key: tallied, not scored">ungraded</span>{% endif %}</td>
+                {% if has_scores %}<td class="text-right">{{ question.points_possible }}</td>{% endif %}
+                <td class="text-right">{{ question.responded }}</td>
+                {% if has_scores %}
+                <td class="text-right">{{ difficulty_badge(question.difficulty) }}</td>
+                <td class="text-right">{{ percent(question.correct_rate) }}</td>
+                <td class="text-right">{{ discrimination_badge(question.discrimination) }}</td>
+                {% endif %}
+                {% if has_likert %}
+                <td class="text-right">{% if question.scale_mean is not none %}{{ '%0.2f'|format(question.scale_mean) }} <span class="quiet">/ {{ question.scale_size }}</span>{% else %}<span class="quiet">&mdash;</span>{% endif %}</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% set positions = {} %}
+    {% for question_id in analysis.questions %}{% set _ = positions.update({question_id: loop.index}) %}{% endfor %}
+
+    {% for question_id, question in analysis.questions.items() %}
+        {% set group = (analysis.likert_groups|selectattr(0, 'equalto', question_id)|first) if question_id in grouped_ids else none %}
+        {% if question_id in grouped_ids and not group %}
+            {# A later member of a shared-scale group: drawn in the group's chart above #}
+        {% elif group %}
+            {% set members = [] %}
+            {% for member_id in group %}{% set _ = members.append(analysis.questions[member_id]) %}{% endfor %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>{{ positions[group[0]] }}&ndash;{{ positions[group[-1]] }}. {{ plural(group|length, 'question') }} on one scale</strong>
+                    <span class="quiet">&middot; {{ question.scale_size }} points, from <em>{{ question.options[None][0] }}</em> to <em>{{ question.options[None][-1] }}</em></span>
+                </div>
+                <div class="card-body">
+                    {% for member in members %}
+                        <div id="question-{{ positions[member.question_id] }}"></div>
+                        {{ likert_row(member, (positions[member.question_id] ~ '. ' ~ member.plain_text) if member.plain_text else (positions[member.question_id] ~ '. ' ~ member.question_id)) }}
+                    {% endfor %}
+                    {{ likert_legend(question.distribution[None], question.colors[None]) }}
+                    {{ likert_table(members, question.options[None]) }}
+                </div>
+            </div>
+        {% else %}
+        <div class="card mb-3" id="question-{{ positions[question_id] }}">
+            <div class="card-header">
+                <strong>{{ positions[question_id] }}. {{ question_id }}</strong>
+                <span class="quiet">&middot; {{ type_name(question) }}
+                    {% if has_scores %}&middot; {{ plural(question.points_possible, 'point') }}{% endif %}</span>
+            </div>
+            <div class="card-body">
+                <div class="question-body">{{ question.body|safe }}</div>
+                {% if question.type != 'text_only_question' %}
+                <p class="mb-2">
+                    <strong>Responded:</strong> {{ question.responded }}{% if question.no_answer %} <span class="quiet">({{ question.no_answer }} left it blank)</span>{% endif %}
+                    {% if question.graded %}
+                    &middot; <strong>Difficulty:</strong> {{ difficulty_badge(question.difficulty) }}
+                    &middot; <strong>Fully correct:</strong> {{ percent(question.correct_rate) }}
+                    &middot; <strong>Discrimination:</strong> {{ discrimination_badge(question.discrimination) }}
+                    {% elif question.likert and question.scale_mean is not none %}
+                    &middot; <strong>Mean position:</strong> {{ '%0.2f'|format(question.scale_mean) }} of {{ question.scale_size }}
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% if question.type == 'text_only_question' %}
+                    <p class="quiet mb-0">Text only, nothing to answer.</p>
+                {% elif question.graded %}
+                    {% if not question.per_part_stats %}
+                        <p class="quiet mb-0">No answers to tally.</p>
+                    {% elif question.single_part %}
+                        {{ answer_table(question.per_part_stats[None]) }}
+                    {% else %}
+                        {% for key, values in question.per_part_stats.items() %}
+                            <div class="mb-2">
+                                <strong>Part:</strong> <code>{{ key|safe }}</code>
+                                {{ answer_table(values) }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% elif question.type in ('essay_question', 'short_answer_question', 'numerical_question') %}
+                    {{ responses_list(question) }}
+                {% elif question.likert %}
+                    {{ likert_row(question, question.question_id) }}
+                    {{ likert_legend(question.distribution[None], question.colors[None]) }}
+                    {{ likert_table([question], question.options[None]) }}
+                {% elif not question.distribution %}
+                    <p class="quiet mb-0">No answers to tally.</p>
+                {% elif question.type == 'multiple_answers_question' %}
+                    <p class="quiet small mb-1">Share of respondents who chose each option (they could choose several).</p>
+                    {{ distribution_table(question.chosen_distribution) }}
+                {% elif question.distribution|length == 1 and None in question.distribution %}
+                    {{ distribution_table(question.distribution[None]) }}
+                {% else %}
+                    {% for key, rows in question.distribution.items() %}
+                        <div class="mb-2">
+                            <strong>Part:</strong> <code>{{ key|safe }}</code>
+                            {{ distribution_table(rows) }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if ranked %}
+    <details class="mb-4">
+        <summary><h3 class="d-inline">{{ 'Students' if has_scores else 'Respondents' }}</h3> <span class="quiet">({{ plural(ranked|length, 'graded submission' if has_scores else 'response') }}{% if has_scores %}, highest score first{% endif %})</span></summary>
+        <table class="table table-sm table-hover mt-2" style="max-width: 70em">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    {% if selected_course_ids|length > 1 %}<th>Course</th>{% endif %}
+                    {% if has_scores %}
+                    <th class="text-right">Score</th>
+                    <th>Correct</th>
+                    {% endif %}
+                    <th class="text-right">Answered</th>
+                    <th class="text-right">Attempts</th>
+                    <th>Submitted</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for summary in ranked %}
+                {% set student = users.get(summary.user_id) %}
+                <tr>
+                    <td>{% if student %}{{ student.name() }} <span class="quiet small">({{ student.email }})</span>{% else %}<span class="quiet">User {{ summary.user_id }}</span>{% endif %}</td>
+                    {% if selected_course_ids|length > 1 %}
+                        <td class="quiet">{{ courses_by_id[summary.course_id].name if summary.course_id in courses_by_id else summary.course_id }}</td>
+                    {% endif %}
+                    {% if has_scores %}
+                    <td class="text-right">{{ percent(summary.score) }}</td>
+                    <td>{% if summary.correct %}<span class="text-success">&#10003;</span>{% else %}<span class="quiet">&ndash;</span>{% endif %}</td>
+                    {% endif %}
+                    <td class="text-right">{{ summary.answered }}</td>
+                    <td class="text-right">{{ summary.attempts if summary.attempts is not none else '' }}</td>
+                    <td>{% if summary.date_submitted %}<span title="{{ summary.date_submitted }}">{{ summary.date_submitted|date_description }}</span>{% else %}<span class="quiet">&mdash;</span>{% endif %}</td>
+                    <td>
+                        {% if summary.submission_id %}
+                            <a href="{{ url_for('blockpy.view_submission', submission_id=summary.submission_id, embed=True) }}" target="_blank">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% endif %}
+
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

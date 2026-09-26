@@ -43,7 +43,7 @@
                 </div>
                 <p>
                     <strong>Type: </strong> {{ question.type }}<br>
-                    <strong>Points: </strong> {{ question.points }}<br>
+                    <strong>Points: </strong> {{ question.points_possible }}<br>
                     <strong>Submissions: </strong> {{ question.scores|length }}<br>
                     <strong>Difficulty: </strong> {{ '%0.2f'|format(100-100*(question.difficulty or 0)) }}%<br>
                     <strong>Discrimination: </strong> {{ '%0.2f'|format(100*(question.discrimination or 0)) }}%<br>
