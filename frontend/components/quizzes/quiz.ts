@@ -4,6 +4,7 @@ import {Submission} from "../../models/submission";
 import {subsetRandomly} from "../../utilities/random";
 import {clearValue, Feedback, getDefaultValue, getValue, Question, SQUARE_BRACKETS, matchKeyInBrackets} from "./questions";
 import {STORAGE_SERVICE} from "../../utilities/safe_local_storage";
+import {buildDisplayItems, QuestionDisplayItem} from "./question_groups";
 
 export enum QuizMode {
     ATTEMPTING = "ATTEMPTING",
@@ -130,6 +131,8 @@ export function fillInMissingQuizInstructionFields(quizInstructions: QuizInstruc
 export class Quiz {
     questionMap: Record<string, Question>;
     questions: ko.ObservableArray<Question>;
+    /** Questions partitioned into single cards and "Question Group" grids, in display order */
+    displayItems: ko.PureComputed<QuestionDisplayItem[]>;
 
     seed: ko.Observable<number>;
     poolRandomness: ko.Observable<QuizPoolRandomness>;
@@ -203,6 +206,17 @@ export class Quiz {
             const attempts = (this.attemptLimit() + this.attemptMulligans() - this.attemptCount());
             return this.attemptLimit() === -1 || attempts > 0;
         }, this);
+
+        this.displayItems = ko.pureComputed<QuestionDisplayItem[]>( () => {
+            return buildDisplayItems(this.questions());
+        }, this);
+    }
+
+    /** Whether any question in a display item is currently visible (after pool hiding). */
+    isItemVisible(item: QuestionDisplayItem): boolean {
+        return item.kind === 'single'
+            ? item.question.visible()
+            : item.questions.some((question) => question.visible());
     }
 
     editAssignmentBody(assignment: Assignment, question: Question, newText: string) {

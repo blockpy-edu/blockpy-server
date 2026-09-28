@@ -243,10 +243,18 @@ export const QUIZZER_HTML = `
         <!-- Quick Jump -->
         <div data-bind="visible: !asStudent() || quiz()?.attemptCount() > 0">
             <span>Overview: </span>
-            <span data-bind="foreach: quiz()?.questions().filter(question => !asStudent() || question.visible())">
-                <quizzer-question-status params="indexId: 1+$index(), status: student, 
-                                                 question: $data, isAnchor: false, 
+            <span data-bind="foreach: quiz()?.displayItems().filter(item => !asStudent() || quiz().isItemVisible(item))">
+                <!-- ko if: kind === 'single' -->
+                <quizzer-question-status params="label: label, status: question.student, 
+                                                 question: question, isAnchor: false, 
                                                  quiz: $component.quiz, asStudent: $component.asStudent()"></quizzer-question-status>
+                <!-- /ko -->
+                <!-- ko if: kind === 'group' -->
+                <quizzer-question-status params="label: label, status: null,
+                                                 questions: questions.filter(question => !$component.asStudent() || question.visible()),
+                                                 isAnchor: false,
+                                                 quiz: $component.quiz, asStudent: $component.asStudent()"></quizzer-question-status>
+                <!-- /ko -->
             </span>
         </div>
     

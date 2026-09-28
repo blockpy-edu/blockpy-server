@@ -178,6 +178,12 @@ export class QuizEditorQuestion {
     body: ko.Observable<string>;
     points: ko.Observable<number>;
     retainOrder: ko.Observable<boolean>;
+    /** MCQ: render answers side-by-side */
+    horizontal: ko.Observable<boolean>;
+    /** MCQ: opt-in "Question Group" name; adjacent horizontal MCQs sharing it and their answers render as one grid */
+    group: ko.Observable<string>;
+    /** Free-form authoring metadata, preserved verbatim (not editable here) */
+    metadata: {[key: string]: any} | null;
 
     /** MCQ / MAQ / Matching: list of answer options */
     answers: ko.ObservableArray<AnswerOption>;
@@ -235,6 +241,10 @@ export class QuizEditorQuestion {
         this.body = ko.observable(question.body || '');
         this.points = ko.observable(question.points ?? 1);
         this.retainOrder = ko.observable(question.retainOrder ?? false);
+        this.horizontal = ko.observable(!!question.horizontal);
+        this.group = ko.observable(typeof question.group === 'string' ? question.group : '');
+        this.metadata = (question.metadata && typeof question.metadata === 'object')
+            ? question.metadata : null;
 
         // answers / statements
         const rawAnswers: string[] = Array.isArray(question.answers) ? question.answers : [];
@@ -411,6 +421,18 @@ export class QuizEditorQuestion {
         if (type === QuizQuestionTypes.matching_question
             || type === QuizQuestionTypes.multiple_dropdowns_question) {
             base.retainOrder = this.retainOrder();
+        }
+        if (type === QuizQuestionTypes.multiple_choice_question) {
+            if (this.horizontal()) {
+                base.horizontal = true;
+            }
+            const group = this.group().trim();
+            if (group) {
+                base.group = group;
+            }
+        }
+        if (this.metadata) {
+            base.metadata = this.metadata;
         }
 
         if (type === QuizQuestionTypes.matching_question) {

@@ -164,10 +164,29 @@
                 <div class="form-group col-md-2 d-flex align-items-end" data-bind="visible:
                     type()==='matching_question' || type()==='multiple_dropdowns_question'">
                     <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="retain-order"
-                            data-bind="checked: retainOrder">
-                        <label class="form-check-label" for="retain-order">Retain Order</label>
+                        <input type="checkbox" class="form-check-input"
+                            data-bind="checked: retainOrder, attr: {id: 'retain-order-'+$index()}">
+                        <label class="form-check-label" data-bind="attr: {for: 'retain-order-'+$index()}">Retain Order</label>
                     </div>
+                </div>
+                <!-- horizontal only for multiple choice -->
+                <div class="form-group col-md-2 d-flex align-items-end" data-bind="visible:
+                    type()==='multiple_choice_question'">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input"
+                            data-bind="checked: horizontal, attr: {id: 'horizontal-'+$index()}">
+                        <label class="form-check-label" data-bind="attr: {for: 'horizontal-'+$index()}">Horizontal</label>
+                    </div>
+                </div>
+            </div>
+            <!-- Question Group: only for horizontal multiple choice -->
+            <div class="form-row" data-bind="visible: type()==='multiple_choice_question' && horizontal()">
+                <div class="form-group col-md-6">
+                    <label>Question Group
+                        <small class="text-muted">(optional; adjacent horizontal questions with the same group name and answers render as one grid)</small>
+                    </label>
+                    <input type="text" class="form-control" data-bind="value: group"
+                           placeholder="e.g. cs_belonging">
                 </div>
             </div>
 

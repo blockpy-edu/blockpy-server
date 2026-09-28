@@ -124,7 +124,16 @@ export interface Question {
     answers?: string[] | {[key: string]: string[]}
     statements?: string[]
     retainOrder?: boolean
+    /** Render multiple choice answers side-by-side instead of stacked */
     horizontal: boolean
+    /**
+     * Opt-in visual grouping: contiguous horizontal multiple choice questions
+     * that share the same group name and the same answers are rendered as one
+     * "Question Group" grid. See question_groups.ts.
+     */
+    group?: string
+    /** Free-form authoring metadata (e.g. survey construct/target); not rendered */
+    metadata?: {[key: string]: any}
 
     feedback: ko.Observable<Feedback>
     visible: ko.Observable<boolean>
