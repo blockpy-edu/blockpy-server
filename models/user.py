@@ -50,6 +50,7 @@ class User(Base, UserMixin):
     authentications: Mapped[list["Authentication"]] = db.relationship(back_populates="user")
     assignments: Mapped[list["Assignment"]] = db.relationship(back_populates="owner")
     assignment_groups: Mapped[list["AssignmentGroup"]] = db.relationship(back_populates="owner")
+    assignment_group_variations: Mapped[list["AssignmentGroupVariation"]] = db.relationship(back_populates="user")
     courses: Mapped[list["Course"]] = db.relationship(back_populates="owner")
     tags: Mapped[list["AssignmentTag"]] = db.relationship(back_populates="owner")
     access_logs: Mapped[list["AccessLog"]] = db.relationship(back_populates="subject")
