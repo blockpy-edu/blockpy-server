@@ -277,7 +277,8 @@ class AssignmentView(RegularView):
         'sample_submissions': make_ajax_fields('id'),
     }
     form_excluded_columns = ('memberships', 'assignment_logs', 'submission_logs',
-                             'submissions', 'reports', 'sample_submissions', 'tags')
+                             'submissions', 'reports', 'sample_submissions', 'tags',
+                             'forks')
     # form_columns = ('id', 'date_modified')
     column_filters = ('id', 'name', 'on_run', 'course_id', 'url', 'instructions', 'reviewed', 'hidden', 'public')
     column_formatters = {'name': _render_assignment_name,
@@ -483,7 +484,7 @@ class SubmissionView(RegularView):
         'course': make_ajax_fields('id', 'url', 'name'),
         'user': make_ajax_fields('first_name', 'last_name', 'email', 'id')
     }
-    form_excluded_columns = ('reviews', 'grade_history', 'submission_logs')
+    form_excluded_columns = ('reviews', 'grade_history', 'submission_logs', 'counts')
     simple_list_pager = True
     _UTC_FIELDS = ["date_started", "date_submitted", "date_graded", "date_due", "date_locked"]
     form_args = dict(
