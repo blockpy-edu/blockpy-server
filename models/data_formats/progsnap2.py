@@ -170,68 +170,78 @@ def extract_error_name(text):
 
 
 def to_progsnap_event(log, order_id, code_states, latest_code_states, scores, submission_lookup):
-    submission_identification = (log.subject_id, log.assignment_id, log.course_id)
+    # Read each repeatedly-used column once; attribute access on a result row is slow
+    subject_id, assignment_id, course_id = log.subject_id, log.assignment_id, log.course_id
+    log_event_type, category, message, file_path = log.event_type, log.category, log.message, log.file_path
+    submission_identification = (subject_id, assignment_id, course_id)
     submission_id = submission_lookup.get(submission_identification, -1)
     # Figure out code_state
-    current_code_base = latest_code_states.get(submission_identification, {})
+    # Only an edit can change a submission's code state, so each submission keeps
+    # its [files, code_state_id] and the files are only rehashed when they change.
+    latest = latest_code_states.get(submission_identification)
     edit_type = ""
-    if log.event_type in CODE_STATE_UPDATE_EVENT_TYPES:
-        current_code_base[log.file_path] = log.message
-        edit_type = CODE_STATE_UPDATE_EVENT_TYPES[log.event_type]
-        latest_code_states[submission_identification] = current_code_base
-    hashed_code_base = tuple(sorted(current_code_base.items()))
-    if hashed_code_base in code_states:
-        code_state_id = code_states[hashed_code_base]
+    if log_event_type in CODE_STATE_UPDATE_EVENT_TYPES:
+        edit_type = CODE_STATE_UPDATE_EVENT_TYPES[log_event_type]
+        if latest is None:
+            latest = latest_code_states[submission_identification] = [{}, None]
+        current_code_base = latest[0]
+        if (latest[1] is None or file_path not in current_code_base
+                or current_code_base[file_path] != message):
+            current_code_base[file_path] = message
+            hashed_code_base = tuple(sorted(current_code_base.items()))
+            latest[1] = code_states.setdefault(hashed_code_base, len(code_states))
+        code_state_id = latest[1]
+    elif latest is not None:
+        code_state_id = latest[1]
     else:
-        code_state_id = len(code_states)
-        code_states[hashed_code_base] = code_state_id
+        code_state_id = code_states.setdefault((), len(code_states))
     # Figure out score
-    if log.event_type == "Intervention" and log.category == "Complete":
+    if log_event_type == "Intervention" and category == "Complete":
         scores[submission_identification] = score = 1
-    elif log.event_type == "X-Submission.LMS":
-        scores[submission_identification] = score = log.message
+    elif log_event_type == "X-Submission.LMS":
+        scores[submission_identification] = score = message
     else:
         score = ""
     # Compile Stuff
-    event_type = log.event_type
+    event_type = log_event_type
     compile_message_type, compile_message_data = "", ""
     execution_result = ""
     program_input, program_output, program_error_output = "", "", ""
     if not USE_V1_ERROR_BEHAVIOR:
-        if log.event_type == "Run.Program" and log.category == "ProgramErrorOutput":
+        if log_event_type == "Run.Program" and category == "ProgramErrorOutput":
             event_type = "Compile.Error"
-            compile_message_type = extract_error_name(log.message)
-            compile_message_data = log.message
-        elif log.event_type == "Run.Program":
+            compile_message_type = extract_error_name(message)
+            compile_message_data = message
+        elif log_event_type == "Run.Program":
             event_type = "Run.Program"
             execution_result = "Success"
-            program_input, program_output = extract_inputs_outputs(log.message)
-        elif log.event_type == "Compile.Error":
+            program_input, program_output = extract_inputs_outputs(message)
+        elif log_event_type == "Compile.Error":
             event_type = "Run.Program"
             execution_result = "Error"
-            program_error_output = log.message
+            program_error_output = message
     # Intervention
-    if log.event_type == "Intervention":
+    if log_event_type == "Intervention":
         intervention_category = "Feedback"
-        intervention_type = log.category + "|" + log.label
-        intervention_message = log.message
-    elif log.event_type == "Resource.View":
-        intervention_category = log.category
+        intervention_type = category + "|" + log.label
+        intervention_message = message
+    elif log_event_type == "Resource.View":
+        intervention_category = category
         intervention_type = log.label
-        intervention_message = log.message
+        intervention_message = message
     else:
         intervention_category = ""
         intervention_type = ""
         intervention_message = ""
     # Result
     return format_progsnap_event_row(
-        log_id=log.id, order_id=order_id, subject_id=log.subject_id, assignment_id=log.assignment_id, course_id=log.course_id,
+        log_id=log.id, order_id=order_id, subject_id=subject_id, assignment_id=assignment_id, course_id=course_id,
         submission_id=submission_id,
         event_type=event_type, code_state_id=code_state_id, parent_event_id="",  # ParentEventId is not used
         client_timestamp=blockpy_timestamp_to_iso8601(log.client_timestamp),
         client_timezone=log.client_timezone,
         score=score, edit_type=edit_type, compile_message_type=compile_message_type, compile_message_data=compile_message_data,
-        code_state_section=log.file_path,
+        code_state_section=file_path,
         execution_result=execution_result, program_input=program_input, program_output=program_output, program_error_output=program_error_output,
         intervention_category=intervention_category,
         intervention_type=intervention_type, intervention_message=intervention_message,
@@ -243,7 +253,7 @@ def to_progsnap_event(log, order_id, code_states, latest_code_states, scores, su
 
   
 def clean_utf8(value):
-    if isinstance(value, str):
+    if isinstance(value, str) and not value.isascii():
         return value.encode("utf-8", "surrogatepass").decode("utf-8", "ignore")
     return value
 

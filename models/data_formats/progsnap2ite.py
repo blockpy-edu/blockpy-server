@@ -87,6 +87,12 @@ class CodeStates:
         self._temp_connection.commit()
         self._id += 1
 
+    def setdefault(self, key, value):
+        if key in self:
+            return self[key]
+        self[key] = value
+        return value
+
     @profile
     def __contains__(self, key):
         str_contents = json.dumps(key)
@@ -139,6 +145,9 @@ class InMemoryCodeStates:
     def __setitem__(self, key, value):
         str_contents = json.dumps(key)
         str_key = sha256_hash(str_contents)
+        self._insert(key, str_key, value)
+
+    def _insert(self, key, str_key, value):
         if value != self._id:
             raise ValueError(f"Inserting item out of order: {value} should be {self._id}")
         ID = self._id
@@ -149,6 +158,18 @@ class InMemoryCodeStates:
                                 (ID, filename, contents, str_key))
         # self.connection.commit()
         self._id += 1
+
+    @profile
+    def setdefault(self, key, value):
+        # Same as `if key in self: self[key] else: self[key] = value`, but
+        # only serializes and hashes the (potentially large) key once
+        str_contents = json.dumps(key)
+        str_key = sha256_hash(str_contents)
+        existing = self._seen_states.get(str_key)
+        if existing is not None:
+            return existing
+        self._insert(key, str_key, value)
+        return value
 
     @profile
     def __contains__(self, key):
@@ -166,12 +187,23 @@ class InMemoryCodeStates:
         self.connection.commit()
 
 def get_submission_lookup(course_id):
-    submissions = Submission.query.filter_by(course_id=maybe_int(course_id))
+    # Only the identifying columns; the full rows carry every submission's code
+    submissions = (Submission.query.filter_by(course_id=maybe_int(course_id))
+                   .order_by(Submission.id.asc())
+                   .with_entities(Submission.id, Submission.user_id,
+                                  Submission.assignment_id, Submission.course_id))
     submission_lookup = {}
     for sub in submissions:
         submission_identification = (sub.user_id, sub.assignment_id, sub.course_id)
         submission_lookup[submission_identification] = sub.id
     return submission_lookup
+
+
+# The columns of a log that to_progsnap_event reads
+MAINTABLE_LOG_COLUMNS = (Log.id, Log.subject_id, Log.assignment_id, Log.course_id,
+                         Log.event_type, Log.file_path, Log.category, Log.label, Log.message,
+                         Log.client_timestamp, Log.client_timezone, Log.date_created)
+MAINTABLE_BATCH_SIZE = 1000
 
 @profile
 def generate_maintable(cursor, connection, course_id, assignment_group_ids, user_ids, exclude):
@@ -192,16 +224,24 @@ def generate_maintable(cursor, connection, course_id, assignment_group_ids, user
     if user_ids is not None:
         query = query.filter(Log.subject_id.in_(user_ids))
     estimated_size = query.count()
-    logs = query.order_by(Log.date_created.asc()).yield_per(100)
+    # Plain rows instead of ORM instances; the ID breaks ties between simultaneous events
+    logs = (query.order_by(Log.date_created.asc(), Log.id.asc())
+            .with_entities(*MAINTABLE_LOG_COLUMNS)
+            .yield_per(MAINTABLE_BATCH_SIZE))
     headers = ", ".join(map(repr, HEADERS))
     spots = ", ".join("?" for h in HEADERS)
     cursor.execute(f"CREATE TABLE MainTable ({headers})")
     connection.commit()
+    insert_events = f"INSERT INTO MainTable ({headers}) VALUES ({spots})"
+    events = []
     order_id = 0
     for log in tqdm(logs, total=estimated_size):
-        cursor.execute(f"INSERT INTO MainTable ({headers}) VALUES ({spots})",
-                       to_progsnap_event(log, order_id, code_states, latest_code_states, scores, submission_lookup))
+        events.append(to_progsnap_event(log, order_id, code_states, latest_code_states, scores, submission_lookup))
         order_id += 1
+        if len(events) >= MAINTABLE_BATCH_SIZE:
+            cursor.executemany(insert_events, events)
+            events.clear()
+    cursor.executemany(insert_events, events)
     cursor.execute("CREATE UNIQUE INDEX MainTableIndex ON MainTable (EventID)")
     connection.commit()
     yield "MainTable.csv"

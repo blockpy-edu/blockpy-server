@@ -130,18 +130,24 @@ class SubmissionLog(Base):
 
     @staticmethod
     def get_users_for_course(course_id):
+        # Find the distinct IDs first, instead of joining every log to its
+        # (wide) user row and then grouping the result back down
+        subject_ids = (db.session.query(SubmissionLog.subject_id)
+                       .filter(SubmissionLog.course_id == course_id)
+                       .distinct())
         return (db.session.query(User)
-                .filter(SubmissionLog.course_id == course_id)
-                .filter(SubmissionLog.subject_id == User.id)
-                .group_by(SubmissionLog.subject_id, User)
+                .filter(User.id.in_(subject_ids))
+                .order_by(User.id)
                 .all())
 
     @staticmethod
     def get_assignments_for_course(course_id) -> 'List[models.Assignment]':
+        assignment_ids = (db.session.query(SubmissionLog.assignment_id)
+                          .filter(SubmissionLog.course_id == course_id)
+                          .distinct())
         return (db.session.query(Assignment)
-                .filter(SubmissionLog.course_id == course_id)
-                .filter(SubmissionLog.assignment_id == Assignment.id)
-                .group_by(SubmissionLog.assignment_id, Assignment)
+                .filter(Assignment.id.in_(assignment_ids))
+                .order_by(Assignment.id)
                 .all())
 
     @staticmethod
