@@ -1866,6 +1866,9 @@ def manage_time():
                 if group.id not in assignment_groups:
                     assignment_groups[group.id] = []
                 assignment_groups[group.id].append(assignment)
+    # List the exams alphabetically, rather than in whatever order their assignments were found
+    all_timed_groups = {group.id: group for group in
+                        natsorted(all_timed_groups.values(), key=lambda grp: (grp.name or "").lower())}
 
     all_timed_assignments = { a.id: a for a in all_timed_assignments }
 

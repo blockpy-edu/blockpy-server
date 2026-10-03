@@ -790,3 +790,27 @@ class TestDashboardAndReporting:
         response = client.get('/courses/list_grading_failures/', query_string={'course_id': 6})
         # Should return success
         assert response.status_code == 200
+
+
+class TestManageTime:
+    """ The instructor page for adjusting students' exam time limits. """
+
+    def test_exams_are_listed_alphabetically(self, client, test_data, act_as):
+        import re
+        from models.assignment_group_membership import AssignmentGroupMembership
+        from tests.factory.factories import AssignmentFactory, AssignmentGroupFactory
+        course = test_data.courses.by(id=6)
+        ada = test_data.user("ada@blockpy.com")
+        # Created out of order, with names that differ in case and number of digits
+        for name in ("Midterm Exam", "Exam 10", "exam 2", "Exam 1"):
+            group = AssignmentGroupFactory.create_assignment_group(name=name, course=course, owner=ada)
+            assignment = AssignmentFactory.create_assignment(name=f"{name} Question", course=course, owner=ada,
+                                                             settings='{"time_limit": "60min"}')
+            AssignmentGroupMembership.move_assignment(assignment.id, group.id)
+        act_as(ada)
+        response = client.get('/courses/manage_time', query_string={'course_id': 6})
+        assert response.status_code == 200
+        page = response.data.decode("utf8")
+        options = [name.strip() for name in re.findall(r'<option value="\d+"\s*>([^(<]+)\(', page)]
+        ours = [name for name in options if name in ("Midterm Exam", "Exam 10", "exam 2", "Exam 1")]
+        assert ours == ["Exam 1", "exam 2", "Exam 10", "Midterm Exam"]
