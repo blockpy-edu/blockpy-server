@@ -279,7 +279,8 @@ def performance_dashboard(course_id):
     Origin: Selin Bacaz's `selin-UI` branch of the THRALLab/blockpy-server fork,
     where this was the `analytics` route at /analytics/<course_id>. Renamed on
     porting because upstream already has `course_analytics` at that URL. The
-    template is a hardcoded UI mock (see templates/courses/performance_dashboard.html).
+    template is a hardcoded UI mock, originally by samalash and revised by Selin
+    (see the header of templates/courses/performance_dashboard.html).
     `@login_required` was added during the port; the original had none. '''
     user, user_id = get_user()
 

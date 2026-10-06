@@ -1,11 +1,19 @@
 {#
     Student Performance Dashboard (prototype)
 
-    Origin: Selin Bacaz's `selin-UI` branch of the THRALLab/blockpy-server fork,
-    where this file lived at templates/courses/analytics.html. It was renamed to
-    performance_dashboard.html when ported here because upstream already has its
-    own analytics page at templates/courses/analytics.html (the `course_analytics`
-    route and the <course-analytics> frontend component). The two are unrelated.
+    Origin: the THRALLab/blockpy-server fork. The page was first built by
+    samalash (branch `performance-dashboard-prototype`, December 2025) as an
+    overwrite of templates/courses/course.html. Selin Bacaz's `selin-UI` branch
+    (January to October 2026) then revised it: per-assignment submission
+    timelines in a scrollable list, a timeline axis in "days before due",
+    assignment-based rather than week-based chart labels, separate Missing and
+    Late stat tiles, and hover/cursor styling; she also moved it into its own
+    file, templates/courses/analytics.html, with a route and a course-page button.
+
+    It was renamed to performance_dashboard.html when ported here because
+    upstream already has its own analytics page at templates/courses/analytics.html
+    (the `course_analytics` route and the <course-analytics> frontend component).
+    The two are unrelated.
 
     This is a UI/UX mock: all student names, metrics and chart series are
     hardcoded placeholders (see Selin's notes below). The intent is to serve as
