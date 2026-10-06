@@ -36,6 +36,17 @@ function renameCourse() {
     </p>
 
 {% if is_instructor %}
+{# Dashboard section ported from Selin Bacaz's `selin-UI` fork branch; the link
+   originally pointed at her `courses.analytics` route, renamed here to
+   `courses.performance_dashboard` to avoid upstream's own analytics page. #}
+<h3>Dashboard</h3>
+    <div class="instructor-only-tools p-2">
+    <small>Instructor Tools (not visible to students or TAs)</small><br>
+    <a href="{{ url_for('courses.performance_dashboard', course_id=course.id) }}"
+    class="btn btn-outline-secondary">
+    Student Performance Dashboard
+    </a> Prototype dashboard of class and per-student performance metrics.<br><br>
+    </div>
 <h3>Assignments</h3>
     <div class="instructor-only-tools p-2">
     <small>Instructor Tools (not visible to students or TAs)</small><br>

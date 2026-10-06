@@ -270,6 +270,45 @@ def assignments(course_id):
                            user=user,
                            course=course)
 
+@courses.route('/performance_dashboard/<course_id>/', methods=['GET', 'POST'])
+@courses.route('/performance_dashboard/<course_id>', methods=['GET', 'POST'])
+@login_required
+def performance_dashboard(course_id):
+    ''' Student Performance Dashboard prototype.
+
+    Origin: Selin Bacaz's `selin-UI` branch of the THRALLab/blockpy-server fork,
+    where this was the `analytics` route at /analytics/<course_id>. Renamed on
+    porting because upstream already has `course_analytics` at that URL. The
+    template is a hardcoded UI mock (see templates/courses/performance_dashboard.html).
+    `@login_required` was added during the port; the original had none. '''
+    user, user_id = get_user()
+
+    if course_id.isdigit():
+        course_id = int(course_id)
+        course = Course.by_id(course_id)
+    else:
+        course = Course.by_url(course_id)
+
+    check_resource_exists(course, "Course", course_id)
+
+    if not user.in_course(course_id) and course.visibility != "public":
+        flash("You are not a user in this course and/or it is not public.")
+        return redirect(url_for('courses.index'))
+
+    is_instructor = user.is_instructor(course_id)
+    is_grader = user.is_grader(course_id)
+    textbooks = course.get_textbooks()
+
+    return render_template(
+        'courses/performance_dashboard.html',
+        course=course,
+        course_id=course_id,
+        is_grader=is_grader,
+        is_instructor=is_instructor,
+        textbooks=textbooks
+    )
+
+
 @courses.route('/users/', methods=['GET'])
 @courses.route('/users', methods=['GET'])
 @login_required
