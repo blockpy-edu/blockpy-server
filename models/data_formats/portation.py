@@ -65,6 +65,19 @@ def sorter(membership):
     return membership.get('assignment_group_url', ""), membership.get('assignment_url', "")
 
 
+FORK_ORIGIN_FIELDS = ('forked_id', 'forked_version')
+
+
+def _strip_fork_origin(data, can_force):
+    """
+    Imported records may not claim an arbitrary assignment/group as their fork origin (it links
+    them into that record's resource graph); only admins (`can_force`) keep those fields.
+    """
+    if can_force:
+        return data
+    return {key: value for key, value in data.items() if key not in FORK_ORIGIN_FIELDS}
+
+
 def import_bundle(bundle, owner_id, course_id=None, update=True, can_force=False):
     # `force` lets a bundle pick its own owner/course; only admins may do that.
     if can_force and 'settings' in bundle:
@@ -84,14 +97,14 @@ def import_bundle(bundle, owner_id, course_id=None, update=True, can_force=False
     assignment_remap = {}
     assignments = bundle.get('assignments', [])
     for assignment_data in natsorted(assignments, key=lambda a: a['name']):
-        assignment = Assignment.decode_json(assignment_data,
+        assignment = Assignment.decode_json(_strip_fork_origin(assignment_data, can_force),
                                             course_id=course.id,
                                             owner_id=owner_id)
         assignment_remap[assignment_data['url']] = assignment.id
     group_remap = {}
     groups = bundle.get('groups', [])
     for group_data in natsorted(groups, key=lambda g: g['name']):
-        group = AssignmentGroup.decode_json(group_data,
+        group = AssignmentGroup.decode_json(_strip_fork_origin(group_data, can_force),
                                             course_id=course.id,
                                             owner_id=owner_id)
         group_remap[group_data['url']] = group.id
