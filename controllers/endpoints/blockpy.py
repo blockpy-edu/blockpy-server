@@ -174,6 +174,32 @@ def serve_kettle_iframe():
     #return abort(500)
     return response
 
+def redact_feedback_submission(submission):
+    """ Blank the code of an encoded FEEDBACK submission unless its contents are published. """
+    if not submission:
+        return submission
+    try:
+        feedback = json.loads(submission.get('code') or "{}")
+        published = bool(feedback.get('published'))
+    except (ValueError, AttributeError):
+        published = False
+    if not published:
+        submission['code'] = json.dumps({"contents": "", "published": False})
+    return submission
+
+
+def redact_feedback_logs(history, feedback_assignment_ids):
+    """
+    Blank the message of every log entry for a FEEDBACK assignment. The graders' File.Edit events are
+    logged under the student's id (the submission's owner), so a student's own history replays every
+    draft the grader typed.
+    """
+    for entry in history:
+        if entry.get('assignment_id') in feedback_assignment_ids:
+            entry['message'] = ""
+    return history
+
+
 def redact_unpublished_feedback(editor_information, assignment, scope):
     """
     Feedback assignments keep {"contents", "published"} as JSON in the submission's
@@ -183,15 +209,7 @@ def redact_unpublished_feedback(editor_information, assignment, scope):
     """
     if assignment.type != AssignmentTypes.FEEDBACK or scope.can_grade:
         return editor_information
-    submission = editor_information.get('submission')
-    if submission:
-        try:
-            feedback = json.loads(submission.get('code') or "{}")
-            published = bool(feedback.get('published'))
-        except (ValueError, AttributeError):
-            published = False
-        if not published:
-            submission['code'] = json.dumps({"contents": "", "published": False})
+    redact_feedback_submission(editor_information.get('submission'))
     editor_information.pop('history', None)
     return editor_information
 
@@ -344,9 +362,12 @@ def load_history():
         course = Course.by_id(course_id)
         assignment_ids = [a.id for a in course.get_submitted_assignments()]
     scopes = []
+    feedback_assignment_ids = set()
     for assignment_id in assignment_ids:
         scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
         scopes.append(scope)
+        if assignment.type == AssignmentTypes.FEEDBACK:
+            feedback_assignment_ids.add(assignment.id)
     # Permission check: viewing an assignment does not grant access to other users' logs.
     # Only a grader for every requested assignment may pull history for other students;
     # everyone else is restricted to their own history.
@@ -362,6 +383,13 @@ def load_history():
     submissions = []
     if with_submission:
         submissions = Submission.get_submissions(course_id, assignment_ids, student_ids)
+    # Same redaction as load_assignment: non-graders never receive unpublished feedback drafts,
+    # neither as the submission's code nor replayed through the log messages.
+    if not can_grade_all and feedback_assignment_ids:
+        history = redact_feedback_logs(history, feedback_assignment_ids)
+        for submission in submissions:
+            if submission.get('assignment_id') in feedback_assignment_ids:
+                redact_feedback_submission(submission)
     return ajax_success({"history": history, "submissions": submissions})
 
 
@@ -1221,6 +1249,9 @@ def browse_history():
         return ajax_failure("Only graders can see logs for other people.")
     history = Log.get_history(course_id, assignment_id, student_id,
                               page_offset, HISTORY_PAGE_LIMIT)
+    # A student's own feedback history replays the grader's unpublished drafts
+    if assignment is not None and assignment.type == AssignmentTypes.FEEDBACK and not user.is_grader(course_id):
+        history = redact_feedback_logs(history, {assignment.id})
     return render_template('blockpy/browse_history.html', assignment=assignment,
                            student=student, course=course, history=history,
                            embed=embed)
