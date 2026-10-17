@@ -44,8 +44,10 @@ class SafeRequest(Request):
     def get_course_id(self, okay_if_failure=False):
         course_id = request.values.get('course_id')
         if course_id is None:
-            if 'course' in g:
-                return g.course.id
+            # g.course is set to None (not left unset) for logged-in non-LTI users
+            course = g.get('course', None)
+            if course is not None:
+                return course.id
             if not okay_if_failure:
                 self.abort_with_error("No course_id given and not logged into a course.")
         course_id = maybe_int(course_id)

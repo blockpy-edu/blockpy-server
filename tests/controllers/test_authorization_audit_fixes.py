@@ -142,8 +142,9 @@ class TestForkAndGroups:
         assert Assignment.by_id(data['id']).course_id == 14
 
     def test_cannot_fork_group_from_unrelated_course(self, client, test_data, act_as):
+        # blockpy.fork_assignment was removed; assignment_group.fork is the surviving route
         act_as(test_data.user(CAPTAIN))
-        data = client.post('/blockpy/fork_assignment', data={
+        data = client.post('/assignment_group/fork', data={
             "assignment_group_id": 1, "course_id": 14}).get_json()
         assert data['success'] is False
 

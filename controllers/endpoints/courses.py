@@ -179,7 +179,9 @@ def change_course_visibility():
     # Perform action
     success = Course.change_course_visibility(course_id, visibility)
     if success:
-        flash(f'Course {course.url} visibility set to f{visibility}')
+        flash(f'Course {course.url} visibility set to {visibility}')
+    else:
+        flash(f'Course visibility not changed; unknown visibility {visibility!r}')
     return redirect(url_for('courses.index'))
 
 

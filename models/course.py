@@ -168,8 +168,9 @@ class Course(Base):
     @staticmethod
     def change_course_visibility(course_id, visibility):
         course = Course.query.filter_by(id=course_id).first()
-        if course and visibility and isinstance(visibility.lower(), CourseVisibility):
-            course.visibility = visibility.lower()
+        parsed = CourseVisibility.parse(visibility)
+        if course and parsed is not None:
+            course.visibility = parsed
             db.session.commit()
             return True
         return False
@@ -370,10 +371,7 @@ class Course(Base):
 
     @staticmethod
     def new(name, owner_id, visibility, term, url):
-        if visibility and isinstance(visibility.lower(), CourseVisibility):
-            visibility = visibility.lower()
-        else:
-            visibility = CourseVisibility.PRIVATE
+        visibility = CourseVisibility.parse(visibility) or CourseVisibility.PRIVATE
         if url:
             existing_course = Course.by_url(url)
             if existing_course:

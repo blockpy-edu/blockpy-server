@@ -125,12 +125,6 @@ def require_assignment_forkable(user, assignment):
     return require_course_adopter(user, assignment.course_id)
 
 
-def require_group_forkable(user, group):
-    if user.is_admin():
-        return True
-    return require_course_adopter(user, group.course_id)
-
-
 def require_group_in_course(user, group_id, course_id):
     """
     An assignment may only be placed into a group that belongs to the course being edited, or to a

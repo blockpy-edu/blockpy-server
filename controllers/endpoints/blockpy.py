@@ -33,8 +33,7 @@ from models.assignment_group import AssignmentGroup
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
 from controllers.auth import get_user, get_consumer_secrets
-from controllers.helpers import login_or_anonymous_required, require_assignment_forkable, require_group_forkable, \
-    may_create_submission
+from controllers.helpers import login_or_anonymous_required, may_create_submission
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
@@ -1277,53 +1276,6 @@ def list_urls():
     course_id = maybe_int(request.values.get('course_id'))
     # Do action
     return jsonify(success=True, urls=Assignment.list_urls(partial)[:5])
-
-
-@blueprint_blockpy.route('/fork_assignment/', methods=['GET', 'POST'])
-@blueprint_blockpy.route('/fork_assignment', methods=['GET', 'POST'])
-@login_required
-def fork_assignment():
-    assignment_id = request.values.get('assignment_id')
-    assignment_group_id = request.values.get('assignment_group_id')
-    if assignment_id is None and assignment_group_id is None:
-        return ajax_failure("No Assignment or Assignment Group ID given!")
-    user, user_id = get_user()
-    course_id = get_course_id()
-    updated_settings = request.values.get('updated_settings', '')
-    transfer_submissions = maybe_bool(request.values.get('transfer_submissions', False))
-    # Verify permissions: They only need to be an instructor in this course
-    require_course_instructor(user, course_id)
-    # Load and verify resources
-    if assignment_group_id:
-        group = AssignmentGroup.query.get(assignment_group_id)
-        check_resource_exists(group, "AssignmentGroup", assignment_group_id)
-        require_group_forkable(user, group)
-        # Create forked group, assignment, memberships
-        new_group, new_assignments = group.fork()
-    else:
-        assignment = Assignment.query.get(assignment_id)
-        check_resource_exists(assignment, "Assignment", assignment_id)
-        require_assignment_forkable(user, assignment)
-        # Create forked assignment, set it as target
-        new_assignments = [assignment.fork(user_id, course_id)]
-    # Transfer all submissions, if desired
-    if transfer_submissions:
-        for new_assignment in new_assignments:
-            # TODO: Need old assignment IDs
-            submission = Submission.by_assignment(new_assignment.id, course_id)
-            submission.edit({'assignment_id': new_assignment.id})
-            # TODO: Also need to grab this for Log, Review
-    # TODO: Parse updated settings for the assignment_id, if it's not None
-
-    # TODO: Perform update
-    modified = assignment.edit(updated_settings)
-    # TODO: Log
-    AssignmentLog.new(assignment.id, assignment.version, course_id,
-                      user.id, "edit",
-                        "assignment_settings.blockpy",
-                      json.dumps(updated_settings),
-                      "", "")
-    return ajax_success({"modified": modified})
 
 
 @blueprint_blockpy.route('/get_recent_logs_for_course/', methods=['GET', 'POST'])

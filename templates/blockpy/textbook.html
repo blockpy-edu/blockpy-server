@@ -156,7 +156,6 @@
                     "importDatasets": {{ config['CORGIS_URL']|tojson }},
                     'loadAssignment': {{ url_for('blockpy.load_assignment')|tojson }},
                     'instructionsAssignmentSetup': {{ url_for('courses.making_problems')|tojson }},
-                    'forkAssignment': {{ url_for('blockpy.fork_assignment')|tojson }},
                     'downloadFile': {{ url_for('blockpy.download_file', external=True)|tojson }},
                     {% if submissions %}
                         'saveAssignment': {{ url_for('blockpy.save_assignment')|tojson }},

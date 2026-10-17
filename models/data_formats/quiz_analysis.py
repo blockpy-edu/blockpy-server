@@ -12,34 +12,12 @@ from dataclasses import dataclass, field
 from typing import Optional
 import re
 
-from html.parser import HTMLParser
 from math import isnan
 
+from common.highlighters import strip_tags
 from common.stats import correlation, binconf
 from models.data_formats.quizzes import process_quiz, try_parse_file, check_quiz_answer, is_answer_given
 from models.role import Role
-
-
-
-class MLStripper(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.reset()
-        self.strict = False
-        self.convert_charrefs = True
-        self.fed = []
-
-    def handle_data(self, d):
-        self.fed.append(d)
-
-    def get_data(self):
-        return ''.join(self.fed)
-
-
-def strip_tags(html):
-    s = MLStripper()
-    s.feed(html)
-    return s.get_data()
 
 
 def to_percent(a_value):

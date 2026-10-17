@@ -57,7 +57,8 @@ def highlight_json(value, linenos=False, prestyles=''):
 
 class MLStripper(HTMLParser):
     def __init__(self):
-        self.reset()
+        # HTMLParser's constructor sets convert_charrefs; without it feed() raises AttributeError
+        super().__init__(convert_charrefs=True)
         self.fed = []
 
     def handle_data(self, d):

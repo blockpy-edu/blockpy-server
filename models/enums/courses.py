@@ -16,6 +16,16 @@ class CourseVisibility(StrEnum):
     STUDENTS = 'students'
     ARCHIVED = 'archived'
 
+    @classmethod
+    def parse(cls, value) -> 'CourseVisibility | None':
+        """ The visibility named by a user-supplied string (case-insensitive), or None if unknown. """
+        if value is None:
+            return None
+        try:
+            return cls(str(value).strip().lower())
+        except ValueError:
+            return None
+
 class CourseService(StrEnum):
     """
     The service that a course is using to manage its assignments.
