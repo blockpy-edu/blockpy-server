@@ -705,13 +705,20 @@ def upload_file():
         contents = request.files.get('contents')
     delete = maybe_bool(request.values.get('delete', 'False'))
     user, user_id = get_user()
+    if user is None or user.anonymous:
+        return ajax_failure("You must be logged in to upload files.")
     if None in (placement, directory, filename):
         return ajax_failure("No placement, directory, filename given!")
     if placement not in ("global", "course", "assignment", "submission", "user"):
         return ajax_failure(f"Invalid placement: {placement!r}")
     files_folder = os.path.join(current_app.config['UPLOADS_DIR'], 'files', placement)
-    # Check file size
+    # Check file type and size
     if not delete:
+        bad_extension = check_upload_extension(filename)
+        if bad_extension is not None:
+            return bad_extension
+        if contents is None:
+            return ajax_failure("No file contents given!")
         contents.seek(0, os.SEEK_END)
         file_length = contents.tell()
         contents.seek(0, 0)
@@ -762,6 +769,11 @@ def rename_file():
         return ajax_failure("No placement, directory, old_filename, new_filename given!")
     if placement not in ("global", "course", "assignment", "submission", "user"):
         return ajax_failure(f"Invalid placement: {placement!r}")
+    if user is None or user.anonymous:
+        return ajax_failure("You must be logged in to rename files.")
+    bad_extension = check_upload_extension(new_filename)
+    if bad_extension is not None:
+        return bad_extension
     files_folder = os.path.join(current_app.config['UPLOADS_DIR'], 'files', placement)
     # Permission check
     permissions = check_file_permissions(user, user_id, placement, directory)
@@ -785,7 +797,28 @@ def rename_file():
     return ajax_failure(f"Could not rename the file!")
 
 
-SUGGEST_DOWNLOAD_EXTENSIONS = [".json", ".sqlite", ".py", ".zip"]
+# Uploaded files are opened by student code (PIL, open()) and shown as images in the editor; nothing
+# else should ever be stored. In particular .html and .svg would be served from the app origin, which
+# is a stored-XSS vector.
+ALLOWED_UPLOAD_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
+    ".txt", ".csv", ".tsv", ".json", ".md",
+    ".py", ".sqlite", ".zip", ".wav", ".mp3",
+}
+# Only these are served with their real type; everything else goes out as an opaque binary.
+INLINE_SAFE_MIMETYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
+    ".webp": "image/webp", ".bmp": "image/bmp",
+}
+
+
+def check_upload_extension(filename):
+    """ Return an ajax_failure response if the filename's extension is not allowed, else None. """
+    _, extension = os.path.splitext(filename or "")
+    if extension.lower() not in ALLOWED_UPLOAD_EXTENSIONS:
+        allowed = ", ".join(sorted(ALLOWED_UPLOAD_EXTENSIONS))
+        return ajax_failure(f"Files of type {extension!r} cannot be uploaded. Allowed types: {allowed}")
+    return None
 
 
 def check_file_permissions(user, user_id, placement, directory):
@@ -832,6 +865,10 @@ def download_file():
     """
     Files are not private. Anyone can see them if you upload them.
 
+    They are always sent as attachments with a non-executable content type and a sandbox CSP, so a
+    stored file can never run as a page on this origin. Images keep their real type so <img> tags and
+    XHR loads from the editor still work (Content-Disposition does not affect subresource loads).
+
     :return:
     """
     # Get parameters
@@ -843,15 +880,15 @@ def download_file():
         return ajax_failure("No placement, directory, filename given!")
     if placement not in ("global", "course", "assignment", "submission", "user"):
         return ajax_failure(f"Invalid placement: {placement!r}")
-    # app.config['UPLOADS_DIR']
-    files_folder = "/".join(('uploads', 'files', placement))
-    # Okay, we got this far, create it!
-    file_path = "/".join((files_folder, secure_filename(directory), filename))
-    suggest_download = any(filename.endswith(extension) for extension in SUGGEST_DOWNLOAD_EXTENSIONS)
+    files_folder = os.path.join(current_app.config['UPLOADS_DIR'], 'files', placement, secure_filename(directory))
+    _, extension = os.path.splitext(filename)
+    mimetype = INLINE_SAFE_MIMETYPES.get(extension.lower(), "application/octet-stream")
     response = send_from_directory(
-        current_app.static_folder, file_path, download_name=filename, as_attachment=suggest_download
+        files_folder, filename, download_name=filename, as_attachment=True, mimetype=mimetype
     )
     response.headers['x-filename'] = filename
+    response.headers['Content-Security-Policy'] = "sandbox"
+    response.headers['X-Content-Type-Options'] = "nosniff"
     return response
 
 
@@ -926,7 +963,7 @@ def save_image():
 @require_request_parameters('submission_id')
 def get_submission_image():
     submission_id = int(request.values.get('submission_id'))
-    relative_image_path = 'uploads/submission_blocks/{}.png'.format(submission_id)
+    image_name = '{}.png'.format(submission_id)
     submission = Submission.query.get(submission_id)
     user, user_id = get_user()
     # Check exists
@@ -935,8 +972,8 @@ def get_submission_image():
     if submission.user_id != user_id:
         require_course_grader(user, submission.course_id)
     # Do action
-    #print(relative_image_path)
-    return current_app.send_static_file(relative_image_path)
+    image_folder = os.path.join(current_app.config['UPLOADS_DIR'], 'submission_blocks')
+    return send_from_directory(image_folder, image_name, mimetype='image/png')
 
 
 @blueprint_blockpy.route('/get_image/', methods=['GET', 'POST'])
@@ -944,8 +981,8 @@ def get_submission_image():
 @require_request_parameters('submission_id', 'directory')
 def get_image():
     submission_id = int(request.values.get('submission_id'))
-    directory = request.values.get('directory')
-    relative_image_path = 'uploads/{}/{}.png'.format(directory, submission_id)
+    directory = secure_filename(request.values.get('directory'))
+    image_name = '{}.png'.format(submission_id)
     submission = Submission.query.get(submission_id)
     user, user_id = get_user()
     # Check exists
@@ -954,7 +991,8 @@ def get_image():
     if submission.user_id != user_id and not user.is_grader(submission.course_id):
         return ajax_failure("This is not your submission and you are not a grader in its course.")
     # Do action
-    return current_app.send_static_file(relative_image_path)
+    image_folder = os.path.join(current_app.config['UPLOADS_DIR'], directory)
+    return send_from_directory(image_folder, image_name, mimetype='image/png')
 
 
 @blueprint_blockpy.route('/save_assignment/', methods=['GET', 'POST'])

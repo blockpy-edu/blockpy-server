@@ -10,7 +10,7 @@ from flask import current_app
 from controllers.auth import get_user
 from controllers.helpers import (get_course_id, check_resource_exists, require_request_parameters, maybe_int,
                                  login_required, ajax_success, ajax_failure, make_log_entry,
-                                 require_course_grader)
+                                 require_course_grader, require_assignment_grader)
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.counters import SubmissionCounts
@@ -91,7 +91,9 @@ def check_similarity(assignment_id, course_id):
     assignment_id = maybe_int(assignment_id)
     course_id = maybe_int(course_id)
     require_course_grader(user, course_id)
-    check_resource_exists(Assignment.by_id(assignment_id), "Assignment", assignment_id)
+    assignment = Assignment.by_id(assignment_id)
+    check_resource_exists(assignment, "Assignment", assignment_id)
+    require_assignment_grader(user, assignment, course_id)
     task = tasks.check_similarity(user_id, assignment_id, [], course_id, "structure text exact", True, 50)
     location = url_for('api.task_status', task_id=task.id)
     return f"<html><head></head><body><a href='{location}'>{location}</a></body></html>", 202, {'Location': location}
@@ -109,7 +111,9 @@ def check_similarity_simple(assignment_id, course_id):
     assignment_id = maybe_int(assignment_id)
     course_id = maybe_int(course_id)
     require_course_grader(user, course_id)
-    check_resource_exists(Assignment.by_id(assignment_id), "Assignment", assignment_id)
+    assignment = Assignment.by_id(assignment_id)
+    check_resource_exists(assignment, "Assignment", assignment_id)
+    require_assignment_grader(user, assignment, course_id)
     task = tasks.check_similarity_simple(user_id, assignment_id, exclude_courses, course_id,
                                          other_student_threshold=other_student_threshold,
                                          starter_change_threshold=starter_change_threshold,

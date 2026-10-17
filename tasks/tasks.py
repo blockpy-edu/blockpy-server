@@ -68,8 +68,9 @@ def check_similarity(user_id, assignment_id, exclude_courses, target_course, pas
     report.update_progress(message="Getting all the submissions relevant to the assignment.")
     assignment: Assignment = Assignment.by_id(assignment_id)
     # TODO: Check that the assignment exists
-    # TODO: Check permissions
-    submissions = Submission.all_by_assignment(assignment_id)
+    # Only submissions from courses the report owner can grade; the endpoint already verified the
+    # owner grades target_course, but the archive would otherwise include every course on the site.
+    submissions = Submission.only_gradable_by(Submission.all_by_assignment(assignment_id), user_id)
 
     report.update_progress(
         message="Grouping them as excluded, archived, or normal depending on exclude_courses and target_courses")
@@ -249,8 +250,8 @@ def check_similarity_simple(user_id, assignment_id, exclude_courses, target_cour
     report.update_progress(message="Getting all the submissions relevant to the assignment.")
     assignment: Assignment = Assignment.by_id(assignment_id)
     # TODO: Check that the assignment exists
-    # TODO: Check permissions
-    submissions = Submission.all_by_assignment(assignment_id)
+    # Only submissions from courses the report owner can grade (see check_similarity).
+    submissions = Submission.only_gradable_by(Submission.all_by_assignment(assignment_id), user_id)
 
     report.update_progress(
         message="Grouping them as excluded, archived, or normal depending on exclude_courses and target_courses")
@@ -641,8 +642,8 @@ def quiz_report(user_id, assignment_id, course_id,
     report.update_progress(message="Getting all the submissions relevant to the quiz.")
     assignment: Assignment = Assignment.by_id(assignment_id)
     # TODO: Check that the assignment exists
-    # TODO: Check permissions
-    submissions = Submission.all_by_assignment(assignment_id)
+    # Only submissions from courses the report owner can grade.
+    submissions = Submission.only_gradable_by(Submission.all_by_assignment(assignment_id), user_id)
     report.update_progress(message="Filtering for the given courses")
     included = [submission for submission in submissions if submission.course_id in adjacent_courses]
     report.update_progress(message="Filtering for the given roles")

@@ -18,10 +18,11 @@ redo_database:
 	python.exe manage.py add_test_users_db
 	python.exe manage.py add_maze_course_db
 create_directories:
-	mkdir -p static/uploads/
+	mkdir -p data/uploads/
+	mkdir -p data/reports/
 	mkdir -p static/gen/
 	mkdir -p static/.webassets-cache/
-	mkdir -p static/uploads/submission_blocks/
+	mkdir -p data/uploads/submission_blocks/
 	mkdir -p static/public/
 	mkdir -p certs/
 	mkdir -p logs/

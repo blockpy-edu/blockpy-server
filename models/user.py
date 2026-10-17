@@ -189,6 +189,20 @@ class User(Base, UserMixin):
             query = query.filter_by(course_id=int(course_id))
         return bool(query.first())
 
+    def get_grader_course_ids(self):
+        """
+        The set of course IDs where this user holds a grading role (instructor, TA, admin-in-course).
+        A site-wide admin returns None, meaning "every course".
+        """
+        if self.is_admin():
+            return None
+        roles = (models.Role.query.with_entities(models.Role.course_id)
+                 .filter(models.Role.user_id == self.id,
+                         models.Role.name.in_(RolePermissions.GRADER_ROLES),
+                         models.Role.course_id.isnot(None))
+                 .distinct().all())
+        return {course_id for (course_id,) in roles}
+
     def is_grader(self, course_id=None):
         query = models.Role.query.filter_by(user_id=self.id)
         query = query.filter(models.Role.name.in_(RolePermissions.GRADER_ROLES))

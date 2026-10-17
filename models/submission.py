@@ -272,6 +272,20 @@ class Submission(EnhancedBase):
         )
 
     @staticmethod
+    def only_gradable_by(submissions, user_id):
+        """
+        Keep only the submissions whose course the given user is allowed to grade.
+        Used by background report tasks, which otherwise see every course's submissions.
+        """
+        user = models.User.query.get(user_id)
+        if user is None:
+            return []
+        allowed = user.get_grader_course_ids()
+        if allowed is None:
+            return list(submissions)
+        return [submission for submission in submissions if submission.course_id in allowed]
+
+    @staticmethod
     def all_by_assignment(assignment_id):
         return (
             db.session.query(Submission)

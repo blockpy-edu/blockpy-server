@@ -1664,6 +1664,9 @@ def check_similar():
         if not assignment_id:
             flash("No assignment selected")
             return redirect(request.url)
+        if assignment_id not in {a.id for assignments in groups.values() for a in assignments}:
+            flash(f"Not allowed to access assignment: {assignment_id}")
+            return redirect(request.url)
         other_student_threshold = maybe_int(request.form.get('other_student_threshold', 95))
         starter_change_threshold = maybe_int(request.form.get('starter_change_threshold', 95))
         minimum_file_length = maybe_int(request.form.get('minimum_file_length', 100))

@@ -9,6 +9,7 @@ services:
     volumes:
       - ./:/usr/src/app
       - static_volume:/usr/src/app/static
+      - data_volume:/usr/src/app/data
       - certs_volume:/usr/src/app/certs
       - logs_volume:/usr/src/app/logs
       - backups_volume:/usr/src/app/backups
@@ -57,6 +58,7 @@ services:
       - logs_volume:/usr/src/app/logs
       - instance_volume:/usr/src/app/instance
       - static_volume:/usr/src/app/static
+      - data_volume:/usr/src/app/data
       - certs_volume:/usr/src/app/certs
       - ./instance/configuration.py:/usr/src/app/instance/configuration.py
     depends_on:
@@ -89,6 +91,7 @@ services:
 volumes:
   blockpy_db:
   static_volume:
+  data_volume:
   certs_volume:
   logs_volume:
   backups_volume:

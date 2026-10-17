@@ -14,11 +14,11 @@ fi
 
 # List of directories to create
 DIRS="/usr/src/app/logs \
-    /usr/src/app/static/uploads \
-    /usr/src/app/static/reports \
+    /usr/src/app/data/uploads \
+    /usr/src/app/data/uploads/submission_blocks \
+    /usr/src/app/data/reports \
     /usr/src/app/static/gen \
     /usr/src/app/static/.webassets-cache \
-    /usr/src/app/static/uploads/submission_blocks \
     /usr/src/app/backups \
     /usr/src/app/instance \
     /run/uwsgi \

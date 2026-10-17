@@ -285,6 +285,30 @@ class Assignment(EnhancedBase):
             db.session.commit()
         return assignment
 
+    def is_used_in_course(self, course_id) -> bool:
+        """
+        True when `course_id` owns this assignment, lists it in one of its assignment groups, or has
+        submissions for it. Used to decide whether a grader of that course may see/grade with it.
+        """
+        course_id = maybe_int(course_id)
+        if course_id is None:
+            return False
+        if self.course_id == course_id:
+            return True
+        in_group = (db.session.query(models.AssignmentGroupMembership.id)
+                    .join(models.AssignmentGroup,
+                          models.AssignmentGroup.id == models.AssignmentGroupMembership.assignment_group_id)
+                    .filter(models.AssignmentGroupMembership.assignment_id == self.id,
+                            models.AssignmentGroup.course_id == course_id)
+                    .first())
+        if in_group:
+            return True
+        submitted = (db.session.query(models.Submission.id)
+                     .filter(models.Submission.assignment_id == self.id,
+                             models.Submission.course_id == course_id)
+                     .first())
+        return bool(submitted)
+
     @staticmethod
     def by_id_or_new(assignment_id: int, owner_id: int, course_id: int) -> 'models.Assignment':
         """ Retrieves or creates the given assignment, if it doesn't exist. """

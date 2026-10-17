@@ -24,8 +24,11 @@ class DefaultConfig:
     # Filesystem settings
     ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
     STATIC_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'static')
-    UPLOADS_DIR = os.path.join(STATIC_DIRECTORY, 'uploads')
-    REPORT_DIR = os.path.join(STATIC_DIRECTORY, 'reports')
+    # User uploads and generated reports must NOT live under STATIC_DIRECTORY: Flask serves
+    # everything under static/ without any permission checks or content-type hardening.
+    DATA_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'data')
+    UPLOADS_DIR = os.path.join(DATA_DIRECTORY, 'uploads')
+    REPORT_DIR = os.path.join(DATA_DIRECTORY, 'reports')
     BLOCKPY_LOG_DIR = os.path.join(ROOT_DIRECTORY, 'logs')
     TIMING_LOG_DIR = os.path.join(ROOT_DIRECTORY, 'logs', 'timing')
     ERROR_FILE_PATH = os.path.join(ROOT_DIRECTORY, 'logs', 'blockpy_errors.log')
@@ -100,7 +103,11 @@ class DefaultConfig:
     JWT_COOKIE_SAMESITE = 'None'
     JWT_COOKIE_SECURE = True
     # If this is too low, could set to 30 days
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=30)
+    # Tokens are embedded in editor pages (for LTI iframes that cannot use cookies), so keep their
+    # lifetime short; a fresh LTI launch mints a new one.
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
+    # LTI and JWT logins set a remember-me cookie; Flask-Login's default is one year.
+    REMEMBER_COOKIE_DURATION = timedelta(days=14)
 
     # Task Settings
     TASK_DB_URI: str

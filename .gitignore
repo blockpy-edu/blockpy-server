@@ -32,14 +32,17 @@ static/.webassets-cache/*
 static/.webassets-cache/.gitkeep
 static/gen/*
 !static/gen/.gitkeep
-static/uploads/*
-!static/uploads/submission_blocks/
-static/uploads/submission_blocks/*
-!static/uploads/submission_blocks/.gitkeep
-!static/uploads/.gitkeep
+data/uploads/*
+!data/uploads/submission_blocks/
+data/uploads/submission_blocks/*
+!data/uploads/submission_blocks/.gitkeep
+!data/uploads/.gitkeep
 static/canvas/
-static/reports/*
-!static/reports/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+# Legacy locations (pre data/ move); keep ignoring any leftover local files
+static/uploads/
+static/reports/
 static/public/*
 !static/public/.gitkeep
 
