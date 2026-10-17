@@ -156,9 +156,9 @@ def fork():
         require_group_in_course(g.user, group, course_id)
     # Perform action
     if new_url is not None:
-        existing = Assignment.by_url(new_url)
-        if existing:
-            return ajax_failure("Assignment URL is already taken!")
+        conflict = Assignment.url_conflict(new_url, course_id)
+        if conflict:
+            return ajax_failure(conflict)
     forked_assignment = assignment.fork(new_owner_id=g.user.id, new_course_id=course_id)
     if group != -1:
         AssignmentGroupMembership.move_assignment(forked_assignment.id, group)
@@ -202,6 +202,9 @@ def new_assignment():
     require_course_instructor(g.user, course_id)
     if group != -1:
         require_group_in_course(g.user, group, course_id)
+    conflict = Assignment.url_conflict(url, course_id)
+    if conflict:
+        return ajax_failure(conflict)
     # Perform action
     assignment = Assignment.new(owner_id=g.user.id, course_id=course_id, url=url,
                                 type=assignment_type, name=name, level=level)
@@ -261,14 +264,28 @@ def get_assignment():
 @require_request_parameters('assignment_id')
 @login_required
 def remove_assignment():
+    """
+    Archive the assignment (soft delete: it leaves its groups and listings, submissions and logs are
+    kept). Only with `hard_delete=true` is it really deleted, which also deletes every course's
+    submissions and logs for it, including courses that merely reused it.
+    """
     assignment_id = int(request.values.get('assignment_id'))
+    hard_delete = maybe_bool(request.values.get('hard_delete', 'false'))
     assignment = Assignment.by_id(assignment_id)
     # Verify exists
     check_resource_exists(assignment, "Assignment", assignment_id)
     # Verify permissions
     require_course_instructor(g.user, assignment.course_id)
-    Assignment.remove(assignment.id)
-    return jsonify(success=True)
+    submission_counts = assignment.count_submissions_by_course()
+    if hard_delete:
+        Assignment.remove(assignment.id)
+        return jsonify(success=True, archived=False, deleted=True,
+                       submissions_deleted=sum(submission_counts.values()),
+                       courses_affected=sorted(submission_counts))
+    assignment.archive()
+    return jsonify(success=True, archived=True, deleted=False,
+                   submissions_kept=sum(submission_counts.values()),
+                   courses_affected=sorted(submission_counts))
 
 
 @blueprint_assignments.route('/move_course', methods=['GET', 'POST'])

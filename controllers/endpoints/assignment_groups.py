@@ -33,6 +33,8 @@ def add_group():
     is_embedded = ('embed' == request.values.get('menu', "select"))
     # Verify permissions
     require_course_instructor(g.user, course_id)
+    if new_url and AssignmentGroup.check_if_url_exists(new_url):
+        return jsonify(success=False, message="Assignment Group URL is already taken!")
     # Perform action
     assignment_group = AssignmentGroup.new(owner_id=g.user.id, course_id=course_id,
                                            name=new_name, url=new_url)
@@ -101,6 +103,8 @@ def edit_group():
     check_resource_exists(assignment_group, "Assignment Group", assignment_group_id)
     # Verify permissions
     require_course_instructor(g.user, assignment_group.course_id)
+    if new_url and new_url != assignment_group.url and AssignmentGroup.check_if_url_exists(new_url):
+        return jsonify(success=False, message="Assignment Group URL is already taken!")
     # Perform action
     changed = assignment_group.edit(dict(name=new_name, url=new_url))
     # Result

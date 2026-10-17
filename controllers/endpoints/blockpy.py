@@ -1088,6 +1088,9 @@ def save_assignment():
         updates["public"] = maybe_bool(request.values.get("public"))
     if "url" in request.values:
         updates["url"] = request.values.get("url") or None
+        conflict = Assignment.url_conflict(updates["url"], assignment.course_id, exclude_id=assignment.id)
+        if conflict:
+            return ajax_failure(conflict)
     if "ip_ranges" in request.values:
         updates["ip_ranges"] = request.values.get("ip_ranges")
     if "name" in request.values:

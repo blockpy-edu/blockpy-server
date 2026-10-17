@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from flask import url_for
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, UniqueConstraint, Boolean, Enum, Index
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, UniqueConstraint, Boolean, Enum, Index, func
 from werkzeug.utils import secure_filename
 from slugify import slugify
 
@@ -205,8 +205,8 @@ class Assignment(EnhancedBase):
 
     @staticmethod
     def get_available() -> 'List[Tuple[models.Assignment, models.AssignmentGroup]]':
-        """ Get all the assignments in the course (along with their first Group) """
-        assignments = Assignment.query.all()
+        """ Get all the (non-archived) assignments (along with their first Group) """
+        assignments = Assignment.query.filter(Assignment.status != AssignmentStatus.ARCHIVED).all()
         return [(assignment, (models.AssignmentGroup.query
                               .filter(models.AssignmentGroup.id == models.AssignmentGroupMembership.assignment_group_id,
                                       assignment.id == models.AssignmentGroupMembership.assignment_id)
@@ -233,7 +233,10 @@ class Assignment(EnhancedBase):
 
     @staticmethod
     def remove(assignment_id: int):
-        """ Delete the assignment with the given ID. """
+        """
+        Permanently delete the assignment with the given ID, along with EVERY course's submissions and
+        logs for it. Prefer `archive()` unless the caller explicitly asked for a hard delete.
+        """
         # TODO: Clear anyone's Fork that is me
         # TODO: Clear assignment tag membership
         # TODO: Clear submission sample
@@ -243,20 +246,56 @@ class Assignment(EnhancedBase):
         Assignment.query.filter_by(id=assignment_id).delete()
         db.session.commit()
 
+    def archive(self):
+        """
+        Soft-delete: mark the assignment archived and take it out of every assignment group, so it
+        disappears from course listings and launches, while all submissions and logs are kept.
+        """
+        models.AssignmentGroupMembership.query.filter_by(assignment_id=self.id).delete()
+        self.status = AssignmentStatus.ARCHIVED
+        db.session.commit()
+
+    def count_submissions_by_course(self) -> dict[int, int]:
+        """ How many submissions this assignment has in each course. """
+        rows = (db.session.query(models.Submission.course_id, func.count(models.Submission.id))
+                .filter(models.Submission.assignment_id == self.id)
+                .group_by(models.Submission.course_id).all())
+        return {course_id: count for course_id, count in rows}
+
+    RESERVED_URL_SUFFIX = "_default"
+
+    @staticmethod
+    def url_conflict(url: Optional[str], course_id, exclude_id: Optional[int] = None) -> Optional[str]:
+        """
+        Why `url` may not be given to an assignment of `course_id` (None if it may). URLs are how
+        LTI launches, textbooks and imports find assignments, so a duplicate lets one assignment
+        stand in for another; and `<course url>_default` names a course's scratchpad assignment.
+        """
+        if not url:
+            return None
+        existing = Assignment.query.filter_by(url=url).first()
+        if existing is not None and existing.id != exclude_id:
+            return "Assignment URL is already taken!"
+        if url.endswith(Assignment.RESERVED_URL_SUFFIX):
+            course = models.Course.by_url(url[:-len(Assignment.RESERVED_URL_SUFFIX)])
+            if course is not None and course.id != maybe_int(course_id):
+                return "That URL is reserved for another course's default assignment."
+        return None
+
     @staticmethod
     def is_in_course(assignment_id: int, course_id: int) -> bool:
         """ Determine if the given assignment belongs to the given course. """
         return Assignment.query.get(assignment_id).course_id == maybe_int(course_id)
 
     @staticmethod
-    def by_course(course_id, exclude_builtins=True) -> 'List[models.Assignment]':
-        """ Get all of the assignments that belong to the given course. """
+    def by_course(course_id, exclude_builtins=True, include_archived=False) -> 'List[models.Assignment]':
+        """ Get all of the assignments that belong to the given course (archived ones only on request). """
+        query = Assignment.query.filter_by(course_id=maybe_int(course_id))
         if exclude_builtins:
-            return (Assignment.query.filter_by(course_id=maybe_int(course_id))
-                    .filter(Assignment.type != 'maze')
-                    .all())
-        else:
-            return Assignment.query.filter_by(course_id=maybe_int(course_id)).all()
+            query = query.filter(Assignment.type != 'maze')
+        if not include_archived:
+            query = query.filter(Assignment.status != AssignmentStatus.ARCHIVED)
+        return query.all()
 
     @staticmethod
     def by_url(assignment_url: Optional[str]) -> 'Optional[models.Assignment]':
