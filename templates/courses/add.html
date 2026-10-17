@@ -24,6 +24,7 @@ Courses: Add
     </p>
 
 <form method=post action="{{ url_for('courses.add') }}">
+    {{ add_form.csrf_token }}
     {{ render_field(add_form.name) }}
     {{ render_field(add_form.visibility) }}
     {{ render_field(add_form.term) }}

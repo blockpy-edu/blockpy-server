@@ -10,8 +10,9 @@ from natsort import natsorted
 from sqlalchemy import func, case, select
 from sqlalchemy.orm import undefer, joinedload
 
-from flask_wtf import Form
+from flask_wtf import Form, FlaskForm
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
+from wtforms.validators import DataRequired, Length, Optional as OptionalField, Regexp, ValidationError
 
 from flask import Blueprint, send_from_directory
 from flask import Flask, redirect, url_for, session, request, jsonify, g, \
@@ -53,15 +54,36 @@ from tasks import tasks
 courses = Blueprint('courses', __name__, url_prefix='/courses')
 
 
-class AddCourseForm(Form):
-    name = StringField("Name", description="A title for the course, shown when navigating to the course on BlockPy.")
+def _strip(value):
+    return value.strip() if isinstance(value, str) else value
+
+
+# Course URLs become path segments (e.g. /courses/<course_id_or_url>), so keep them to a safe slug alphabet.
+COURSE_URL_PATTERN = r'^[A-Za-z0-9_.-]+$'
+
+
+class AddCourseForm(FlaskForm):
+    """
+    FlaskForm (not the bare WTForms ``Form`` used elsewhere) so that ``validate()`` also checks the CSRF token.
+    """
+    name = StringField("Name", validators=[DataRequired(), Length(max=255)], filters=[_strip],
+                       description="A title for the course, shown when navigating to the course on BlockPy.")
     visibility = SelectField('Visibility',
                              choices=[('private', 'Private'), ('public', 'Public'),
                                       ('archived', 'Archived')],
                              description="Public courses are visible to all users, but private courses are not visible outside of folks with roles in that course. Archived courses are concluded courses that should not be shown anymore (they can be restored). ")
-    term = StringField("Term")
-    url = StringField("URL", description="A unique URL for the course. Must be different from any other URLs for other courses. I recommend using underscores.")
+    term = StringField("Term", validators=[OptionalField(), Length(max=255)], filters=[_strip])
+    url = StringField("URL", validators=[DataRequired(), Length(max=255),
+                                         Regexp(COURSE_URL_PATTERN,
+                                                message="URLs may only contain letters, numbers, underscores, hyphens, and periods.")],
+                      filters=[_strip],
+                      description="A unique URL for the course. Must be different from any other URLs for other courses. I recommend using underscores.")
     submit = SubmitField("Add new course")
+
+    def validate_url(self, field):
+        # Course.by_id_or_url tries the numeric id first, so an all-digit URL could never be reached.
+        if field.data and field.data.isdigit():
+            raise ValidationError("URLs cannot be made up of only digits.")
 
 
 SETTINGS_EXPLANATION = """
@@ -82,15 +104,23 @@ def add():
     """
     add_form = AddCourseForm(request.form)
     if request.method == 'POST':
-        new_course = Course.new(name=add_form.name.data,
-                                owner_id=g.user.id,
-                                visibility=add_form.visibility.data,
-                                term=add_form.term.data,
-                                url=add_form.url.data)
-        if new_course:
-            flash('New course added')
-            return redirect(url_for('courses.index'))
+        if not add_form.validate():
+            if add_form.errors.get('csrf_token'):
+                flash("Course not created; the form's security token was missing or invalid. Please reload the page and try again.")
+            else:
+                flash('Course not created; please fix the errors below.')
+        elif not Course.check_url_is_unique(add_form.url.data, None):
+            add_form.url.errors = list(add_form.url.errors) + ['Another course already uses this URL.']
+            flash('Course not created; URLs must be unique.')
         else:
+            new_course = Course.new(name=add_form.name.data,
+                                    owner_id=g.user.id,
+                                    visibility=add_form.visibility.data,
+                                    term=add_form.term.data,
+                                    url=add_form.url.data)
+            if new_course:
+                flash('New course added')
+                return redirect(url_for('courses.index'))
             flash('Course not created; Non-unique URL perhaps?')
     return render_template('courses/add.html', add_form=add_form)
 
