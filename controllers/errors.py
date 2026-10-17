@@ -14,7 +14,7 @@ def handle_lti_exception(error):
 
 
 def handle_401(error):
-    return render_template('lti/forbidden.html',
+    return render_template('errors/forbidden.html',
                            message= "Unauthorized Error: "+str(error)+"\n<br>Please reload the page and try again.",
                            reason='Unauthorized'
     ), 401

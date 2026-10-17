@@ -4,7 +4,7 @@ import time
 import random
 
 import flask_security
-from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory, render_template
+from flask import Blueprint, request, Response, jsonify, abort, g, url_for, send_from_directory, render_template, make_response
 
 from flask import current_app
 from controllers.auth import get_user
@@ -124,17 +124,22 @@ def check_similarity_simple(assignment_id, course_id):
 
 
 def load_api_user():
-    email = request.json.get('email')
-    password = request.json.get('password')
+    """
+    The API caller: either explicit credentials in the JSON body, or the already logged-in
+    (non-anonymous) session user. Every visitor has an anonymous user row, so a bare `g.user`
+    must never count as authenticated here.
+    """
+    body = request.get_json(silent=True) or {}
+    email = body.get('email')
+    password = body.get('password')
     if email is None or password is None:
-        if g.user is None:
-            abort(400, "Missing email or password arguments")  # missing arguments
+        if g.user is None or g.user.anonymous:
+            abort(make_response(jsonify(success=False, message="You must log in or provide email and password."), 401))
         return g.user
     user = User.find_student(email)
-    if not user:
-        abort(400, "No user with email '{}' found.".format(email))  # Could not find user
-    if not flask_security.utils.verify_password(password, user.password):
-        abort(400, "Password verification failed.")
+    # Same message either way, so emails cannot be enumerated
+    if not user or not user.password or not flask_security.utils.verify_password(password, user.password):
+        abort(make_response(jsonify(success=False, message="Invalid email or password."), 401))
     return user
 
 
@@ -203,24 +208,30 @@ def export():
 @blueprint_api.route('/import', methods=['GET', 'POST'])
 def import_endpoint():
     user = load_api_user()
-    course_id = request.json.get('course_id')
+    bundle = request.get_json(silent=True)
+    if not isinstance(bundle, dict):
+        abort(400, "Expected a JSON bundle")
+    course_id = maybe_int(bundle.get('course_id'))
     if course_id is None:
         abort(400, "You need to specify the course_id")
-    assignments = request.json.get('assignments', [])
+    # Everything in the bundle lands in (or moves to) course_id
+    if not user.is_instructor(course_id) and not user.is_admin():
+        abort(403, "Not an instructor in the destination course.")
+    # A `course` entry edits an existing course by url (or creates one); admins only
+    if 'course' in bundle and not user.is_admin():
+        abort(403, "Only administrators can import a course record.")
+    assignments = bundle.get('assignments', [])
     for assignment in assignments:
-        assignment = Assignment.by_url(assignment['url'])
-        if ((assignment and not user.is_instructor(assignment.course_id))
-                or (not assignment and not user.is_instructor(course_id))):
-            return abort(400, "Not an instructor in this assignments' course.")
-    groups = request.json.get('groups', [])
+        existing = Assignment.by_url(assignment.get('url')) if isinstance(assignment, dict) else None
+        if existing and not user.is_instructor(existing.course_id) and not user.is_admin():
+            return abort(403, "Not an instructor in this assignment's course.")
+    groups = bundle.get('groups', [])
     for group in groups:
-        group = AssignmentGroup.by_url(group['url'])
-        # A group that does not exist yet will be created in `course_id`.
-        if ((group and not user.is_instructor(group.course_id))
-                or (not group and not user.is_instructor(course_id))):
-            return abort(400, "Not an instructor in this assignment groups' course.")
+        existing = AssignmentGroup.by_url(group.get('url')) if isinstance(group, dict) else None
+        if existing and not user.is_instructor(existing.course_id) and not user.is_admin():
+            return abort(403, "Not an instructor in this assignment group's course.")
     # TODO: Verify that memberships are all attached to a group owned by this user
-    import_bundle(request.json, owner_id=user.id, course_id=course_id)
+    import_bundle(bundle, owner_id=user.id, course_id=course_id, can_force=user.is_admin())
     return jsonify(success=True)
 
 # export_progsnap2

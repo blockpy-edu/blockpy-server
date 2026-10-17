@@ -32,7 +32,31 @@ from models.log_tables import SubmissionLog as Log
 from models.log_tables import RoleLog, CourseLog, ErrorLog, AccessLog, AssignmentLog, SubmissionLog
 
 
+def _redirect_to_login():
+    if current_app.config.get('PREFERRED_LOGIN_URL'):
+        return redirect(current_app.config['PREFERRED_LOGIN_URL'])
+    return redirect(url_for('security.login', next=request.url))
+
+
 def login_required(f):
+    """
+    Require a real (non-anonymous) account. Every visitor gets an anonymous user row
+    (see auth.make_user_anonymous), so checking `g.user is None` alone lets anyone through.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if g.user is None or getattr(g.user, 'anonymous', False):
+            return _redirect_to_login()
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def login_or_anonymous_required(f):
+    """
+    Allow anonymous (try-it-out) users as well as real accounts; only rejects a missing user.
+    Use for editor routes that anonymous visitors legitimately exercise (saving code, logging events).
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if g.user is None:
@@ -73,6 +97,51 @@ def require_course_grader(user, course_id, allow_fork=False):
         abort(make_response(jsonify(success=False, message=message, forkable=False), 200))
         return False
     return True
+
+def require_assignment_grader(user, assignment, course_id):
+    """
+    Require that the user can grade `course_id` AND has a legitimate claim on `assignment` from that
+    course: the course owns the assignment, the user grades the course that owns it, or the course
+    actually uses it (has submissions for it). Otherwise a grader of any course could pull another
+    course's submissions just by naming an assignment id.
+    """
+    require_course_grader(user, course_id)
+    course_id = maybe_int(course_id)
+    if user.is_grader(assignment.course_id) or assignment.is_used_in_course(course_id):
+        return True
+    message = 'Assignment {} does not belong to course {}.'.format(assignment.id, course_id)
+    abort(make_response(jsonify(success=False, message=message, forkable=False), 200))
+    return False
+
+
+def require_assignment_forkable(user, assignment):
+    """
+    Forking copies instructor-only content (grading scripts, hidden exams), so the caller must be
+    allowed to see the SOURCE: admin, grader or adopter of its course, or the assignment is public.
+    """
+    if assignment.public or user.is_admin():
+        return True
+    return require_course_adopter(user, assignment.course_id)
+
+
+def require_group_forkable(user, group):
+    if user.is_admin():
+        return True
+    return require_course_adopter(user, group.course_id)
+
+
+def require_group_in_course(user, group_id, course_id):
+    """
+    An assignment may only be placed into a group that belongs to the course being edited, or to a
+    course the caller instructs. Returns the group.
+    """
+    group = AssignmentGroup.by_id(group_id)
+    check_resource_exists(group, "AssignmentGroup", group_id)
+    if group.course_id != maybe_int(course_id) and not user.is_instructor(group.course_id) and not user.is_admin():
+        message = 'Assignment group {} does not belong to course {}.'.format(group.id, course_id)
+        abort(make_response(jsonify(success=False, message=message), 200))
+    return group
+
 
 def require_course_adopter(user, course_id):
     if user.is_grader(course_id):

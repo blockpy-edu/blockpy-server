@@ -78,7 +78,11 @@ def move_token_to_header(func):
 def check_banned_user():
     user = getattr(g, 'user', None)
     if user and user.banned:
-        notify_admin()
+        # One email per session, not one per request: a banned account must not be able to
+        # flood the admins' inboxes just by reloading.
+        if not session.get('banned_notified'):
+            session['banned_notified'] = True
+            notify_admin()
         abort(403, description="You are banned. Stop trying. The administrator has been notified.")
 
 @move_token_to_header
@@ -120,6 +124,10 @@ def login_user_if_able():
     g.safely = InvalidUserPermissionLayer()
     # Invalid URL
     if not request.endpoint:
+        return
+    # Static files need no user; creating an anonymous user row for every cookie-less asset
+    # request would grow the user table without bound.
+    if request.endpoint == 'static':
         return
     # Let flask-security handle any login attempts on its own
     if request.endpoint.startswith('security.login'):

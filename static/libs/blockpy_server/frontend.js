@@ -9023,6 +9023,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+/** Log text is student-written and rendered through `html:` bindings, so escape it. */
+function escapeHtml(value) {
+    return String(value !== null && value !== void 0 ? value : "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 
 // TODO: Load events on page load, mode or setting
@@ -9115,40 +9124,40 @@ class SubmissionState {
                 this.lastRan = log.when();
                 let message = "";
                 if (log.category() === "ProgramErrorOutput") {
-                    message = `<strong>Runtime Error</strong><div>${log.message()}</div>`;
+                    message = `<strong>Runtime Error</strong><div>${escapeHtml(log.message())}</div>`;
                 }
                 else {
                     try {
                         const data = JSON.parse(log.message());
                         if ("output" in data) {
                             const output = JSON.parse(data['output']);
-                            const outputBody = output.map((line) => `<code>${line.type}: ${line.contents}</code>`).join("\n");
+                            const outputBody = output.map((line) => `<code>${escapeHtml(line.type)}: ${escapeHtml(line.contents)}</code>`).join("\n");
                             message += "<strong>Execution Output:</strong><pre>" + outputBody + "</pre>";
                         }
                         if ("errors" in data) {
                             const errors = JSON.parse(data['errors']);
-                            const errorBody = errors.map((error) => `<code>${error}</code>`).join("\n");
+                            const errorBody = errors.map((error) => `<code>${escapeHtml(error)}</code>`).join("\n");
                             message += "<strong>Execution Errors:</strong><pre>" + errorBody + "</pre>";
                         }
-                        message += `<strong>Run Details</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                        message += `<strong>Run Details</strong><pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
                     }
                     catch (e) {
                         console.error(e);
-                        message = `<strong>Run Details</strong><pre>${log.message()}</pre>`;
+                        message = `<strong>Run Details</strong><pre>${escapeHtml(log.message())}</pre>`;
                     }
                 }
                 this.system = `${message}`;
                 break;
             case "Compile.Error":
-                this.system = `<strong>Compiler Error</strong><div>${log.message()}</div>`;
+                this.system = `<strong>Compiler Error</strong><div>${escapeHtml(log.message())}</div>`;
                 break;
             case "Intervention":
                 this.completed = this.completed || log.category() === "Complete";
-                this.feedback = `<strong>${log.label()}</strong><div>${log.message()}</div>`;
+                this.feedback = `<strong>${escapeHtml(log.label())}</strong><div>${escapeHtml(log.message())}</div>`;
                 break;
             case "X-View.Change":
                 this.mode = log.message();
-                this.system = `<strong>Changed Editing Mode</strong><div>${this.mode}</div>`;
+                this.system = `<strong>Changed Editing Mode</strong><div>${escapeHtml(this.mode)}</div>`;
                 break;
             case "X-Submission.LMS":
                 this.score = parseInt(log.message(), 10);

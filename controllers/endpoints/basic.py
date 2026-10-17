@@ -34,6 +34,8 @@ def about():
 
 @basic.route('/whoops', methods=['GET', 'POST'])
 def whoops():
+    from controllers.helpers import require_admin
+    require_admin(g.user)
     raise Exception("Whoops!")
 
 
@@ -46,6 +48,8 @@ def favicon():
 
 @basic.route("/site-map", methods=['GET', 'POST'])
 def site_map():
+    from controllers.helpers import require_admin
+    require_admin(g.user)
     output = []
     for rule in current_app.url_map.iter_rules():
         options = {}
