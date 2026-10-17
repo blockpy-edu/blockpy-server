@@ -30,6 +30,12 @@ def make_event(seconds, assignment_id=1, event_type="File.Edit", category="", la
 NAMES = {1: "Exam 1.1", 2: "Exam 1.2", 3: "Exam Intro"}
 
 
+
+def assert_login_redirect(response):
+    """ Anonymous visitors are bounced to the login page by login_required. """
+    assert response.status_code == 302
+    assert 'login' in response.headers['Location']
+
 class TestAnalyzeTime:
     def test_no_events(self):
         analysis = analyze_time([], 300, NAMES)
@@ -291,8 +297,8 @@ class TestTimeAnalysisPage:
     def test_anonymous_cannot_view(self, client, exam_logs):
         url, params = self.url(exam_logs, assignment_group_id=exam_logs['group'].id)
         response = client.get(url, query_string=params)
-        # Anonymous visitors are not graders; the grader check answers with a JSON failure
-        assert response.get_json()['success'] is False
+        assert_login_redirect(response)
+    
 
     def test_student_cannot_view(self, client, exam_logs, act_as):
         act_as(user_by_email("benimaru@blockpy.com"))

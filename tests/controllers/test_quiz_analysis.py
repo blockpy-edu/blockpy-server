@@ -54,6 +54,12 @@ HALF = {"capital": "Lyon", "earth": "true", "primes": ["2"], "why": ""}
 NOTHING_RIGHT = {"capital": "Berlin", "earth": "false", "primes": ["4"], "why": ""}
 
 
+
+def assert_login_redirect(response):
+    """ Anonymous visitors are bounced to the login page by login_required. """
+    assert response.status_code == 302
+    assert 'login' in response.headers['Location']
+
 class TestAnalyzeQuiz:
     def test_invalid_body_or_checks_report_an_error(self):
         analysis = analyze_quiz(fake_assignment(BODY, "{not json"), [fake_submission(PERFECT)])
@@ -438,7 +444,8 @@ class TestQuizAnalysisPage:
 
     def test_anonymous_cannot_view(self, client, quiz):
         response = client.get(self.url(quiz), query_string={"assignment_id": quiz['assignment'].id})
-        assert response.get_json()['success'] is False
+        assert_login_redirect(response)
+    
 
     def test_student_cannot_view(self, client, quiz, act_as):
         act_as(quiz['rimuru'])

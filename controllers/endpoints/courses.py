@@ -20,7 +20,8 @@ from flask import Flask, redirect, url_for, session, request, jsonify, g, \
 from common.dates import epoch_to_datetime, datetime_to_string
 from common.highlighters import strip_tags
 from controllers.auth import get_user
-from controllers.helpers import (get_lti_property, require_request_parameters, login_required,
+from controllers.helpers import (login_or_anonymous_required,
+                                 get_lti_property, require_request_parameters, login_required,
                                  require_course_instructor, require_course_grader, get_select_menu_link,
                                  check_resource_exists, get_course_id, ajax_success, ajax_failure, maybe_int,
                                  maybe_bool, require_admin, check_course_unlocked,
@@ -36,7 +37,9 @@ from models.data_formats.quiz_analysis import (analyze_quiz, load_roles_by_user_
 from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
-from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent
+from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent, UserRoles
+from markupsafe import escape as html_escape
+from common.text import csv_safe
 from models.enums.roles import RolePermissions
 from models.user import User
 from models.course import Course
@@ -272,7 +275,7 @@ def assignments(course_id):
 
 @courses.route('/users/', methods=['GET'])
 @courses.route('/users', methods=['GET'])
-@login_required
+@login_or_anonymous_required
 def users():
     user_ids = request.values.get('user_ids', "")
     course_id = get_course_id()
@@ -460,8 +463,10 @@ def remove_role(role_id):
     if role is None:
         return "Role not found"
     course_id = role.course_id
-    is_instructor = g.user.is_instructor(course_id)
-    if not is_instructor:
+    # Site-wide roles have no course; is_instructor(None) would match ANY instructor.
+    if course_id is None:
+        require_admin(g.user)
+    elif not g.user.is_instructor(course_id):
         return "You're not an instructor in this course!"
     role.remove()
     return redirect(url_for('courses.manage_users', course_id=course_id))
@@ -480,10 +485,14 @@ def change_role():
     if role is None:
         return "Role not found"
     course_id = role.course_id
-    is_instructor = g.user.is_instructor(course_id)
-    if not is_instructor:
+    if course_id is None:
+        require_admin(g.user)
+    elif not g.user.is_instructor(course_id):
         return "You're not an instructor in this course!"
-    role.update_role(new_role)
+    if new_role == UserRoles.ADMIN and not g.user.is_admin():
+        return ajax_failure("Only administrators can grant the admin role.")
+    if role.update_role(new_role) is None:
+        return ajax_failure(f"Unknown role: {new_role!r}")
     return ajax_success({"new_role": new_role})
 
 
@@ -1451,6 +1460,8 @@ def bulk_assignment_editor_setup(all_submitted=False):
     course: Course = Course.by_id(course_id)
     # Check Resource Exists
     check_resource_exists(course, "Course", course_id)
+    # The per-assignment checks below are vacuous for a course with no assignments of its own
+    require_course_instructor(g.user, course_id)
     grouped_assignments = natsorted(course.get_assignments_grouped() if not all_submitted else course.get_submitted_assignments_grouped(),
                                     key=lambda r: (r.AssignmentGroup.name if r.AssignmentGroup is not None else "",
                                                    r.Assignment.name))

@@ -20,7 +20,8 @@ from flask import (Blueprint, g, session, render_template, url_for, request, jso
 
 from common.highlighters import strip_tags
 from controllers.auth import get_user
-from controllers.helpers import (get_lti_property, require_request_parameters, login_required,
+from controllers.helpers import (require_assignment_forkable, require_group_in_course,
+                                 get_lti_property, require_request_parameters, login_required,
                                  require_course_instructor, get_select_menu_link,
                                  check_resource_exists, parse_assignment_load, get_course_id, ajax_success,
                                  ajax_failure, maybe_int, maybe_bool, require_course_grader,
@@ -150,6 +151,9 @@ def fork():
     check_resource_exists(assignment, "Assignment", assignment_id)
     # Verify permissions
     require_course_instructor(g.user, course_id)
+    require_assignment_forkable(g.user, assignment)
+    if group != -1:
+        require_group_in_course(g.user, group, course_id)
     # Perform action
     if new_url is not None:
         existing = Assignment.by_url(new_url)
@@ -196,6 +200,8 @@ def new_assignment():
     group = maybe_int(request.values.get('group', "-1"))
     # Verify permissions
     require_course_instructor(g.user, course_id)
+    if group != -1:
+        require_group_in_course(g.user, group, course_id)
     # Perform action
     assignment = Assignment.new(owner_id=g.user.id, course_id=course_id, url=url,
                                 type=assignment_type, name=name, level=level)
@@ -396,8 +402,35 @@ def bulk_upload():
             flash('No selected file')
             return redirect(request.url)
         if file:
-            bundle = json.loads(file.read().decode('utf-8'))
-            import_bundle(bundle, owner_id=g.user.id, course_id=course_id, can_force=g.user.is_admin())
+            try:
+                bundle = json.loads(file.read().decode('utf-8'))
+            except (ValueError, UnicodeDecodeError):
+                flash("That file is not valid JSON.")
+                return redirect(request.url)
+            if not isinstance(bundle, dict):
+                flash("That file is not a bundle.")
+                return redirect(request.url)
+            if 'course' in bundle and not g.user.is_admin():
+                flash("Only administrators can import a course record.")
+                return redirect(request.url)
+            # Existing assignments/groups are matched by url and overwritten, so the caller must
+            # instruct the course that currently owns each one.
+            for kind, model in (('assignments', Assignment), ('groups', AssignmentGroup)):
+                items = bundle.get(kind, [])
+                if not isinstance(items, list) or not all(isinstance(item, dict) and item.get('url') for item in items):
+                    flash(f"Every entry in {kind!r} must be an object with a url.")
+                    return redirect(request.url)
+                for item in items:
+                    existing = model.by_url(item['url'])
+                    if existing and not g.user.is_instructor(existing.course_id) and not g.user.is_admin():
+                        flash(f"You are not an instructor in the course that owns {kind[:-1]} {item['url']!r}.")
+                        return redirect(request.url)
+            try:
+                import_bundle(bundle, owner_id=g.user.id, course_id=course_id, can_force=g.user.is_admin())
+            except (KeyError, TypeError, ValueError, AttributeError) as e:
+                current_app.logger.info(f"bulk_upload rejected a malformed bundle: {e!r}")
+                flash("That bundle is malformed and could not be imported.")
+                return redirect(request.url)
             flash("File uploaded successfully")
             return redirect(request.url)
         flash("No file contents")

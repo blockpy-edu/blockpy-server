@@ -66,7 +66,8 @@ def sorter(membership):
 
 
 def import_bundle(bundle, owner_id, course_id=None, update=True, can_force=False):
-    if 'settings' in bundle:
+    # `force` lets a bundle pick its own owner/course; only admins may do that.
+    if can_force and 'settings' in bundle:
         if 'force' in bundle['settings']:
             if 'owner_id' in bundle['settings']['force']:
                 owner_id = bundle['settings']['force']['owner_id']

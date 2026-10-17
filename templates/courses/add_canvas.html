@@ -30,8 +30,12 @@ To add our tools to your Canvas course, you'll need to do the following.
     <li>Click "Add App".</li>
     <li>Choose "Paste XML".</li>
     <li>For the name, enter <code>BlockPy Version {{ config['SITE_VERSION'] }}</code></li>
+    {% if g.user and g.user.is_admin() %}
     <li>For the Consumer Key, enter <code>{{ config['CONSUMER_KEY'] }}</code></li>
     <li>For the Shared Secret, enter <code>{{ config['CONSUMER_KEY_SECRET'] }}</code></li>
+    {% else %}
+    <li>For the Consumer Key and Shared Secret, ask your BlockPy administrator; they are not shown here.</li>
+    {% endif %}
     <li>For the XML Configuration, copy the XML on the following page: <a href="{{ url_for('courses.config') }}">LTI XML Configuration</a></li>
     <li>To add new BlockPy/Maze assignments, choose the "External Tool" type and select "BlockPy Version {{ config['SITE_VERSION'] }}" from the list.</li>
 </ol>

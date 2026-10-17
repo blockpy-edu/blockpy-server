@@ -5,6 +5,12 @@ Tests cover creating, editing, removing, forking groups, and security permission
 import pytest
 
 
+
+def assert_login_redirect(response):
+    """ Anonymous visitors are bounced to the login page by login_required. """
+    assert response.status_code == 302
+    assert 'login' in response.headers['Location']
+
 class TestAssignmentGroupCreation:
     """Test assignment group creation endpoint (add_group)."""
 
@@ -14,9 +20,9 @@ class TestAssignmentGroupCreation:
             'course_id': 6,
             'name': 'New Group'
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_add_group_student_blocked(self, client, test_data, act_as):
         """Students cannot create assignment groups."""
         # Lulu (100) is a student in course 6
@@ -75,9 +81,9 @@ class TestAssignmentGroupEditing:
             'assignment_group_id': 1,
             'new_name': 'Edited Group'
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_edit_group_student_blocked(self, client, test_data, act_as):
         """Students cannot edit assignment groups."""
         # Lulu (100) is a student in course 6
@@ -134,9 +140,9 @@ class TestAssignmentGroupRemoval:
         response = client.post('/assignment_group/remove', data={
             'assignment_group_id': 1
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_remove_group_student_blocked(self, client, test_data, act_as):
         """Students cannot remove assignment groups."""
         # Lulu (100) is a student in course 6
@@ -178,9 +184,9 @@ class TestAssignmentGroupForking:
         response = client.post('/assignment_group/fork', data={
             'assignment_group_id': 1
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_fork_group_student_blocked(self, client, test_data, act_as):
         """Students cannot fork assignment groups."""
         act_as(test_data.user("lulu@blockpy.com"))
@@ -225,9 +231,9 @@ class TestAssignmentGroupMembershipManagement:
             'old_group_id': 1,
             'new_group_id': 2
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_move_membership_student_blocked(self, client, test_data, act_as):
         """Students cannot move assignments between groups."""
         act_as(test_data.user("lulu@blockpy.com"))
@@ -352,9 +358,9 @@ class TestAssignmentGroupSecuritySettings:
             'assignment_group_id': 1,
             'ip_ranges': '192.168.1.0/24'
         })
-        assert response.json['success'] is False
-        # assert response.status_code == 302  # Redirect to login
+        assert_login_redirect(response)
     
+
     def test_edit_security_student_blocked(self, client, test_data, act_as):
         """Students cannot edit security settings."""
         act_as(test_data.user("lulu@blockpy.com"))
@@ -395,8 +401,9 @@ class TestAssignmentGroupExportSubmissions:
         response = client.get('/assignment_group/export_submissions', query_string={
             'assignment_group_id': 1
         })
-        assert response.json['success'] is False
+        assert_login_redirect(response)
     
+
     def test_export_submissions_student_blocked(self, client, test_data, act_as):
         """Students cannot export group submissions."""
         act_as(test_data.user("lulu@blockpy.com"))
@@ -448,9 +455,9 @@ class TestAssignmentGroupForkingMenu:
     def test_forking_menu_anonymous(self, client, test_data):
         """Anonymous users cannot access forking menu."""
         response = client.get('/assignment_group/forking_menu')
-        # May require auth
-        assert response.json['success'] is False
+        assert_login_redirect(response)
     
+
     def test_forking_menu_authenticated(self, client, test_data, act_as):
         """Authenticated users can access forking menu."""
         act_as(test_data.user("ada@blockpy.com"))

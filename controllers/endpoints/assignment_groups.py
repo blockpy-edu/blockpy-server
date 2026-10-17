@@ -297,6 +297,8 @@ def forking_menu():
         target_course_id = maybe_int(request.form.get('target_course_id'))
         if target_course_id is None:
             message.append(f"Invalid target course id: <code>{target_course_id}</code>")
+        else:
+            require_course_instructor(g.user, target_course_id)
         # TODO: PICK UP HERE
         if message:
             flash("Updating:<br>" + "<br>".join(message))

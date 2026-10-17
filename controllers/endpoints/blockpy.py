@@ -33,6 +33,7 @@ from models.assignment_group import AssignmentGroup
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
 from controllers.auth import get_user, get_consumer_secrets
+from controllers.helpers import login_or_anonymous_required, require_assignment_forkable, require_group_forkable
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
@@ -252,7 +253,7 @@ def load_assignment():
 @blueprint_blockpy.route('/save_file/', methods=['GET', 'POST'])
 @blueprint_blockpy.route('/save_file', methods=['GET', 'POST'])
 @require_request_parameters('filename')
-@login_required
+@login_or_anonymous_required
 def save_file():
     filename = safe_request.get_str("filename")
     course_id = safe_request.get_course_id(False)
@@ -363,7 +364,7 @@ def load_history():
 @blueprint_blockpy.route('/log_event/', methods=['GET', 'POST'])
 @blueprint_blockpy.route('/log_event', methods=['GET', 'POST'])
 @require_request_parameters('event_type')
-@login_required
+@login_or_anonymous_required
 def log_event():
     course_id = safe_request.get_course_id(True)
     user, user_id = g.safely.get_user()
@@ -1231,11 +1232,13 @@ def fork_assignment():
     if assignment_group_id:
         group = AssignmentGroup.query.get(assignment_group_id)
         check_resource_exists(group, "AssignmentGroup", assignment_group_id)
+        require_group_forkable(user, group)
         # Create forked group, assignment, memberships
         new_group, new_assignments = group.fork()
     else:
         assignment = Assignment.query.get(assignment_id)
         check_resource_exists(assignment, "Assignment", assignment_id)
+        require_assignment_forkable(user, assignment)
         # Create forked assignment, set it as target
         new_assignments = [assignment.fork(user_id, course_id)]
     # Transfer all submissions, if desired

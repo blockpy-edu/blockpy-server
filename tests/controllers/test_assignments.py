@@ -5,6 +5,12 @@ Tests cover creating, reading, updating, deleting assignments, and security perm
 import pytest
 
 
+
+def assert_login_redirect(response):
+    """ Anonymous visitors are bounced to the login page by login_required. """
+    assert response.status_code == 302
+    assert 'login' in response.headers['Location']
+
 class TestAssignmentCreation:
     """Test assignment creation endpoint (new_assignment)."""
     
@@ -14,12 +20,9 @@ class TestAssignmentCreation:
             'course_id': 6,
             'name': 'New Assignment'
         })
-        # Returns 200 with success=False for auth failures
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data['success'] is False
-        assert 'instructor' in data['message'].lower()
+        assert_login_redirect(response)
     
+
     def test_new_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot create assignments."""
         # Lulu (100) is a student in course 6
@@ -99,9 +102,9 @@ class TestAssignmentRemoval:
         response = client.post('/assignments/remove', data={
             'assignment_id': 100
         })
-        # assert response.status_code == 302  # Redirect to login
-        assert response.json['success'] is False
+        assert_login_redirect(response)
     
+
     def test_remove_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot remove assignments."""
         # Lulu (100) is a student in course 6
@@ -144,9 +147,9 @@ class TestAssignmentMoveCourse:
             'assignment_id': 100,
             'new_course_id': 7
         })
-        # assert response.status_code == 302  # Redirect to login
-        assert response.json['success'] is False
+        assert_login_redirect(response)
     
+
     def test_move_course_student_blocked(self, client, test_data, act_as):
         """Students cannot move assignments between courses."""
         act_as(test_data.user("lulu@blockpy.com"))
@@ -242,9 +245,9 @@ class TestAssignmentFork:
             'assignment_id': 100,
             'course_id': 6
         })
-        # assert response.status_code == 302  # Redirect to login
-        assert response.json['success'] is False
+        assert_login_redirect(response)
     
+
     def test_fork_assignment_student_blocked(self, client, test_data, act_as):
         """Students cannot fork assignments."""
         act_as(test_data.user("lulu@blockpy.com"))

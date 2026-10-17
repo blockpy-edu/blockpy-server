@@ -103,13 +103,16 @@ class ValidUserPermissionLayer(PermissionLayer):
         if self.user.is_instructor(assignment_course_id):
             return FULL, assignment
         # If the user is an instructor of the course the assignment is being used in, they can at least grade with it
-        if using_course_id and self.user.is_instructor(using_course_id):
+        # ... but only if that course really uses the assignment; otherwise any instructor of any
+        # course could read hidden/locked assignments just by naming their own course id.
+        if using_course_id and self.user.is_instructor(using_course_id) and assignment.is_used_in_course(using_course_id):
             return GRADER, assignment
         # For non-hidden assignments,
         if not assignment.hidden:
             # If the user is a grader (e.g., TA) in the course, they can see the assignment.
             if self.user.is_grader(assignment_course_id) or (
                     using_course_id and self.user.is_grader(using_course_id)
+                    and assignment.is_used_in_course(using_course_id)
             ):
                 return GRADER, assignment
         # Otherwise the assignment is hidden, so we have to do our security checks.

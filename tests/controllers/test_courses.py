@@ -5,6 +5,12 @@ low-quality AI generated. We should improve them at some point.
 import pytest
 
 
+
+def assert_login_redirect(response):
+    """ Anonymous visitors are bounced to the login page by login_required. """
+    assert response.status_code == 302
+    assert 'login' in response.headers['Location']
+
 class TestCourseIndexAndViewing:
     """Test basic course listing and viewing endpoints."""
     
@@ -175,11 +181,9 @@ class TestCourseModification:
     def test_add_course_anonymous_shows_login(self, client):
         """Anonymous users get shown login page for add course."""
         response = client.get('/courses/add')
-        # Returns 200 with login form instead of 302 redirect
-        assert response.status_code == 200
-        # Should contain login/signin content
-        assert b'login' in response.data.lower() or b'sign in' in response.data.lower()
+        assert_login_redirect(response)
     
+
     def test_add_course_authenticated_allowed(self, client, test_data, act_as):
         """Authenticated users can access the add course page."""
         act_as(test_data.user("ada@blockpy.com"))

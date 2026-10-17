@@ -45,8 +45,8 @@ class Role(Base):
         }
 
     def update_role(self, new_role):
-        if new_role in [id for id, name in self.CHOICES]:
-            self.name = new_role
+        if new_role in {role.value for role in UserRoles}:
+            self.name = UserRoles(new_role)
             db.session.commit()
             return new_role
         return None
