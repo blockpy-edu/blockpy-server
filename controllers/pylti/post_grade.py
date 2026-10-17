@@ -14,6 +14,7 @@ from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
 from models import Submission, User, GradeHistory
 from models.assignment_group import AssignmentGroup
+from models.assignment_group_membership import AssignmentGroupMembership
 from models.course import Course
 from dataclasses import dataclass
 
@@ -231,8 +232,17 @@ def grade_submission(submission_id: int, assignment_group_id,
     report.assignment_id = submission.assignment_id
     report.assignment_version = submission.assignment_version
     report.submission_version = submission.version
+    # The client may name the group it launched from, but only one that actually contains this
+    # submission's assignment; otherwise a student could have any group's total (e.g. a perfect
+    # practice set) posted to this assignment's gradebook column.
+    if assignment_group_id is not None and assignment_group_id != submission.assignment_group_id:
+        in_group = AssignmentGroupMembership.query.filter_by(
+            assignment_group_id=assignment_group_id, assignment_id=submission.assignment_id).first()
+        if in_group is None:
+            assignment_group_id = None
     if assignment_group_id is None:
-        report.assignment_group_id = submission.assignment_group_id
+        assignment_group_id = submission.assignment_group_id
+    report.assignment_group_id = assignment_group_id
     if client_correct is None:
         report.correct = submission.correct
     if client_score is None:

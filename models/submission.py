@@ -160,6 +160,20 @@ class Submission(EnhancedBase):
             "date_started": datetime_to_string(self.date_started),
         }
 
+    # Fields of encode_json that only the owner and graders should see. Public assignments let any
+    # viewer load another student's submission; the LMS passback id must not travel with it.
+    VIEWER_HIDDEN_FIELDS = ("endpoint", "feedback", "user_id__email")
+
+    @classmethod
+    def redact_for_viewer(cls, data):
+        """ Strip owner/grader-only fields from an encoded submission (a dict from encode_json). """
+        if not data:
+            return data
+        for field in cls.VIEWER_HIDDEN_FIELDS:
+            if field in data:
+                data[field] = "" if isinstance(data[field], str) else None
+        return data
+
     def encode_human(self, with_history=False, role_lookup=None, log_lookup=None):
         """
         Create a human-readable dictionary of files for this submission.

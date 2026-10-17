@@ -76,6 +76,10 @@ def load_submission():
     # Non-graders get the redacted quiz (no answer key); this was previously inverted.
     is_quiz = submission.assignment.type == 'quiz' and not scope.can_grade
     assignment_data = submission.assignment.for_editor(submission.user_id, submission.course_id, is_quiz)
+    if not scope.can_grade:
+        # Public assignments let other students (and anonymous visitors) see this submission, but not
+        # its LMS passback id, instructor feedback, or the owner's email.
+        assignment_data['submission'] = Submission.redact_for_viewer(assignment_data.get('submission'))
     return load_editor({
         "user": user,
         "user_id": user_id,
@@ -320,8 +324,9 @@ def save_student_file(filename, course_id, user):
         "code": code,
         "file_path": file_path,
     }, submission_last_updated=submission_last_updated)
+    # The log row belongs to the submission's course, not whatever course_id the client sent
     make_log_entry(submission.id, submission.version, submission.assignment_id, submission.assignment_version,
-                   course_id, submission.user_id,
+                   submission.course_id, submission.user_id,
                    SubmissionLogEvent.BLOCKPY_FILE_EDIT,
                    file_path, message=new_code)
     return ajax_success({"version_change": version_change})
@@ -414,6 +419,10 @@ def log_event():
     scope, submission = g.safely.load_submission_by_id(submission_id)
     if not scope.can_edit:
         return ajax_failure("Only the submission owner and graders can log events for a submission.")
+    # The row is filed under the submission's own course and assignment; the client-sent ids would let
+    # a student write entries into any course's history.
+    course_id = submission.course_id
+    assignment_id = submission.assignment_id
     # Make the entry
     submission_last_updated = submission.date_modified
     new_log = make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
