@@ -3,6 +3,7 @@ Loads the static data files for testing.
 '''
 import csv
 import pytest
+from datetime import datetime
 from pathlib import Path
 
 from common.text import generate_uuid
@@ -107,6 +108,8 @@ def convert_value(value, type_name):
     if value == "":
         return None
     try:
+        if type_name == 'datetime':
+            return datetime.fromisoformat(value)
         if type_name == 'int':
             return int(value)
         elif type_name == 'float':

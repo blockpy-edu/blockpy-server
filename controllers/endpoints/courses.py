@@ -20,6 +20,7 @@ from flask import Flask, redirect, url_for, session, request, jsonify, g, \
 
 from common.dates import epoch_to_datetime, datetime_to_string
 from common.highlighters import strip_tags
+from common.course_creation import creation_block_reason, allowed_visibility
 from controllers.auth import get_user
 from controllers.helpers import (login_or_anonymous_required,
                                  get_lti_property, require_request_parameters, login_required,
@@ -113,13 +114,23 @@ def add():
             add_form.url.errors = list(add_form.url.errors) + ['Another course already uses this URL.']
             flash('Course not created; URLs must be unique.')
         else:
+            # Anti-spam: new accounts get one course, everyone else a daily quota, and only established
+            # accounts may publish publicly. Admins and LMS-linked staff are exempt.
+            standing = g.user.course_creation_standing()
+            blocked = creation_block_reason(standing, current_app.config)
+            if blocked:
+                flash(f'Course not created; {blocked}')
+                return render_template('courses/add.html', add_form=add_form)
+            visibility, note = allowed_visibility(standing, add_form.visibility.data, current_app.config)
             new_course = Course.new(name=add_form.name.data,
                                     owner_id=g.user.id,
-                                    visibility=add_form.visibility.data,
+                                    visibility=visibility,
                                     term=add_form.term.data,
                                     url=add_form.url.data)
             if new_course:
                 flash('New course added')
+                if note:
+                    flash(note)
                 return redirect(url_for('courses.index'))
             flash('Course not created; Non-unique URL perhaps?')
     return render_template('courses/add.html', add_form=add_form)
@@ -163,8 +174,12 @@ def edit(course_id):
                 flash(f"Settings are not valid JSON: {e}")
                 modified = False
             else:
+                visibility, note = allowed_visibility(g.user.course_creation_standing(),
+                                                      edit_form.visibility.data, current_app.config)
+                if note:
+                    flash(note)
                 modified = course.edit(name=edit_form.name.data,
-                                       visibility=edit_form.visibility.data,
+                                       visibility=visibility,
                                        term=edit_form.term.data,
                                        url=edit_form.url.data,
                                        settings=edit_form.settings.data)
@@ -207,6 +222,10 @@ def change_course_visibility():
     require_course_instructor(g.user, course_id)
     check_course_unlocked(course)
     # Perform action
+    visibility, note = allowed_visibility(g.user.course_creation_standing(), visibility, current_app.config)
+    if note:
+        flash(note)
+        return redirect(url_for('courses.index'))
     success = Course.change_course_visibility(course_id, visibility)
     if success:
         flash(f'Course {course.url} visibility set to {visibility}')

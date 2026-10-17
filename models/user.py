@@ -183,6 +183,36 @@ class User(Base, UserMixin):
                                                 name=UserRoles.ADMIN,
                                                 user_id=self.id).first())
 
+    def is_lms_staff(self):
+        """
+        Whether this user holds a grading role in any course that came from an LMS (Canvas/LTI) launch.
+        Such accounts were vouched for by an institution, so they are exempt from the self-serve anti-spam limits.
+        """
+        from models.enums.courses import CourseService
+        return bool(db.session.query(models.Role.id)
+                    .join(models.Course, models.Role.course_id == models.Course.id)
+                    .filter(models.Role.user_id == self.id,
+                            models.Role.name.in_(RolePermissions.GRADER_ROLES),
+                            models.Course.service != CourseService.NATIVE)
+                    .first())
+
+    def course_creation_standing(self):
+        """
+        Snapshot of this account's history for the course-creation anti-spam rules (common/course_creation.py).
+        """
+        from common.course_creation import CreatorStanding
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        created = self.date_created
+        if created is not None and created.tzinfo is not None:
+            created = created.astimezone(timezone.utc).replace(tzinfo=None)
+        owned = models.Course.query.filter_by(owner_id=self.id)
+        return CreatorStanding(exempt=self.is_admin() or self.is_lms_staff(),
+                               confirmed=self.confirmed_at is not None,
+                               account_age=(now - created) if created is not None else None,
+                               courses_owned=owned.count(),
+                               courses_last_day=owned.filter(
+                                   models.Course.date_created >= now - timedelta(days=1)).count())
+
     def is_instructor(self, course_id=None):
         query = models.Role.query.filter_by(user_id=self.id, name=UserRoles.INSTRUCTOR)
         if course_id is not None:

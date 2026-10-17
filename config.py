@@ -117,6 +117,13 @@ class DefaultConfig:
     # Logs
     ROTATE_LOGS = False
 
+    # Anti-spam limits for self-serve course creation (see common/course_creation.py for the rules).
+    # Admins and staff of LMS-linked courses are exempt. Set a limit to 0 to disable that rule.
+    COURSE_CREATION_NEW_ACCOUNT_HOURS = 24
+    COURSE_CREATION_NEW_ACCOUNT_LIMIT = 1
+    COURSE_CREATION_DAILY_LIMIT = 5
+    COURSE_CREATION_PUBLIC_AFTER_DAYS = 7
+
     # Force https URLs
     PREFERRED_URL_SCHEME = 'https'
 
