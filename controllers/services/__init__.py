@@ -94,6 +94,39 @@ class ValidUserPermissionLayer(PermissionLayer):
         assignment = self.check_resource_exists(assignment, "Assignment", assignment_id)
         return self._assignment_checks(assignment, using_course_id)
 
+    def _enforce_assignment_locks(self, assignment: Assignment):
+        """ Abort unless the request passes the assignment's IP range and passcode locks. """
+        if not assignment.is_allowed(safe_request.remote_addr):
+            self.abort_with_error("You cannot access this assignment from your current location: " + safe_request.remote_addr, 403)
+        possible_passcode = safe_request.get_maybe_str('passcode', '')
+        if assignment.passcode_fails(possible_passcode):
+            self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
+
+    def _may_adopt(self, assignment: Assignment) -> bool:
+        """
+        Whether the user is entitled to the assignment's content regardless of its locks: it is public,
+        its home course is public, or they grade/adopt its home course (the same rule as
+        courses.adopt_assignments). Anyone else who merely *uses* it in their own course gets grader
+        powers over their own students' work, but must still satisfy the IP/passcode locks.
+        """
+        if assignment.public:
+            return True
+        if self.user.is_grader(assignment.course_id) or self.user.is_adopter(assignment.course_id):
+            return True
+        course = Course.by_id(assignment.course_id)
+        return course is not None and course.visibility == 'public'
+
+    def _grader_via_using_course(self, assignment: Assignment) -> tuple[PermissionScope, Assignment]:
+        """
+        GRADER scope obtained only through a course that uses the assignment. Locked assignments (IP
+        ranges or passcode) keep their locks for users who could not adopt the assignment outright;
+        otherwise any registered user could create a course, submit to the assignment there, and read
+        a locked exam from anywhere without the passcode.
+        """
+        if (assignment.has_passcode() or (assignment.ip_ranges or '').strip()) and not self._may_adopt(assignment):
+            self._enforce_assignment_locks(assignment)
+        return GRADER, assignment
+
     def _assignment_checks(self, assignment: Assignment, using_course_id: Optional[int] = None) -> tuple[PermissionScope, Assignment]:
         # If the user is an admin, they can see everything. No questions asked.
         if self.user.is_admin():
@@ -106,23 +139,18 @@ class ValidUserPermissionLayer(PermissionLayer):
         # ... but only if that course really uses the assignment; otherwise any instructor of any
         # course could read hidden/locked assignments just by naming their own course id.
         if using_course_id and self.user.is_instructor(using_course_id) and assignment.is_used_in_course(using_course_id):
-            return GRADER, assignment
+            return self._grader_via_using_course(assignment)
         # For non-hidden assignments,
         if not assignment.hidden:
             # If the user is a grader (e.g., TA) in the course, they can see the assignment.
-            if self.user.is_grader(assignment_course_id) or (
-                    using_course_id and self.user.is_grader(using_course_id)
-                    and assignment.is_used_in_course(using_course_id)
-            ):
+            if self.user.is_grader(assignment_course_id):
                 return GRADER, assignment
+            if (using_course_id and self.user.is_grader(using_course_id)
+                    and assignment.is_used_in_course(using_course_id)):
+                return self._grader_via_using_course(assignment)
         # Otherwise the assignment is hidden, so we have to do our security checks.
-        if assignment.is_allowed(safe_request.remote_addr):
-            possible_passcode = safe_request.get_maybe_str('passcode', '')
-            if assignment.passcode_fails(possible_passcode):
-                self.abort_with_error(f"Passcode '{possible_passcode}' rejected.", 200)
-            return STUDENT_ASSIGNMENT, assignment
-        else:
-            self.abort_with_error("You cannot access this assignment from your current location: " + safe_request.remote_addr, 403)
+        self._enforce_assignment_locks(assignment)
+        return STUDENT_ASSIGNMENT, assignment
 
     def log_submission_entry(self, submission: Submission, assignment: Assignment, event_type, message):
         make_log_entry(submission.id, submission.version, assignment.id, assignment.version, submission.course_id,
