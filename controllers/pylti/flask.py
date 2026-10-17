@@ -234,8 +234,8 @@ class LTI:
                                         self.response_url, xml)
 
         if not successful:
-            log.error("Post Message Failed")
-            raise LTIPostMessageException(f"Post Message Failed for get_grade to {self.response_url} with result: {full_result}")
+            log.error("Post Message Failed for get_grade to %s with result: %s", self.response_url, full_result)
+            raise LTIPostMessageException(f"Post Message Failed for get_grade to {self.response_url} (see server log)")
         return parse_read_result(full_result)
 
     def post_grade(self, grade, message='', endpoint=None, url=False,
@@ -264,8 +264,8 @@ class LTI:
             successful, full_result = post_message(self._consumers(), self.key,
                                             self.response_url, xml)
             if not successful:
-                log.error("Post Message Failed")
-                raise LTIPostMessageException(f"Post Message Failed for post_grade to {self.response_url} with result:\n{full_result}")
+                log.error("Post Message Failed for post_grade to %s with result: %s", self.response_url, full_result)
+                raise LTIPostMessageException(f"Post Message Failed for post_grade to {self.response_url} (see server log)")
             return True
 
         return False

@@ -72,7 +72,8 @@ def load_submission():
         return redirect(url_for('blockpy.load', assignment_id=submission.assignment.id,
                                 course_id=course_id if course_id else submission.course_id))
     # Get the assignment
-    is_quiz = submission.assignment.type == 'quiz' and scope.can_grade
+    # Non-graders get the redacted quiz (no answer key); this was previously inverted.
+    is_quiz = submission.assignment.type == 'quiz' and not scope.can_grade
     assignment_data = submission.assignment.for_editor(submission.user_id, submission.course_id, is_quiz)
     return load_editor({
         "user": user,
@@ -652,7 +653,13 @@ def start_assignment():
     if date_started == "clear":
         action = 'clearing'
     else:
-        date_started = iso_to_datetime(date_started)
+        try:
+            date_started = iso_to_datetime(date_started)
+        except (ValueError, TypeError):
+            # Students never get to use this value (server time is used below); graders must send ISO 8601
+            if user.is_grader(course_id):
+                return ajax_failure(f"Could not parse date_started: {date_started!r}")
+            date_started = None
     if assignment_group_id is None:
         assignment = Assignment.by_id(assignment_id)
         check_resource_exists(assignment, "Assignment", assignment_id)
@@ -670,6 +677,16 @@ def start_assignment():
         # Check permissions
         if submission.user_id != user_id:
             require_course_grader(user, submission.course_id)
+        elif not user.is_grader(submission.course_id):
+            # A student starting their own timer: the server picks the time, it cannot be
+            # cleared, and it cannot be restarted once set.
+            if action == 'clearing':
+                return ajax_failure("Only graders can clear a timer.")
+            if submission.date_started is not None:
+                dates.append(datetime_to_string(submission.date_started))
+                continue
+            from datetime import datetime as _datetime, timezone as _timezone
+            date_started = _datetime.now(_timezone.utc)
         if action == 'setting':
             submission.edit({'date_started': date_started})
             dates.append(datetime_to_string(submission.date_started))
@@ -1169,10 +1186,12 @@ def load_assignment_give_feedback():
 
     :return:
     '''
-    assignment_id = request.values.get('assignment_id', None)
+    assignment_id = maybe_int(request.values.get('assignment_id', None))
     if assignment_id is None:
         return ajax_failure("No Assignment ID given!")
-    assignment = Assignment.by_id(assignment_id)
+    course_id = get_course_id(okay_if_failure=True)
+    # Same hidden / IP / passcode checks as loading the assignment in the editor
+    scope, assignment = g.safely.load_assignment_by_id(assignment_id, course_id)
     return jsonify(success=True, give_feedback=assignment.on_run)
 
 

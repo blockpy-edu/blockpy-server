@@ -1,5 +1,6 @@
 import difflib
 import os
+from markupsafe import escape as html_escape
 
 DIFF_TEMPLATE = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -53,25 +54,27 @@ def make_report(directory, cheating_rings):
     for ring in cheating_rings:
         for submission, friends in ring.items():
             friends = set(friends)
-            name = submission.user.name()
-            assignment_name = submission.assignment.name
+            name = html_escape(submission.user.name())
+            assignment_name = html_escape(submission.assignment.name)
+            course_name = html_escape(submission.course.name)
             final_filename = f"{submission.course_id}-{submission.user_id}.html"
             filename = os.path.join(directory, final_filename)
-            links.append((name, assignment_name, submission.course.name, final_filename, len(friends)))
+            links.append((name, assignment_name, course_name, final_filename, len(friends)))
             with open(filename, 'w', encoding='utf-8') as out:
                 print(DIFF_TEMPLATE, file=out)
 
-                print(f"<p>Similarity report for {name} (<code>{submission.course.name}</code> on <code>{assignment_name}</code>)</p>", file=out)
+                print(f"<p>Similarity report for {name} (<code>{course_name}</code> on <code>{assignment_name}</code>)</p>", file=out)
                 print(f"<h1>Other Users:</h1>", file=out)
                 print(f"<ol>", file=out)
                 for friend, sim in friends:
-                    friend_name = friend.user.name()
-                    print("<li>", link(friend_name, friend.user_id), f"({sim}%) from {friend.course.name}</li>", file=out)
+                    friend_name = html_escape(friend.user.name())
+                    print("<li>", link(friend_name, friend.user_id), f"({sim}%) from {html_escape(friend.course.name)}</li>", file=out)
                 print(f"</ol>", file=out)
 
                 print("<h1>File Similarity</h1>", file=out)
                 for friend, sim in friends:
-                    friend_name = friend.user.name()
+                    friend_name = html_escape(friend.user.name())
+                    # difflib does not escape fromdesc/todesc, so they are pre-escaped above
                     table = differ.make_table(submission.code.splitlines(), friend.code.splitlines(), name, friend_name)
                     print(f"<a id='{friend.user_id}' />", file=out)
                     print(table, "<br>" * 2, file=out)

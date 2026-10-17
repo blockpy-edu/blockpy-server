@@ -24,18 +24,16 @@ HISTORY = [
               {%- endif -%})
              +" - " +
              (REMAP_EVENT_TYPES[{{ log.event_type|tojson }}] || {{ log.event_type|tojson }}),
-     "event_label": "{{ log.event_type }}
-                     {%- if log.category %}/ {{ log.category }}{% endif -%}
-                     {%- if log.label %}/ {{ log.label }}{% endif -%}",
+     "event_label": {{ (log.event_type ~ ("/ " ~ log.category if log.category else "") ~ ("/ " ~ log.label if log.label else ""))|tojson }},
         message:
             {%- if log.event_type.lower() in ("file.edit", "file.create") -%}
                 {{ log.message|highlight_python_code|tojson }}
             {%- elif log.event_type.lower() == "intervention" -%}
                 {{ (log.label+"\n"+log.message)|tojson }}
             {%- elif log.event_type.lower() == "session.start" -%}
-                "<pre>"+JSON.stringify({{ log.message|safe or "{}" }}, null, 2)+"</pre>"
+                {{ log.message|pretty_json_pre|tojson }}
             {%- else -%}
-                {{ ("<pre>"+log.message+"</pre>")|tojson }}
+                {{ log.message|escaped_pre|tojson }}
             {%- endif -%},
         {%- for key, value in log.items() -%}
             {% if key != "message" %}

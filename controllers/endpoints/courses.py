@@ -280,6 +280,7 @@ def users():
     user_ids = request.values.get('user_ids', "")
     course_id = get_course_id()
     user, user_id = get_user()
+    user_id_of_caller = user_id
     if course_id is None:
         return ajax_failure("You are not in a course context.")
     is_grader = user.is_grader(course_id)
@@ -309,8 +310,12 @@ def users():
             # With Course Role Information
             user = User.by_id(user_id)
             check_resource_exists(user, "User", user_id)
+            course_roles = user.get_course_roles(course_id)
+            if not course_roles and user.id != user_id_of_caller:
+                errors.append(f"User {user_id} is not in course {course_id}")
+                continue
             user_data = user.encode_json()
-            user_data['roles'] = [r.encode_json() for r in user.get_course_roles(course_id)]
+            user_data['roles'] = [r.encode_json() for r in course_roles]
             users.append(user_data)
     return ajax_success(dict(users=users, errors=errors))
 
@@ -1765,8 +1770,8 @@ def fake_dashboard():
                 for submission_id, metrics in submission.items():
                     values = [metrics.get(metric, "") for metric in all_metrics]
                     special_metrics = compute_special_metrics(metrics)
-                    writer.writerow([user.id, user.name(), user.email,
-                                     assignment.id, assignment.name, assignment.url,
+                    writer.writerow([user.id, csv_safe(user.name()), csv_safe(user.email),
+                                     assignment.id, csv_safe(assignment.name), assignment.url,
                                      submission_id, *special_metrics, *values])
         if mode == 'csv':
             output.seek(0)
@@ -1778,7 +1783,7 @@ def fake_dashboard():
             reader = csv.reader(output)
             next(reader)  # skip header
             for row in reader:
-                html_parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>")
+                html_parts.append("<tr>" + "".join(f"<td>{html_escape(cell)}</td>" for cell in row) + "</tr>")
             html_parts.append("</table>")
             return "".join(html_parts)
 

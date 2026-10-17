@@ -38,6 +38,19 @@ def make_flavored_uuid_generator(flavor: str):
 
 CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x0c\x0e-\x1f]")
 
+CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(value):
+    """
+    Neutralise spreadsheet formula injection: a cell starting with =, +, -, @ (or a tab/CR) is
+    executed as a formula by Excel/Sheets. Prefix such strings with a quote so they stay text.
+    """
+    if isinstance(value, str) and value.startswith(CSV_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
 def sanitize_for_pg_text(input_string: str) -> str:
     """
     Sanitize a string for safe storage in PostgreSQL text fields by removing control characters.

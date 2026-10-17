@@ -25,6 +25,7 @@ from models.assignment_tag import AssignmentTag
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
 from controllers.auth import get_user
+from common.text import csv_safe
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
@@ -169,19 +170,19 @@ def get_grading_spreadsheet():
                       "Course ID", "Group ID", "Assignment ID", "User ID",
                       "Assignment Type", "Code"
                       ]])
-        cw.writerows([[submission.course.name if submission.course else "Unknown Course",
-                       submission.assignment_group.name if submission.assignment_group else "No Group",
-                       submission.assignment.name, submission.user.name(),
+        cw.writerows([[csv_safe(submission.course.name) if submission.course else "Unknown Course",
+                       csv_safe(submission.assignment_group.name) if submission.assignment_group else "No Group",
+                       csv_safe(submission.assignment.name), csv_safe(submission.user.name()),
                        ",".join([role.name for role, user in User.get_user_role(submission.course_id, submission.user_id)]),
-                       submission.user.email,
+                       csv_safe(submission.user.email),
                        submission.correct, submission.score, submission.full_score(), len(submission.get_reviews()),
                        submission.full_status(False), submission.submission_status, submission.grading_status,
                        submission.version, submission.estimate_duration() if estimate_time_spent else "",
                        submission.date_created, submission.date_modified, submission.get_session_start_time() or "",
-                       submission.extra_files,
+                       csv_safe(submission.extra_files),
                        submission.course_id, submission.assignment_group_id, submission.assignment_id, submission.user_id,
                        submission.assignment.type,
-                       submission.code if with_code else "",
+                       csv_safe(submission.code) if with_code else "",
                        ]
                       for submission in submissions])
         output = make_response(f.getvalue())
@@ -222,6 +223,7 @@ def normalize_score(score: str) -> float:
 
 @blueprint_grading.route("/bulk_update_submission/", methods=['GET', 'POST'])
 @blueprint_grading.route("/bulk_update_submission", methods=['GET', 'POST'])
+@login_required
 def bulk_update_submission():
     """
     This endpoint is if the user has a JSON list of submission objects uploaded.
@@ -239,8 +241,16 @@ def bulk_update_submission():
             flash('No selected file')
             return redirect(request.url)
         if file:
-            bundle = json.loads(file.read().decode('utf-8'))
+            try:
+                bundle = json.loads(file.read().decode('utf-8'))
+            except (ValueError, UnicodeDecodeError):
+                flash("That file is not valid JSON.")
+                return redirect(request.url)
+            if not isinstance(bundle, list):
+                flash("Expected a JSON list of submission objects.")
+                return redirect(request.url)
             changed = 0
+            skipped = 0
             for submission_data in bundle:
                 if 'submission_id' not in submission_data or 'score' not in submission_data or 'correct' not in submission_data:
                     flash("Submission object missing fields: " + str(submission_data))
@@ -251,6 +261,9 @@ def bulk_update_submission():
                 message = submission_data.get('message', "")
                 submission = Submission.by_id(submission_id)
                 if submission:
+                    if not g.user.is_grader(submission.course_id):
+                        skipped += 1
+                        continue
                     grade_submission(submission_id, None, g.user, request.remote_addr,
                                      score, correct, None, None, True, by_human=True, must_be_grader=True)
                     make_log_entry(submission_id, submission.version,
@@ -262,7 +275,7 @@ def bulk_update_submission():
                             "message": message
                         }))
                     changed += 1
-            flash(f"File uploaded successfully: {changed} submissions updated.")
+            flash(f"File uploaded successfully: {changed} submissions updated, {skipped} skipped (not a grader).")
             return redirect(request.url)
         flash("No file contents")
         return redirect(request.url)

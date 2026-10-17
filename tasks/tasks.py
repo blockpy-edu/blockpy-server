@@ -15,6 +15,7 @@ from flask import current_app, render_template, url_for
 
 from common.filesystem import ensure_dirs
 from common.urls import append_parameters
+from common.text import csv_safe
 from controllers.helpers import make_log_entry
 from controllers.pylti.common import LTIPostMessageException
 from controllers.pylti.flask import LTI
@@ -381,12 +382,12 @@ def make_red_flag_report(user_id, target_course, short_threshold, characters_per
                 standardized_row = standardized.get(student, {}).get(url, {})
                 standardized_values = [standardized_row.get(c) for c in NUMERIC_COLUMNS]
                 reasons, red_flag_index = identify_red_flags(r, standardized_row)
-                csv_out.writerow([course.name,
-                                  student.name(), student.id, student.email,
-                                  r['assignment_id'], url,
+                csv_out.writerow([csv_safe(course.name),
+                                  csv_safe(student.name()), student.id, csv_safe(student.email),
+                                  r['assignment_id'], csv_safe(url),
                                   link,
                                   red_flag_index,
-                                  "|".join(reasons),
+                                  csv_safe("|".join(reasons)),
                                   *numeric_row,
                                   *standardized_values,
                                   r['score']])

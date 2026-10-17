@@ -23,7 +23,7 @@
     <tbody>
     {% for value, outcome in values.items()|sort(attribute='1.1') %}
         <tr>
-            <td><code title="{{ value|escape }}">{{ value|safe }}</code></td>
+            <td><code title="{{ value }}">{{ value }}</code></td>
             <td>{{ outcome[0] }}</td>
             <td>{{ outcome[1] }}</td>
             <td>{{ '%0.2f'|format(100*outcome[2]) }}%</td>
@@ -54,7 +54,7 @@
                     <ul>
                     {% if question.per_part_stats %}
                     {% for key, values in question.per_part_stats.items() %}
-                        <li><code title="{{ key|escape  }}">{{ key|safe }}</code>
+                        <li><code title="{{ key }}">{{ key }}</code>
                         {{ answer_table(question, values)}}
                          </li>
                     {% endfor %}

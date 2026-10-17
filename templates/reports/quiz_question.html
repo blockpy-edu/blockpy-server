@@ -11,7 +11,7 @@
             <li>
             {% if student == answer %}
                 <span class="mdq mdq-{{ question|check_quiz_answer(feedback, student, check, is_grader) }}">
-                {{ student|safe }}
+                {{ student }}
                 </span>
             {% else %}
                 {{ answer|safe }}
@@ -54,7 +54,7 @@
                 <td>{{ s|safe }}</td>
                 <td><span class="mdq mdq-{{ question|check_quiz_answer(feedback, a, check, is_grader, loop.index0) }}">
                     {% if a %}
-                        {{ a|safe }}
+                        {{ a }}
                     {% else %}
                         <i>Nothing</i>
                     {% endif %}

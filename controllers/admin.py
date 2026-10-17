@@ -8,10 +8,10 @@ from zoneinfo import ZoneInfo
 
 import pytz
 # Import Flask
-from flask_admin import Admin, BaseView, expose, form
+from flask_admin import Admin, AdminIndexView, BaseView, expose, form
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.fileadmin import FileAdmin
-from flask import g, Blueprint, request, url_for, render_template, Response, current_app, session
+from flask import g, Blueprint, request, url_for, render_template, Response, current_app, session, abort
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from flask_admin.model.filters import BaseFilter
 from markupsafe import Markup
@@ -531,8 +531,18 @@ class ProtectedFileAdmin(FileAdmin):
             return g.user.is_admin()
         return False
 
+class ProtectedIndexView(AdminIndexView):
+    """ The /admin/ landing page lists every table and file view; admins only, like the views. """
+
+    def is_accessible(self):
+        return bool(g.user) and g.user.is_admin()
+
+    def inaccessible_callback(self, name, **kwargs):
+        abort(403)
+
+
 def setup_admin(app):
-    admin = Admin(app)
+    admin = Admin(app, index_view=ProtectedIndexView())
     admin.add_view(UserView(User, db.session, category='Tables'))
     admin.add_view(CourseView(Course, db.session, category='Tables'))
     admin.add_view(SubmissionView(Submission, db.session, category='Tables'))

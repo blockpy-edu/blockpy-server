@@ -212,7 +212,7 @@ def _post_patched_request(consumers, lti_key, body,
     http._normalize_headers = monkey_patch_function
     
     log.debug("key %s", lti_key)
-    log.debug("secret %s", secret)
+    # never log the shared secret
     log.debug("url %s", url)
     log.debug("response %s", response)
     log.debug("content %s", format(content))

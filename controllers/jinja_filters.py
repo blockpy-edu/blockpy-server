@@ -12,6 +12,7 @@ from common.highlighters import highlight_python_code, highlight_java_code, high
     highlight_typescript_code
 from flask import request, g
 from markdown import Markdown
+from markupsafe import escape as html_escape
 
 
 def attempt_json_load(data):
@@ -108,8 +109,11 @@ def make_readonly_quiz_body(question, feedback, student, check, is_grader):
     if question['type'] in ('multiple_dropdowns_question', 'fill_in_multiple_blanks_question'):
         for key, value in student.items():
             correct = check_entered_string(value, check, key)
-            text = re.sub(rf"(?<!\\)(\[{key}\])(?!\()",
-                          f"<span class='mdq mdq-{correct if is_grader else 'unknown'}'>{value}</span>",
+            # `value` is student-typed text rendered to graders: escape it, and avoid re.sub's
+            # backslash processing on it.
+            safe_value = str(html_escape(value))
+            text = re.sub(rf"(?<!\\)(\[{re.escape(str(key))}\])(?!\()",
+                          lambda _match: f"<span class='mdq mdq-{correct if is_grader else 'unknown'}'>{safe_value}</span>",
                           text)
         # Also remove any double-doubled brackets
         text = re.sub(r"\[\[", r"[", text)
@@ -135,7 +139,23 @@ def extract_kettle_instructions(instructions, submission, assignment):
     return instructions
 
 
+def escaped_pre(message):
+    """ Student-written log text wrapped in <pre>, HTML-escaped, for the history browser. """
+    return "<pre>" + str(html_escape(message if message is not None else "")) + "</pre>"
+
+
+def pretty_json_pre(message):
+    """ Like escaped_pre, but pretty-prints the text when it is JSON. """
+    try:
+        message = json.dumps(json.loads(message), indent=2)
+    except (TypeError, ValueError):
+        pass
+    return escaped_pre(message)
+
+
 def setup_jinja_filters(app):
+    app.jinja_env.filters['escaped_pre'] = escaped_pre
+    app.jinja_env.filters['pretty_json_pre'] = pretty_json_pre
     app.jinja_env.filters['markdown'] = Markdown(extensions=['fenced_code']).convert
     app.jinja_env.filters['zip'] = zip
     app.jinja_env.filters['json_load'] = attempt_json_load
