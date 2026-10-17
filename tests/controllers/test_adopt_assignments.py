@@ -7,7 +7,8 @@ import pytest
 from models import db
 from models.assignment import Assignment
 from models.course import Course
-from models.log_tables import SubmissionLog
+from models.enums import CourseLogEvent
+from models.log_tables import SubmissionLog, CourseLog
 from models.submission import Submission
 
 
@@ -210,3 +211,15 @@ class TestAdoptAndUnadopt:
         adopt(client, assignment_id=feedback.id)
         response = client.get('/courses/feedback_editor/6')
         assert b'Adopted Feedback' in response.data
+
+    def test_adopt_and_unadopt_are_logged(self, client, test_data, act_as):
+        act_as(test_data.user("ada@blockpy.com"))
+        adopt(client, assignment_id=120)
+        # Adopting twice only logs once, since the second is a no-op
+        adopt(client, assignment_id=120)
+        logs = CourseLog.query.filter_by(course_id=6).order_by(CourseLog.id).all()
+        assert [(log.event_type, log.field, log.value, log.subject_id) for log in logs] ==                [(CourseLogEvent.ADOPT, "assignment_id", "120", 10)]
+        unadopt(client, assignment_id=120)
+        logs = CourseLog.query.filter_by(course_id=6).order_by(CourseLog.id).all()
+        assert [log.event_type for log in logs] == [CourseLogEvent.ADOPT, CourseLogEvent.UNADOPT]
+        assert (logs[1].field, logs[1].value) == ("assignment_id", "120")

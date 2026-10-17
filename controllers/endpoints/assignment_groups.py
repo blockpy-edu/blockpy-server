@@ -8,10 +8,11 @@ from controllers.auth import get_user
 from controllers.helpers import (require_request_parameters, require_course_instructor, login_required,
                                  require_course_adopter,
                                  check_resource_exists, get_select_menu_link, get_course_id, ajax_success,
-                                 maybe_int, require_course_grader, make_log_entry, abort_with_failure)
-from models import Course, Submission, AssignmentLog
+                                 maybe_int, require_course_grader, make_log_entry, abort_with_failure,
+                                 client_time_fields)
+from models import Course, Submission, AssignmentLog, CourseLog
 
-from models.enums.logs import AssignmentLogEvent
+from models.enums.logs import AssignmentLogEvent, CourseLogEvent
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
 from models.assignment_group_membership import AssignmentGroupMembership
@@ -64,6 +65,11 @@ def fork_group():
     # Perform action
     new_assignment_group, assignments = assignment_group.fork(new_owner_id=g.user.id,
                                                               new_course_id=assignment_group.course_id)
+    CourseLog.new(assignment_group.course_id, g.user.id, CourseLogEvent.FORK,
+                  "assignment_group_id", str(new_assignment_group.id), *client_time_fields())
+    for new_assignment in assignments:
+        AssignmentLog.new(new_assignment.id, new_assignment.version, assignment_group.course_id, g.user.id,
+                          AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id), *client_time_fields())
     # Result
     select_url = get_select_menu_link(new_assignment_group.id, new_assignment_group.name, is_embedded, True)
     return jsonify(success=True, id=new_assignment_group.id,
@@ -316,6 +322,12 @@ def forking_menu():
                             new_name=assignment.name)
             AssignmentGroupMembership.move_assignment(new_assignment.id, forked_group.id)
             new_assignments.append(new_assignment)
+        CourseLog.new(target_course_id, g.user.id, CourseLogEvent.FORK,
+                      "assignment_group_id", str(forked_group.id), *client_time_fields())
+        for new_assignment in new_assignments:
+            AssignmentLog.new(new_assignment.id, new_assignment.version, target_course_id, g.user.id,
+                              AssignmentLogEvent.FORK, "forked_id", str(new_assignment.forked_id),
+                              *client_time_fields())
         links = "<br>\n".join([
             "<a href='"+url_for('assignments.load', assignment_group_id=forked_group.id,
                                 course_id=target_course_id)

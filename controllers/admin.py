@@ -16,7 +16,7 @@ from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from flask_admin.model.filters import BaseFilter
 from markupsafe import Markup
 
-from sqlalchemy import func, text as sql_text, Date, cast
+from sqlalchemy import func, text as sql_text, Date, cast, inspect as sqlalchemy_inspect
 from sqlalchemy_utc import UtcDateTime
 from wtforms import StringField
 
@@ -26,6 +26,7 @@ from models.course import Course
 from models.role import Role
 from models.authentication import Authentication
 from models.log_tables import RoleLog, AccessLog, ErrorLog, CourseLog, AssignmentLog, SubmissionLog
+from models.enums import CourseLogEvent
 from models.submission import Submission
 from models.sample_submission import SampleSubmission
 from models.review import Review
@@ -251,6 +252,23 @@ class CourseView(RegularView):
         'owner': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
     }
 
+    def on_model_change(self, form, model, is_created):
+        super().on_model_change(form, model, is_created)
+        if is_created:
+            return
+        # Owner transfers and locking only happen through this panel, so they are logged here.
+        attrs = sqlalchemy_inspect(model).attrs
+        owner_changed = attrs.owner.history.has_changes() or attrs.owner_id.history.has_changes()
+        locked_changed = attrs.locked.history.has_changes()
+        if not (owner_changed or locked_changed):
+            return
+        # Flush so owner_id reflects a newly selected owner before it is logged
+        db.session.flush()
+        if owner_changed:
+            CourseLog.new(model.id, g.user.id, CourseLogEvent.TRANSFER, value=str(model.owner_id))
+        if locked_changed:
+            CourseLog.new(model.id, g.user.id, CourseLogEvent.EDIT, field="locked", value=str(model.locked))
+
 
 class AssignmentView(RegularView):
     can_export = True
@@ -310,6 +328,70 @@ class AssignmentGroupView(RegularView):
         'course': make_ajax_fields('id', 'url', 'name'),
         'forked': make_ajax_fields('name', 'url', 'id')
     }
+
+
+class AuditLogView(RegularView):
+    """
+    Read-only listing for the audit tables. Rows are never created, edited or
+    deleted from the panel: the admin panel must not be a way to rewrite history.
+    """
+    can_create = False
+    can_edit = False
+    can_delete = False
+    can_export = True
+    can_view_details = True
+    column_display_pk = True
+    column_default_sort = ('date_created', True)
+    simple_list_pager = True
+
+
+class CourseLogView(AuditLogView):
+    column_list = ('id', 'date_created', 'course_id', 'subject_id', 'event_type', 'field', 'value')
+    column_filters = ('id', 'date_created', 'course_id', 'subject_id', 'event_type', 'field', 'value')
+    column_formatters = {'value': _render_code}
+    form_ajax_refs = {
+        'course': make_ajax_fields('id', 'url', 'name'),
+        'subject': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
+    }
+
+
+class RoleLogView(AuditLogView):
+    column_list = ('id', 'date_created', 'course_id', 'role_id', 'subject_id', 'authorizer_id',
+                   'event_type', 'event_value')
+    column_filters = ('id', 'date_created', 'course_id', 'role_id', 'subject_id', 'authorizer_id',
+                      'event_type', 'event_value')
+    form_ajax_refs = {
+        'course': make_ajax_fields('id', 'url', 'name'),
+        'subject': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
+        'authorizer': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
+    }
+
+
+class AssignmentLogView(AuditLogView):
+    column_list = ('id', 'date_created', 'assignment_id', 'assignment_version', 'course_id', 'subject_id',
+                   'event_type', 'field', 'value')
+    column_filters = ('id', 'date_created', 'assignment_id', 'course_id', 'subject_id', 'event_type', 'field')
+    # value holds whole file contents
+    column_formatters = {'value': _render_code}
+    form_ajax_refs = {
+        'assignment': make_ajax_fields('name', 'url', 'id'),
+        'course': make_ajax_fields('id', 'url', 'name'),
+        'subject': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
+    }
+
+
+class AccessLogView(AuditLogView):
+    column_list = ('id', 'date_created', 'subject_id', 'route', 'method', 'ip_address')
+    column_filters = ('id', 'date_created', 'subject_id', 'route', 'method', 'ip_address')
+    form_ajax_refs = {
+        'subject': make_ajax_fields('first_name', 'last_name', 'email', 'id'),
+    }
+
+
+class ErrorLogView(AuditLogView):
+    column_list = ('id', 'date_created', 'access_log_id', 'error_type', 'message')
+    column_filters = ('id', 'date_created', 'access_log_id', 'error_type', 'message')
+    column_formatters = {'message': _render_code, 'traceback': _render_code}
 
 
 class LogView(RegularView):
@@ -553,8 +635,12 @@ def setup_admin(app):
     admin.add_view(AssignmentTagView(AssignmentTag, db.session, category='Tables'))
     admin.add_view(AuthenticationView(Authentication, db.session, category='Tables'))
     admin.add_view(RoleView(Role, db.session, category='Tables'))
-    admin.add_view(LogView(SubmissionLog, db.session, category='Tables'))
-    # TODO: Other logs tables
+    admin.add_view(LogView(SubmissionLog, db.session, category='Logs'))
+    admin.add_view(CourseLogView(CourseLog, db.session, category='Logs'))
+    admin.add_view(RoleLogView(RoleLog, db.session, category='Logs'))
+    admin.add_view(AssignmentLogView(AssignmentLog, db.session, category='Logs'))
+    admin.add_view(AccessLogView(AccessLog, db.session, category='Logs'))
+    admin.add_view(ErrorLogView(ErrorLog, db.session, category='Logs'))
     admin.add_view(ReviewView(Review, db.session, category='Tables'))
     admin.add_view(ReportView(Report, db.session, category='Tables'))
     admin.add_view(InviteView(Invite, db.session, category='Tables'))

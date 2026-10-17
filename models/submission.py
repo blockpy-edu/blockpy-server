@@ -795,40 +795,6 @@ class Submission(EnhancedBase):
                 current_app.logger.info("Could not delete because:" + str(e))
         return None
 
-    def log_code(self, course_id, extension=".py", timestamp=""):
-        """
-        DEPRECATED
-
-        Store the code on disk, mapped to the Assignment ID and the Student ID
-        """
-        # Multiple-file logging
-        log = models.SubmissionLog.new(
-            self.id,
-            self.version,
-            "code",
-            "set",
-            self.assignment_id,
-            self.assignment_version,
-            course_id,
-            self.user_id,
-            body=self.code,
-            timestamp=timestamp,
-            extended=False,
-        )
-
-        directory = os.path.join(
-            current_app.config["BLOCKPY_LOG_DIR"],
-            str(self.assignment_id),
-            str(self.user_id),
-        )
-
-        ensure_dirs(directory)
-        name = time.strftime("%Y%m%d-%H%M%S")
-        file_name = os.path.join(directory, name + extension)
-
-        with open(file_name, "w") as blockly_logfile:
-            blockly_logfile.write(self.code)
-
     def get_reviews(self):
         return [
             review.encode_json()
@@ -983,7 +949,7 @@ class Submission(EnhancedBase):
     def copy_from(self, old_submission, overwrite_endpoints=False):
         self.code = old_submission.code
         self.extra_files = old_submission.extra_files
-        self.url = old_submission.url
+        # url is this submission's own (unique) identity and is not copied
         if overwrite_endpoints or not self.endpoint:
             self.endpoint = old_submission.endpoint
         self.score = old_submission.score

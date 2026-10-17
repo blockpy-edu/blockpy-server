@@ -1,0 +1,287 @@
+<style>
+.audit-review .audit-row td { vertical-align: top; }
+.audit-review .audit-value { white-space: pre-wrap; word-break: break-word; max-height: 12em; overflow: auto; font-size: 85%; }
+.audit-review .audit-value.expanded { max-height: none; }
+.audit-review .audit-diff { font-size: 85%; white-space: pre-wrap; word-break: break-word; margin: 0; }
+.audit-review .audit-diff .add { background: #e6ffed; color: #22863a; }
+.audit-review .audit-diff .remove { background: #ffeef0; color: #b31d28; }
+.audit-review .audit-diff .header { color: #6a737d; }
+.audit-review .audit-sparkline { width: 120px; height: 28px; }
+.audit-review .audit-sparkline polyline { fill: none; stroke: #0275d8; stroke-width: 1.5; }
+.audit-review .audit-day { background: #f7f7f9; }
+.audit-review .audit-tile .display-4 { font-size: 2rem; }
+.audit-review .audit-frame { font-family: monospace; font-size: 85%; word-break: break-all; }
+.audit-review .audit-traceback { white-space: pre-wrap; font-size: 80%; max-height: 30em; overflow: auto; }
+</style>
+
+<div class="audit-review">
+
+    <!-- Admin navigation between the review pages -->
+    <!-- ko if: isAdmin -->
+    <nav class="mb-3 small">
+        <a data-bind="attr: {href: dashboardUrl()}, css: {'font-weight-bold': page === 'dashboard'}">Dashboard</a>
+        &middot; <a data-bind="attr: {href: feedUrl()}, css: {'font-weight-bold': page === 'feed'}">Feed</a>
+        &middot; <a data-bind="attr: {href: errorsUrl()}, css: {'font-weight-bold': page === 'errors'}">Errors</a>
+    </nav>
+    <!-- /ko -->
+
+    <!-- ================= Dashboard ================= -->
+    <!-- ko if: page === 'dashboard' -->
+    <div class="alert alert-danger" data-bind="visible: summaryError(), text: summaryError()"></div>
+
+    <form class="form-inline mb-3" data-bind="submit: lookup">
+        <input type="text" class="form-control mr-2" style="min-width: 22em" placeholder="user email, course id or url, assignment id or url"
+               data-bind="textInput: lookupQuery">
+        <button type="submit" class="btn btn-outline-secondary">Find history</button>
+    </form>
+    <ul class="list-unstyled" data-bind="foreach: lookupMatches">
+        <li><span class="badge badge-light" data-bind="text: kind"></span> <a data-bind="attr: {href: url}, text: label"></a></li>
+    </ul>
+    <p class="text-muted small" data-bind="visible: lookupSearched() && !lookupMatches().length">Nothing matched.</p>
+
+    <div class="row" data-bind="if: summary()">
+        <!-- ko foreach: tileTables() -->
+        <div class="col-md-3 mb-3">
+            <div class="card audit-tile h-100" data-bind="with: $component.tileFor($data)">
+                <div class="card-body py-2">
+                    <div class="text-muted small" data-bind="text: $component.tableLabels[$parent] + ' events'"></div>
+                    <div class="display-4" data-bind="text: since"></div>
+                    <div class="small">last 24 hours &middot; <span data-bind="text: week"></span> this week</div>
+                    <svg class="audit-sparkline" viewBox="0 0 120 28"><polyline data-bind="attr: {points: $component.sparkline(days)}"></polyline></svg>
+                </div>
+            </div>
+        </div>
+        <!-- /ko -->
+        <div class="col-md-3 mb-3">
+            <div class="card audit-tile h-100" data-bind="with: summary().errors">
+                <div class="card-body py-2">
+                    <div class="text-muted small">Server errors</div>
+                    <div class="display-4" data-bind="text: since"></div>
+                    <div class="small">last 24 hours &middot; <span data-bind="text: week"></span> this week
+                        &middot; <a data-bind="attr: {href: $component.errorsUrl()}">details</a></div>
+                    <svg class="audit-sparkline" viewBox="0 0 120 28"><polyline data-bind="attr: {points: $component.sparkline(days)}"></polyline></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-3">
+            <h4>Recent destructive events</h4>
+            <p class="text-muted small" data-bind="visible: summary() && !destructive().length">Nothing deleted, removed or unadopted recently.</p>
+            <table class="table table-sm" data-bind="visible: destructive().length">
+                <tbody data-bind="template: {name: 'audit-event-rows', foreach: destructive}"></tbody>
+            </table>
+        </div>
+        <div class="col-lg-6 mb-3">
+            <h4>Recent privilege changes</h4>
+            <p class="text-muted small" data-bind="visible: summary() && !privilege().length">No instructor or admin roles given or changed recently.</p>
+            <table class="table table-sm" data-bind="visible: privilege().length">
+                <tbody data-bind="template: {name: 'audit-event-rows', foreach: privilege}"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- /ko -->
+
+    <!-- ================= Course header ================= -->
+    <!-- ko if: page === 'course' -->
+    <div class="card mb-3">
+        <div class="card-body py-2 small">
+            <span class="mr-3"><strong>Owner:</strong> <span data-bind="text: header.owner ? (header.owner.first_name + ' ' + header.owner.last_name + ' <' + header.owner.email + '>') : 'unknown'"></span></span>
+            <span class="mr-3"><strong>Visibility:</strong> <span data-bind="text: header.visibility"></span></span>
+            <span class="mr-3"><strong>Locked:</strong> <span data-bind="text: header.locked ? 'yes' : 'no'"></span></span>
+            <span><strong>Created:</strong> <span data-bind="text: whenString(header.createdAt)"></span>
+                <!-- ko if: header.createdBy --> by <span data-bind="text: header.createdBy.first_name + ' ' + header.createdBy.last_name"></span><!-- /ko -->
+                <!-- ko ifnot: header.createdBy --> <span class="text-muted">(before audit logging began)</span><!-- /ko -->
+            </span>
+        </div>
+    </div>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link" href="#" data-bind="css: {active: tab() === 'all'}, click: function() { tab('all'); }">All</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-bind="css: {active: tab() === 'settings'}, click: function() { tab('settings'); }">Settings</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-bind="css: {active: tab() === 'roster'}, click: function() { tab('roster'); }">Roster</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" data-bind="css: {active: tab() === 'assignments'}, click: function() { tab('assignments'); }">Assignments</a></li>
+    </ul>
+    <!-- /ko -->
+
+    <!-- ================= Assignment header ================= -->
+    <!-- ko if: page === 'assignment' -->
+    <div class="card mb-3">
+        <div class="card-body py-2 small">
+            <span class="mr-3"><strong>Type:</strong> <span data-bind="text: header.assignment ? header.assignment.type : ''"></span></span>
+            <span class="mr-3"><strong>URL:</strong> <code data-bind="text: header.assignment ? header.assignment.url : ''"></code></span>
+            <span class="mr-3"><strong>Owner:</strong> <span data-bind="text: header.owner ? (header.owner.first_name + ' ' + header.owner.last_name) : 'unknown'"></span></span>
+            <span><strong>Course:</strong>
+                <!-- ko if: header.course --><a data-bind="attr: {href: courseUrl(header.course.id)}, text: header.course.name"></a><!-- /ko -->
+                <!-- ko ifnot: header.course --><span class="text-muted">deleted</span><!-- /ko -->
+            </span>
+        </div>
+    </div>
+    <p class="text-muted small">Each edit can be diffed against the previous edit of the same field.</p>
+    <!-- /ko -->
+
+    <!-- ================= Filters (global feed only) ================= -->
+    <!-- ko if: page === 'feed' -->
+    <form class="card mb-3" data-bind="submit: function() { feed.reload(); }">
+        <div class="card-body py-2">
+            <div class="form-row align-items-end">
+                <div class="form-group col-md-3 mb-2">
+                    <label class="small mb-0">Tables</label><br>
+                    <label class="mr-2 small"><input type="checkbox" value="course_log" data-bind="checked: feed.tables"> Course</label>
+                    <label class="mr-2 small"><input type="checkbox" value="role_log" data-bind="checked: feed.tables"> Roster</label>
+                    <label class="small"><input type="checkbox" value="assignment_log" data-bind="checked: feed.tables"> Assignment</label>
+                </div>
+                <div class="form-group col-md-2 mb-2">
+                    <label class="small mb-0">Event types (comma separated)</label>
+                    <input type="text" class="form-control form-control-sm" placeholder="edit,delete" data-bind="textInput: feed.eventTypes">
+                </div>
+                <div class="form-group col-md-1 mb-2">
+                    <label class="small mb-0">Subject id</label>
+                    <input type="text" class="form-control form-control-sm" data-bind="textInput: feed.subjectId">
+                </div>
+                <div class="form-group col-md-2 mb-2">
+                    <label class="small mb-0">Search field/value</label>
+                    <input type="text" class="form-control form-control-sm" data-bind="textInput: feed.search">
+                </div>
+                <div class="form-group col-md-2 mb-2">
+                    <label class="small mb-0">Since</label>
+                    <input type="datetime-local" class="form-control form-control-sm" data-bind="value: feed.since">
+                </div>
+                <div class="form-group col-md-2 mb-2">
+                    <label class="small mb-0">Before</label>
+                    <input type="datetime-local" class="form-control form-control-sm" data-bind="value: feed.before">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+        </div>
+    </form>
+    <!-- /ko -->
+
+    <!-- ================= Feeds ================= -->
+    <!-- ko if: page === 'user' -->
+    <div class="row">
+        <div class="col-lg-6">
+            <h4>Did</h4>
+            <!-- ko template: {name: 'audit-feed', data: feed} --><!-- /ko -->
+        </div>
+        <div class="col-lg-6">
+            <h4>Received</h4>
+            <!-- ko template: {name: 'audit-feed', data: receivedFeed} --><!-- /ko -->
+        </div>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: page === 'feed' || page === 'course' || page === 'assignment' -->
+    <!-- ko template: {name: 'audit-feed', data: feed} --><!-- /ko -->
+    <!-- /ko -->
+
+    <!-- ================= Errors ================= -->
+    <!-- ko if: page === 'errors' -->
+    <p class="text-muted small">
+        Unhandled server errors from the last <span data-bind="text: errorDays"></span> days, grouped by exception type and the
+        innermost frame of the traceback. <span data-bind="text: errorTotal"></span> occurrences in total.
+        <a href="#" data-bind="click: function() { errorDays(90); loadErrors(); }">Show 90 days</a>
+    </p>
+    <div class="alert alert-danger" data-bind="visible: errorsError(), text: errorsError()"></div>
+    <p data-bind="visible: errorsLoading()">Loading&hellip;</p>
+    <p class="text-muted" data-bind="visible: !errorsLoading() && !errorGroups().length && !errorsError()">No errors recorded.</p>
+    <table class="table table-sm" data-bind="visible: errorGroups().length">
+        <thead><tr><th>Error</th><th>Where</th><th class="text-right">24h</th><th class="text-right">7d</th><th class="text-right">Total</th><th>First seen</th><th>Last seen</th><th></th></tr></thead>
+        <tbody data-bind="foreach: errorGroups">
+            <tr>
+                <td><a href="#" data-bind="click: $component.toggleGroup.bind($component), text: error_type"></a></td>
+                <td class="audit-frame" data-bind="text: frame"></td>
+                <td class="text-right" data-bind="text: day"></td>
+                <td class="text-right" data-bind="text: week"></td>
+                <td class="text-right" data-bind="text: count"></td>
+                <td class="small" data-bind="text: $component.whenString(first_seen)"></td>
+                <td class="small" data-bind="text: $component.whenString(last_seen)"></td>
+                <td><svg class="audit-sparkline" viewBox="0 0 120 28"><polyline data-bind="attr: {points: $component.sparklineCounts(days)}"></polyline></svg></td>
+            </tr>
+            <tr data-bind="visible: $component.expandedGroup() === $data">
+                <td colspan="8">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>When</th><th>User</th><th>Route</th><th>IP</th><th>Message</th></tr></thead>
+                        <tbody data-bind="foreach: occurrences">
+                            <tr>
+                                <td class="small text-nowrap"><a href="#" data-bind="click: $component.toggleOccurrence.bind($component), text: $component.whenString(when)"></a></td>
+                                <td class="small" data-bind="text: $component.occurrenceUser($data)"></td>
+                                <td class="small"><code data-bind="text: method + ' ' + route"></code></td>
+                                <td class="small" data-bind="text: ip_address"></td>
+                                <td class="small" data-bind="text: message"></td>
+                            </tr>
+                            <tr data-bind="visible: $component.expandedOccurrence() === $data">
+                                <td colspan="5"><pre class="audit-traceback" data-bind="text: traceback"></pre></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <!-- /ko -->
+
+</div>
+
+<!-- One feed: grouped by day, with load more -->
+<script type="text/html" id="audit-feed">
+    <div class="alert alert-danger" data-bind="visible: error(), text: error()"></div>
+    <p class="text-muted" data-bind="visible: hasLoaded() && !rows().length && !error()">No events.</p>
+    <table class="table table-sm" data-bind="visible: rows().length">
+        <tbody data-bind="foreach: groups">
+            <tr class="audit-day"><th colspan="5" data-bind="text: day"></th></tr>
+            <!-- ko template: {name: 'audit-event-rows', foreach: rows} --><!-- /ko -->
+        </tbody>
+    </table>
+    <p data-bind="visible: loading()">Loading&hellip;</p>
+    <button class="btn btn-sm btn-outline-secondary" data-bind="visible: rows().length && !exhausted() && !loading(), click: loadMore">Load more</button>
+</script>
+
+<!-- One event row (the data is an EventRow) -->
+<script type="text/html" id="audit-event-rows">
+    <tr class="audit-row">
+        <td class="text-nowrap small" data-bind="text: $component.when(event)"></td>
+        <td class="small">
+            <!-- ko if: $component.isAdmin -->
+            <a data-bind="attr: {href: $component.userUrl(event.subject_id)}, text: $component.subjectName(event)"></a>
+            <!-- /ko -->
+            <!-- ko ifnot: $component.isAdmin -->
+            <span data-bind="text: $component.subjectName(event)"></span>
+            <!-- /ko -->
+        </td>
+        <td class="small">
+            <span class="badge badge-light" data-bind="text: $component.tableLabel(event)"></span>
+            <!-- ko if: $component.targetUrl(event) -->
+            <a data-bind="attr: {href: $component.targetUrl(event)}, text: $component.targetLabel(event)"></a>
+            <!-- /ko -->
+            <!-- ko ifnot: $component.targetUrl(event) -->
+            <span class="text-muted" data-bind="text: $component.targetLabel(event)"></span>
+            <!-- /ko -->
+            <span class="text-muted" data-bind="text: $component.contextLabel(event), visible: $component.page === 'assignment' || $component.page === 'user'"></span>
+        </td>
+        <td class="small"><span class="badge" data-bind="css: $component.badgeClass(event), text: event.event_type"></span></td>
+        <td class="small">
+            <!-- ko if: event.table === 'role_log' -->
+            <span data-bind="text: $component.sentence(event)"></span>
+            <!-- /ko -->
+            <!-- ko ifnot: event.table === 'role_log' -->
+            <code data-bind="text: $component.fieldLabel(event), visible: event.field"></code>
+            <!-- ko if: event.value !== null -->
+            <div class="audit-value" data-bind="text: shownValue(), css: {expanded: expanded()}"></div>
+            <a href="#" class="small" data-bind="click: toggleValue, text: expanded() ? 'show less' : 'show all', visible: event.value_truncated || (event.value || '').length > 200"></a>
+            <!-- /ko -->
+            <!-- ko if: canDiff() -->
+            <a href="#" class="small ml-2" data-bind="click: toggleDiff, text: diffOpen() ? 'hide diff' : 'diff'"></a>
+            <!-- ko if: diffOpen() -->
+            <div>
+                <span class="text-muted small" data-bind="visible: diffLoading()">Loading diff&hellip;</span>
+                <span class="text-danger small" data-bind="text: diffError(), visible: diffError()"></span>
+                <span class="text-muted small" data-bind="visible: !diffLoading() && diffPreviousId() === null && diffLines().length">First edit of this field; everything is new.</span>
+                <pre class="audit-diff" data-bind="foreach: diffLines"><div data-bind="css: kind, text: (kind === 'add' ? '+ ' : kind === 'remove' ? '- ' : kind === 'context' ? '  ' : '') + text"></div></pre>
+            </div>
+            <!-- /ko -->
+            <!-- /ko -->
+            <!-- /ko -->
+        </td>
+    </tr>
+</script>

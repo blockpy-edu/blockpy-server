@@ -1,6 +1,7 @@
 import io
 import csv
 import time
+import uuid
 import statistics
 from datetime import datetime, timezone
 from pprint import pprint
@@ -10,6 +11,7 @@ from natsort import natsorted
 from sqlalchemy import func, case, select
 from sqlalchemy.orm import undefer, joinedload
 
+from flask_security.utils import hash_password
 from flask_wtf import Form, FlaskForm
 from wtforms import IntegerField, BooleanField, StringField, SubmitField, SelectField, TextAreaField, HiddenField
 from wtforms.validators import DataRequired, Length, Optional as OptionalField, Regexp, ValidationError
@@ -27,7 +29,7 @@ from controllers.helpers import (login_or_anonymous_required,
                                  require_course_instructor, require_course_grader, get_select_menu_link,
                                  check_resource_exists, get_course_id, ajax_success, ajax_failure, maybe_int,
                                  maybe_bool, require_admin, check_course_unlocked,
-                                 make_log_entry)
+                                 make_log_entry, client_time_fields)
 from controllers.submission_search import (parse_submission_search, matches_search_criteria,
                                            encode_submission_for_filter, search_load_options,
                                            prefetch_search_relations, VIEW_SUBMISSIONS_SEARCH_FIELDS,
@@ -39,17 +41,17 @@ from models.data_formats.quiz_analysis import (analyze_quiz, load_roles_by_user_
 from models.data_formats.report import make_report
 from models import db, AssignmentGroup, AssignmentGroupMembership, SubmissionCounts
 from models.data_formats.portation import export_bundle
-from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent, UserRoles
+from models.enums import USER_DISPLAY_ROLES, SubmissionLogEvent, UserRoles, CourseLogEvent
 from markupsafe import escape as html_escape
 from common.text import csv_safe
 from models.enums.roles import RolePermissions
 from models.user import User
-from models.course import Course
+from models.course import Course, CourseHasSubmissions
 from models.role import Role
 from models.submission import Submission
 from models.assignment import Assignment
 from models.report import Report
-from models.log_tables import SubmissionLog as Log
+from models.log_tables import SubmissionLog as Log, CourseLog
 from tasks import tasks
 
 courses = Blueprint('courses', __name__, url_prefix='/courses')
@@ -178,7 +180,7 @@ def edit(course_id):
                                                       edit_form.visibility.data, current_app.config)
                 if note:
                     flash(note)
-                modified = course.edit(name=edit_form.name.data,
+                modified = course.edit(g.user.id, name=edit_form.name.data,
                                        visibility=visibility,
                                        term=edit_form.term.data,
                                        url=edit_form.url.data,
@@ -202,8 +204,19 @@ def remove_course():
     # Verify permissions
     require_admin(g.user)
     check_course_unlocked(course)
-    # Perform action
-    Course.remove(course_id)
+    # Courses with student work are archived, never deleted, from the web
+    blocking = Course.count_submissions_blocking_removal(course_id)
+    if blocking:
+        flash(f"Course not removed: it has {blocking} submission(s). Set its visibility to archived instead; "
+              f"an administrator can delete it completely from the command line.")
+        return redirect(url_for('courses.index'))
+    # Log first, since the course row is about to go away
+    CourseLog.new(course_id, g.user.id, CourseLogEvent.DELETE, None, None, *client_time_fields())
+    try:
+        Course.remove(course_id)
+    except CourseHasSubmissions as blocked:
+        flash(str(blocked))
+        return redirect(url_for('courses.index'))
     flash('Course removed')
     return redirect(url_for('courses.index'))
 
@@ -226,7 +239,7 @@ def change_course_visibility():
     if note:
         flash(note)
         return redirect(url_for('courses.index'))
-    success = Course.change_course_visibility(course_id, visibility)
+    success = Course.change_course_visibility(course_id, visibility, g.user.id)
     if success:
         flash(f'Course {course.url} visibility set to {visibility}')
     else:
@@ -249,7 +262,7 @@ def pin_course():
     check_course_unlocked(course)
     # Perform action
     try:
-        course.set_setting("pinned", pin_status, g.user)
+        course.set_setting("pinned", pin_status, g.user.id)
         return ajax_success({"updatedSettings": course.settings})
     except Exception as e:
         return ajax_failure("Failed to set pinned status:"+str(e))
@@ -269,7 +282,7 @@ def rename_course():
     check_course_unlocked(course)
     # Perform action
     new_name = request.values.get('name')
-    Course.rename(course_id, new_name)
+    Course.rename(course_id, new_name, g.user.id)
     return jsonify(success=True)
 
 
@@ -490,18 +503,22 @@ def add_users(course_id):
                 new_user = current_app.user_datastore.create_user(first_name=first_name,
                                                                   last_name=last_name,
                                                                   email=new_email,
+                                                                  # Unusable until they reset it
+                                                                  password=hash_password(uuid.uuid4().hex),
                                                                   confirmed_at=datetime.now(timezone.utc))
+                # The datastore only adds to the session; the user needs an id before it gets a role
+                current_app.user_datastore.commit()
                 newly_created.append(new_user)
             new_role = add_form.role.data
             # TODO: Update this to reflect new enums
             if new_role in ('student', 'learner') and not new_user.is_student(course_id):
-                new_user.add_role('learner', course_id=course_id)
+                new_user.add_role('learner', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             elif new_role == 'teachingassistant' and not new_user.is_grader(course_id):
-                new_user.add_role('teachingassistant', course_id=course_id)
+                new_user.add_role('teachingassistant', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             elif new_role == 'instructor' and not new_user.is_instructor(course_id):
-                new_user.add_role('instructor', course_id=course_id)
+                new_user.add_role('instructor', course_id=course_id, authorizer_id=g.user.id)
                 newly_added.append(new_user)
             # TODO: Add an invite for the course and that user
             # TODO: Send an email to reset their password
@@ -524,7 +541,7 @@ def remove_role(role_id):
         require_admin(g.user)
     elif not g.user.is_instructor(course_id):
         return "You're not an instructor in this course!"
-    role.remove()
+    role.remove(authorizer_id=g.user.id)
     return redirect(url_for('courses.manage_users', course_id=course_id))
 
 
@@ -547,7 +564,7 @@ def change_role():
         return "You're not an instructor in this course!"
     if new_role == UserRoles.ADMIN and not g.user.is_admin():
         return ajax_failure("Only administrators can grant the admin role.")
-    if role.update_role(new_role) is None:
+    if role.update_role(new_role, authorizer_id=g.user.id) is None:
         return ajax_failure(f"Unknown role: {new_role!r}")
     return ajax_success({"new_role": new_role})
 
@@ -1141,6 +1158,8 @@ def adopt_assignments(course_id):
                                               assignment_group_id=group.id if group else None)
                 if created:
                     adopted += 1
+                    CourseLog.new(course_id, user_id, CourseLogEvent.ADOPT,
+                                  "assignment_id", str(row["assignment"].id), *client_time_fields())
             messages.append("Adopted {} assignment(s).".format(adopted))
             if adopted < len(targets):
                 messages.append("{} were already adopted.".format(len(targets) - adopted))
@@ -1162,6 +1181,8 @@ def adopt_assignments(course_id):
                 if row["can_unadopt"]:
                     row["submission"].delete_completely()
                     removed += 1
+                    CourseLog.new(course_id, user_id, CourseLogEvent.UNADOPT,
+                                  "assignment_id", str(row["assignment"].id), *client_time_fields())
             messages.append("Unadopted {} assignment(s).".format(removed))
         flash(" ".join(messages))
         return redirect(url_for('courses.adopt_assignments', course_id=course_id,

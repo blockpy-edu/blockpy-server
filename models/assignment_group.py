@@ -84,9 +84,11 @@ class AssignmentGroup(EnhancedBase):
                       .filter(AssignmentGroup.course_id == group.course_id,
                               AssignmentGroup.position > position)
                       .update({"position": (AssignmentGroup.position - 1)}))
-        # Delete target
-        AssignmentGroup.query.filter_by(id=assignment_group_id).delete()
+        # Delete the rows that point at the group before the group itself
         models.AssignmentGroupMembership.query.filter_by(assignment_group_id=assignment_group_id).delete()
+        (models.Submission.query.filter_by(assignment_group_id=assignment_group_id)
+         .update({"assignment_group_id": None}, synchronize_session=False))
+        AssignmentGroup.query.filter_by(id=assignment_group_id).delete()
         db.session.commit()
 
     def fork(self, new_owner_id: int, new_course_id: int, with_assignments: bool=True,

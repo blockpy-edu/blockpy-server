@@ -19,9 +19,11 @@ import models
 
 class RoleLog(Base):
     __tablename__ = "role_log"
-    role_id: Mapped[int] = mapped_column(Integer(), ForeignKey('role.id'))
+    # No database foreign keys on the course/role/assignment columns: audit rows must outlive
+    # the rows they describe (see fall26_audit_log_fk.sql). The relationships join explicitly.
+    role_id: Mapped[int] = mapped_column(Integer())
     # Identification
-    course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
+    course_id: Mapped[int] = mapped_column(Integer())
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Authorization
     authorizer_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
@@ -33,8 +35,10 @@ class RoleLog(Base):
     client_timestamp: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
     client_timezone: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
 
-    role: Mapped["Role"] = db.relationship(back_populates="role_logs")
-    course: Mapped["Course"] = db.relationship(back_populates="role_logs")
+    role: Mapped["Role"] = db.relationship(back_populates="role_logs",
+                                           primaryjoin="foreign(RoleLog.role_id) == Role.id")
+    course: Mapped["Course"] = db.relationship(back_populates="role_logs",
+                                               primaryjoin="foreign(RoleLog.course_id) == Course.id")
     subject: Mapped["User"] = db.relationship(back_populates="role_logs", foreign_keys=[subject_id])
     authorizer: Mapped["User"] = db.relationship(back_populates="authorizer_logs", foreign_keys=[authorizer_id])
 
@@ -57,6 +61,25 @@ class RoleLog(Base):
         db.session.add(log)
         db.session.commit()
         return log
+
+    def encode_json(self):
+        """ The normalized audit event shape shared with CourseLog and AssignmentLog;
+        the role name goes in `value`. """
+        return {
+            'table': 'role_log',
+            'id': self.id,
+            'date_created': datetime_to_string(self.date_created),
+            'event_type': str(self.event_type),
+            'subject_id': self.subject_id,
+            'authorizer_id': self.authorizer_id,
+            'course_id': self.course_id,
+            'assignment_id': None,
+            'role_id': self.role_id,
+            'field': None,
+            'value': self.event_value,
+            'client_timestamp': self.client_timestamp,
+            'client_timezone': self.client_timezone,
+        }
 
     def __str__(self):
         return f'<RoleLog {self.event_type} event for {self.role_id}>'

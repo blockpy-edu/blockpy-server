@@ -38,7 +38,7 @@ class SubmissionLog(Base):
     course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
-    event_type: Mapped[str] = mapped_column(String(255), default=SubmissionLogEvent.UNKNOWN.name,)
+    event_type: Mapped[str] = mapped_column(String(255), default=SubmissionLogEvent.UNKNOWN.value)
     file_path: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
     category: Mapped[str] = mapped_column(String(255), default="")
     label: Mapped[str] = mapped_column(String(255), default="")

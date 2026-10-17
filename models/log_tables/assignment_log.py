@@ -24,9 +24,11 @@ import models
 class AssignmentLog(Base):
     __tablename__ = "assignment_log"
     # Identification
-    assignment_id: Mapped[int] = mapped_column(Integer(), ForeignKey('assignment.id'))
+    # No database foreign keys on the course/role/assignment columns: audit rows must outlive
+    # the rows they describe (see fall26_audit_log_fk.sql). The relationships join explicitly.
+    assignment_id: Mapped[int] = mapped_column(Integer())
     assignment_version: Mapped[int] = mapped_column(Integer())
-    course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
+    course_id: Mapped[int] = mapped_column(Integer())
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
     event_type: Mapped[AssignmentLogEvent] = mapped_column(Enum(AssignmentLogEvent, values_callable=get_enum_values))
@@ -36,9 +38,11 @@ class AssignmentLog(Base):
     client_timestamp: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
     client_timezone: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
 
-    assignment: Mapped["Assignment"] = db.relationship(back_populates="assignment_logs")
+    assignment: Mapped["Assignment"] = db.relationship(back_populates="assignment_logs",
+                                                       primaryjoin="foreign(AssignmentLog.assignment_id) == Assignment.id")
     subject: Mapped["User"] = db.relationship(back_populates="assignment_logs")
-    course: Mapped["Course"] = db.relationship(back_populates="assignment_logs")
+    course: Mapped["Course"] = db.relationship(back_populates="assignment_logs",
+                                               primaryjoin="foreign(AssignmentLog.course_id) == Course.id")
 
     __table_args__ = (Index('assignment_log_assignment_index', "assignment_id"),
                       Index('assignment_log_subject_index', "subject_id"))
@@ -59,6 +63,25 @@ class AssignmentLog(Base):
         # Single-file logging
         # logging.getLogger('Events').info(log.for_file())
         return log
+
+    def encode_json(self):
+        """ The normalized audit event shape shared with CourseLog and RoleLog. """
+        return {
+            'table': 'assignment_log',
+            'id': self.id,
+            'date_created': datetime_to_string(self.date_created),
+            'event_type': str(self.event_type),
+            'subject_id': self.subject_id,
+            'authorizer_id': None,
+            'course_id': self.course_id,
+            'assignment_id': self.assignment_id,
+            'assignment_version': self.assignment_version,
+            'role_id': None,
+            'field': self.field,
+            'value': self.value,
+            'client_timestamp': self.client_timestamp,
+            'client_timezone': self.client_timezone,
+        }
 
     def __str__(self):
         return f'<AssignmentLog {self.event_type} for {self.assignment_id}>'

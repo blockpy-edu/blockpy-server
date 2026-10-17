@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import math
 
+from models.enums.logs import SubmissionLogEvent
+
 
 @dataclass
 class LatePolicy:
@@ -85,9 +87,10 @@ class LatePolicy:
         return min(result, self.max_penalty)
 
 class LogEventType:
-    LMS_SUBMISSION = "X-Submission.LMS"
-    LMS_UNCHANGED = "X-Unchanged.LMS"
-    LMS_FAILURE = "X-Submission.LMS.Failure"
-    QUIZ_GRADE_FAILURE = "X-Quiz.Grade.Failure"
-    IP_ADDRESS_BLOCKED = "X-IP.Blocked"
-    SUBMIT = "Submit"
+    """ Aliases kept for the LTI grade-posting code; the values live on SubmissionLogEvent. """
+    LMS_SUBMISSION = SubmissionLogEvent.X_LMS_SUBMISSION
+    LMS_UNCHANGED = SubmissionLogEvent.X_LMS_UNCHANGED
+    LMS_FAILURE = SubmissionLogEvent.X_LMS_FAILURE
+    QUIZ_GRADE_FAILURE = SubmissionLogEvent.X_QUIZ_GRADE_FAILURE
+    IP_ADDRESS_BLOCKED = SubmissionLogEvent.X_IP_BLOCKED
+    SUBMIT = SubmissionLogEvent.X_SUBMIT

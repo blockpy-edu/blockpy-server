@@ -1,0 +1,31 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+<script type='text/javascript'>
+    $().ready(function() {
+        mainModel = {
+            config: {{ config|tojson }}
+        };
+        ko.applyBindings(mainModel);
+    });
+</script>
+{% endblock %}
+
+{% block body %}
+
+<h1>{{ title }}</h1>
+
+{% if subtitle %}
+<p class="text-muted small">{{ subtitle|safe }}</p>
+{% endif %}
+
+<audit-review params="config: config"></audit-review>
+
+{% endblock %}

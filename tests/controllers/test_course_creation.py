@@ -274,6 +274,6 @@ class TestCreationLimitsInRoutes:
 
     def test_established_instructor_can_still_publish_via_change_visibility(self, client, test_data, act_as):
         act_as(test_data.user(ADA))
-        Course.change_course_visibility(8, 'private')
+        Course.change_course_visibility(8, 'private', 10)
         client.post('/courses/change_course_visibility', data={'course_id': 8, 'visibility': 'public'})
         assert Course.by_id(8).visibility == CourseVisibility.PUBLIC

@@ -1,6 +1,9 @@
 # Audit Logging: Review and Development Plan
 
-Status: plan. Nothing here has been implemented yet.
+Status: implemented on the `audit-logging` branch, 2026-09-13, phases 1 through 7.
+The living description is `docs/audit-logs.md`, which also lists the small deviations
+from this plan (feed page URL, bulk-transfer value, sparklines, history link placement).
+Production still needs `fall26_audit_log_fk.sql` run by hand before the code is deployed.
 Reviewed 2026-09-13 against `master` at `e1ad149a`, then re-verified line by line
 against the code on the same day. Corrections from the second pass are marked
 **(revised)** so the reasoning behind each change stays visible.

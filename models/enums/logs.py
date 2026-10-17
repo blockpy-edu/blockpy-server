@@ -22,6 +22,11 @@ class CourseLogEvent(StrEnum):
     EDIT = "edit"
     ARCHIVE = "archive"
     CORRUPTED = "corrupted"
+    # Assignment-level events that belong to the course rather than the assignment.
+    # field is "assignment_id" or "assignment_group_id"; value is the id.
+    ADOPT = "adopt"
+    UNADOPT = "unadopt"
+    FORK = "fork"
 
 
 class RoleLogEvent(StrEnum):
@@ -56,3 +61,16 @@ class SubmissionLogEvent(StrEnum):
     BLOCKPY_FILE_EDIT = "File.Edit"
     BLOCKPY_FILE_CREATE = "File.Create"
     BLOCKPY_SESSION_START = "Session.Start"
+
+    # Server-side events that used to be bare string literals
+    X_SUBMISSION_GET = "X-Submission.Get"
+    X_VIEW_SUBMISSION = "X-View.Submission"
+    X_IMAGE_SAVE = "X-Image.Save"
+    X_GRADE_INSTRUCTOR = "X-Grade.Instructor"
+    X_LMS_SUBMISSION = "X-Submission.LMS"
+    X_LMS_UNCHANGED = "X-Unchanged.LMS"
+    X_LMS_FAILURE = "X-Submission.LMS.Failure"
+    X_LMS_RETRY_FAILURE = "X-Submission.LMS.Retry-Failure"
+    X_QUIZ_GRADE_FAILURE = "X-Quiz.Grade.Failure"
+    X_IP_BLOCKED = "X-IP.Blocked"
+    X_SUBMIT = "Submit"

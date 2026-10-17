@@ -151,7 +151,7 @@ class TestUsingCourseGraderKeepsLocks:
     @pytest.fixture
     def locked_exam(self, client, test_data):
         """ Assignment 100 becomes a locked exam of a private course 6. """
-        Course.by_id(PUBLIC_COURSE).edit(visibility='private')
+        Course.by_id(PUBLIC_COURSE).edit(10, visibility='private')
         exam = Assignment.by_id(100)
         exam.edit({'hidden': True, 'ip_ranges': '10.0.0.0/8',
                    'settings': json.dumps({'passcode': 'secret'})})
@@ -189,7 +189,7 @@ class TestUsingCourseGraderKeepsLocks:
         assert response.get_json()['success'] is True
 
     def test_unlocked_shared_assignment_unchanged(self, client, test_data, act_as):
-        Course.by_id(PUBLIC_COURSE).edit(visibility='private')
+        Course.by_id(PUBLIC_COURSE).edit(10, visibility='private')
         act_as(test_data.user(CAPTAIN))
         self.adopt_into_own_course(client)
         response = client.get(self.LOAD, query_string={'assignment_id': 100, 'course_id': PRIVATE_COURSE})

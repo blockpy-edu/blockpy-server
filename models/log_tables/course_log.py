@@ -20,7 +20,9 @@ import models
 class CourseLog(Base):
     __tablename__ = "course_log"
     # Identification
-    course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
+    # No database foreign keys on the course/role/assignment columns: audit rows must outlive
+    # the rows they describe (see fall26_audit_log_fk.sql). The relationships join explicitly.
+    course_id: Mapped[int] = mapped_column(Integer())
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
     event_type: Mapped[CourseLogEvent] = mapped_column(Enum(CourseLogEvent, values_callable=get_enum_values), nullable=False)
@@ -32,7 +34,8 @@ class CourseLog(Base):
     client_timezone: Mapped[Optional[str]] = mapped_column(String(255), default="", nullable=True)
 
     subject: Mapped["User"] = db.relationship(back_populates="course_logs")
-    course: Mapped["Course"] = db.relationship(back_populates="course_logs")
+    course: Mapped["Course"] = db.relationship(back_populates="course_logs",
+                                               primaryjoin="foreign(CourseLog.course_id) == Course.id")
 
     __table_args__ = (Index('course_log_course_index', "course_id"),
                       Index('course_log_subject_index', "subject_id"))
@@ -56,6 +59,24 @@ class CourseLog(Base):
         db.session.add(log)
         db.session.commit()
         return log
+
+    def encode_json(self):
+        """ The normalized audit event shape shared with RoleLog and AssignmentLog. """
+        return {
+            'table': 'course_log',
+            'id': self.id,
+            'date_created': datetime_to_string(self.date_created),
+            'event_type': str(self.event_type),
+            'subject_id': self.subject_id,
+            'authorizer_id': None,
+            'course_id': self.course_id,
+            'assignment_id': None,
+            'role_id': None,
+            'field': self.field,
+            'value': self.value,
+            'client_timestamp': self.client_timestamp,
+            'client_timezone': self.client_timezone,
+        }
 
     def __str__(self):
         return f'<CourseLog {self.event_type} event in {self.course_id}>'

@@ -184,12 +184,31 @@ def import_course(owner_id, course_data_path):
 
 
 @cli.command("delete_course")
-@click.option("--course", '-c', "course_id")
-def delete_course(course_id):
-    """Deletes a specific course"""
-    from models.course import Course
-    if click.confirm("Are you sure you want to delete this course?"):
-        Course.remove(int(course_id), True)
+@click.option("--course", '-c', "course_id", required=True, type=int)
+@click.option("--remove-linked", "remove_linked", is_flag=True, default=False,
+              help="Also destroy every submission in the course or to its assignments. "
+                   "Without this, a course with student work is refused.")
+def delete_course(course_id, remove_linked):
+    """Deletes a course and everything it owns. Student work is only deleted with --remove-linked."""
+    from models.course import Course, CourseHasSubmissions
+    from models.log_tables import CourseLog
+    from models.enums import CourseLogEvent
+    course = Course.by_id(course_id)
+    if course is None:
+        raise click.ClickException(f"There is no course with id {course_id}.")
+    blocking = Course.count_submissions_blocking_removal(course_id)
+    if blocking and not remove_linked:
+        raise click.ClickException(f"Course {course_id} ({course.name}) has {blocking} submission(s). "
+                                   f"Archive it, or pass --remove-linked to destroy the student work too.")
+    what = f"course {course_id} ({course.name!r})" + (f" and its {blocking} submission(s)" if blocking else "")
+    if click.confirm(f"Are you sure you want to delete {what}?"):
+        # Command-line deletions are attributed to the seeded admin user (id 1)
+        CourseLog.new(course_id, 1, CourseLogEvent.DELETE)
+        try:
+            Course.remove(course_id, remove_linked)
+        except CourseHasSubmissions as blocked:
+            raise click.ClickException(str(blocked))
+        click.echo(f"Deleted {what}.")
 
 
 def dump_rows(rows, output, table_name):
@@ -205,10 +224,34 @@ def _log_for_course(course, output):
     logs = Log.get_logs_for_course(course)
     dump_rows(logs, output, 'log')
 
+@cli.command("prune_error_logs")
+@click.option("--days", "-d", "days", default=90, type=int, show_default=True,
+              help="Delete error records older than this many days")
+def prune_error_logs(days):
+    """Deletes old error_log rows, then the access_log rows no error references any more.
+
+    Not run automatically; run it by hand or from cron. Tracebacks can contain student
+    code, emails and LTI parameters, so there is no reason to keep them forever."""
+    from datetime import datetime, timedelta, timezone
+    from models.log_tables import ErrorLog, AccessLog
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+    errors = (ErrorLog.query.filter(ErrorLog.date_created < cutoff)
+              .delete(synchronize_session=False))
+    still_referenced = db.session.query(ErrorLog.access_log_id)
+    orphans = (AccessLog.query.filter(AccessLog.date_created < cutoff,
+                                      ~AccessLog.id.in_(still_referenced))
+               .delete(synchronize_session=False))
+    db.session.commit()
+    click.echo(f"Deleted {errors} error_log rows and {orphans} orphaned access_log rows "
+               f"older than {cutoff:%Y-%m-%d %H:%M} UTC.")
+
+
 @cli.command("dump_db")
 @click.option('--output', '-o', 'output', default='backups/db/')
 @click.option('--log_for_course', '-l', 'log_for_course', default=None)
 def dump_db(output, log_for_course):
+    # The tables are listed explicitly on purpose. error_log and access_log are left out:
+    # tracebacks and messages can contain student code, emails and LTI parameters.
     if log_for_course:
         return _log_for_course(log_for_course, output)
     from models.assignment_group_membership import AssignmentGroupMembership

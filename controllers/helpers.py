@@ -19,7 +19,7 @@ from functools import wraps
 from natsort import natsorted
 
 # Flask imports
-from flask import g, request, redirect, url_for, make_response, current_app
+from flask import g, request, redirect, url_for, make_response, current_app, has_request_context
 from flask import flash, session, jsonify, abort
 
 from common.dates import from_canvas_isotime
@@ -69,7 +69,8 @@ def login_or_anonymous_required(f):
 
 def abort_with_failure(code, message, as_html=False):
     if as_html:
-        abort(code, message)
+        # Werkzeug has no exception for 2xx codes, so HTML failures are always Forbidden pages
+        abort(403, message)
     else:
         abort(make_response(jsonify(success=False, message=message), code))
 
@@ -474,6 +475,13 @@ def ajax_success(original_data):
     original_data['ip'] = request.remote_addr
     original_data['success'] = True
     return jsonify(original_data)
+
+
+def client_time_fields():
+    """ (timestamp, timezone) as reported by the client in the request, or ("", "") outside one. """
+    if not has_request_context():
+        return "", ""
+    return request.values.get('timestamp', ''), request.values.get('timezone', '')
 
 
 def make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,

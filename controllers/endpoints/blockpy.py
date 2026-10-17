@@ -37,7 +37,7 @@ from controllers.helpers import login_or_anonymous_required, may_create_submissi
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
-                                 make_log_entry, check_permissions)
+                                 make_log_entry, check_permissions, client_time_fields)
 from common.highlighters import highlight_python_code
 from tasks.tasks import queue_lti_post_grade
 from models.user import User
@@ -847,6 +847,11 @@ def rename_file():
         except Exception as e:
             current_app.logger.info(f"Could not rename file `{old_file_path}` to `{new_file_path}` because: {e}")
             return ajax_failure(f"Could not rename the file!")
+        if placement == "assignment":
+            assignment = Assignment.by_id(directory)
+            AssignmentLog.new(assignment.id, assignment.version,
+                              get_course_id(True) or assignment.course_id, user_id,
+                              AssignmentLogEvent.RENAME, old_filename, new_filename, *client_time_fields())
         endpoint = url_for("blockpy.download_file", _external=True,_scheme="https",
                            placement=placement, directory=directory, filename=new_filename)
         return jsonify(success=True, ip=request.remote_addr, endpoint=endpoint)

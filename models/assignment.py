@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from flask import url_for
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Column, String, Text, Integer, ForeignKey, UniqueConstraint, Boolean, Enum, Index, func
+from sqlalchemy import Column, String, Text, Integer, ForeignKey, UniqueConstraint, Boolean, Enum, Index, func, or_
 from werkzeug.utils import secure_filename
 from slugify import slugify
 
@@ -85,7 +85,8 @@ class Assignment(EnhancedBase):
                                                           secondary=assignment_tag_membership)
     sample_submissions: Mapped[list["SampleSubmission"]] = db.relationship(back_populates="assignment")
     submission_logs: Mapped[list["SubmissionLog"]] = db.relationship(back_populates="assignment")
-    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="assignment")
+    assignment_logs: Mapped[list["AssignmentLog"]] = db.relationship(back_populates="assignment", passive_deletes=True,
+                                                                    primaryjoin="foreign(AssignmentLog.assignment_id) == Assignment.id")
     submissions: Mapped[list["Submission"]] = db.relationship(back_populates="assignment")
     memberships: Mapped[list["AssignmentGroupMembership"]] = db.relationship(back_populates="assignment")
     reports: Mapped[list["Report"]] = db.relationship(back_populates="assignment")
@@ -237,13 +238,26 @@ class Assignment(EnhancedBase):
         Permanently delete the assignment with the given ID, along with EVERY course's submissions and
         logs for it. Prefer `archive()` unless the caller explicitly asked for a hard delete.
         """
-        # TODO: Clear anyone's Fork that is me
-        # TODO: Clear assignment tag membership
-        # TODO: Clear submission sample
-        models.AssignmentGroupMembership.query.filter_by(assignment_id=assignment_id).delete()
-        models.Submission.remove_by_assignment(assignment_id)
-        models.SubmissionLog.remove_by_assignment(assignment_id)
-        Assignment.query.filter_by(id=assignment_id).delete()
+        assignment_id = maybe_int(assignment_id)
+        quietly = dict(synchronize_session=False)
+        # Student work first, and everything that points at it (same order as Course.remove)
+        doomed = db.session.query(models.Submission.id).filter(models.Submission.assignment_id == assignment_id)
+        models.SubmissionCounts.query.filter(models.SubmissionCounts.submission_id.in_(doomed)).delete(**quietly)
+        models.GradeHistory.query.filter(models.GradeHistory.submission_id.in_(doomed)).delete(**quietly)
+        models.Review.query.filter(models.Review.submission_id.in_(doomed)).delete(**quietly)
+        (models.SampleSubmission.query.filter(models.SampleSubmission.forked_id.in_(doomed))
+         .update({"forked_id": None}, **quietly))
+        models.SubmissionLog.query.filter(or_(models.SubmissionLog.submission_id.in_(doomed),
+                                              models.SubmissionLog.assignment_id == assignment_id)).delete(**quietly)
+        models.Submission.query.filter(models.Submission.id.in_(doomed)).delete(**quietly)
+        # Then what hangs off the assignment itself
+        models.AssignmentGroupMembership.query.filter_by(assignment_id=assignment_id).delete(**quietly)
+        db.session.execute(models.assignment_tag_membership.delete().where(
+            models.assignment_tag_membership.c.assignment_id == assignment_id))
+        models.SampleSubmission.query.filter_by(assignment_id=assignment_id).delete(**quietly)
+        models.Report.query.filter_by(assignment_id=assignment_id).update({"assignment_id": None}, **quietly)
+        Assignment.query.filter_by(forked_id=assignment_id).update({"forked_id": None}, **quietly)
+        Assignment.query.filter_by(id=assignment_id).delete(**quietly)
         db.session.commit()
 
     def archive(self):

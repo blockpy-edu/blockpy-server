@@ -1,4 +1,5 @@
 id,date_created,date_modified,name,subname,user_id,course_id,external_id
+index,datetime,datetime,string,string,integer,integer,integer
 1,,,admin,,1,,
 2,,,instructor,,1,2,
 

@@ -9,6 +9,7 @@ from controllers.endpoints.external import blueprint_external
 from controllers.endpoints.grading import blueprint_grading
 from controllers.quizzes import blueprint_quizzes
 from controllers.endpoints.api import blueprint_api
+from controllers.endpoints.audit import blueprint_audit
 #from controllers.endpoints.lapis import blueprint_lapis
 
 def register_blueprints(app):
@@ -22,6 +23,7 @@ def register_blueprints(app):
     app.register_blueprint(blueprint_grading)
     app.register_blueprint(blueprint_quizzes)
     app.register_blueprint(blueprint_api)
+    app.register_blueprint(blueprint_audit)
     #app.register_blueprint(blueprint_lapis)
 
 
