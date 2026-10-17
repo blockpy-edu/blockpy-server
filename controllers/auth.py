@@ -202,6 +202,9 @@ def get_user() -> (User, int):
 def try_lti_login_initial():
     g.lti = LTI(get_consumer_secrets())
     g.lti.verify_request()
+    # Only a launch whose OAuth signature was checked in THIS request may carry trusted LTI form
+    # fields (sourcedid, due/lock dates); g.lti alone is also set from a stored session.
+    g.lti_launch_verified = True
     # TODO: Provide any other LTI information that we need
     load_lti_user()
     g.access_token = create_user_token()

@@ -27,7 +27,8 @@ from common.maybe import maybe_bool, maybe_int
 from models.course import Course
 from models.assignment import Assignment
 from models.assignment_group import AssignmentGroup
-from models.enums import SubmissionLogEvent
+from models.user import User
+from models.enums import SubmissionLogEvent, CourseVisibility
 from models.log_tables import SubmissionLog as Log
 from models.log_tables import RoleLog, CourseLog, ErrorLog, AccessLog, AssignmentLog, SubmissionLog
 
@@ -238,6 +239,41 @@ def handle_single_arg_hack():
         yield value
 
 
+def may_create_submission(user, course_id, target_user_id=None):
+    """
+    Whether a NEW submission may be created for `target_user_id` (default: the caller) in `course_id`.
+
+    Loading an existing submission is never gated here; this only decides who may "join" a course by
+    submitting to it. Creation is allowed when the target user already has a role in the course, when
+    the caller's LTI context is that course (the verified launch that enrols them has just run, so this
+    also covers launches whose role string we could not map), when the course is public or is the
+    default scratch course, or when the caller is an admin. Otherwise anyone could plant submissions
+    (and their own assignments' content) into any course just by naming its id.
+    """
+    course_id = maybe_int(course_id)
+    if user is None or course_id is None:
+        return False
+    if user.is_admin():
+        return True
+    if target_user_id in (None, user.id):
+        target = user
+    else:
+        target = User.by_id(target_user_id)
+        if target is None:
+            return False
+    if target.in_course(course_id):
+        return True
+    if target.id != user.id:
+        return False
+    lti_course = g.get('course', None)
+    if lti_course is not None and lti_course.id == course_id:
+        return True
+    course = Course.by_id(course_id)
+    if course is None:
+        return False
+    return course.visibility == CourseVisibility.PUBLIC or course.url == 'default'
+
+
 def parse_assignment_load(assignment_id_or_url=None):
     # Single Arg Hack
     #handle_single_arg_hack()
@@ -261,10 +297,13 @@ def parse_assignment_load(assignment_id_or_url=None):
     course_id = maybe_int(request.args.get('course_id', None))
     if course_id is None:
         course_id = int(g.course.id) if 'course' in g and g.course else None
-    # LTI submission URL
-    new_submission_url = request.form.get('lis_result_sourcedid', None)
-    new_due_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_dueat', None))
-    new_lock_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_lockat', None))
+    # LTI submission URL and dates: only trust them on a launch whose OAuth signature was verified in
+    # this request (auth.try_lti_login_initial). Anyone can post these form fields to the plain
+    # editor route, and they control the grade passback target and the late/lock windows.
+    lti_launch = bool(g.get('lti_launch_verified', False))
+    new_submission_url = request.form.get('lis_result_sourcedid', None) if lti_launch else None
+    new_due_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_dueat', None)) if lti_launch else None
+    new_lock_date = from_canvas_isotime(request.form.get('custom_canvas_assignment_lockat', None)) if lti_launch else None
     # Embedded?
     embed = request.values.get('embed', 'false').lower() == 'true'
     # Get group
@@ -285,8 +324,8 @@ def parse_assignment_load(assignment_id_or_url=None):
             course = Course.get_default()
             course_id = course.id
         else:
-            course = g.course
-        default_assignment = course.get_default_assignment()
+            course = Course.by_id(course_id) or Course.get_default()
+        default_assignment = course.get_default_assignment() if course else None
         if default_assignment:
             assignments = [default_assignment]
         else:
@@ -301,9 +340,14 @@ def parse_assignment_load(assignment_id_or_url=None):
         submissions = []
         submission_assignment_map = {}
     else:
-        submissions = [assignment.load_or_new_submission(user_id, course_id, new_submission_url, assignment_group_id,
-                                                         new_due_date, new_lock_date)
-                       for assignment in assignments]
+        # Existing submissions always load; NEW ones are only created when the user may join the course
+        existing = [assignment.load(user_id, course_id) for assignment in assignments]
+        if all(existing) or may_create_submission(user, course_id):
+            submissions = [assignment.load_or_new_submission(user_id, course_id, new_submission_url, assignment_group_id,
+                                                             new_due_date, new_lock_date)
+                           for assignment in assignments]
+        else:
+            submissions = []
         submission_assignment_map = {submission.assignment_id: submission for submission in submissions}
     # Determine the users' role in relation to this information
     role = user.determine_role(assignments, submissions) if user else "anonymous"

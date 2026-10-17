@@ -33,7 +33,8 @@ from models.assignment_group import AssignmentGroup
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
 from controllers.auth import get_user, get_consumer_secrets
-from controllers.helpers import login_or_anonymous_required, require_assignment_forkable, require_group_forkable
+from controllers.helpers import login_or_anonymous_required, require_assignment_forkable, require_group_forkable, \
+    may_create_submission
 from controllers.helpers import (ajax_failure, parse_assignment_load, require_request_parameters,
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
@@ -222,7 +223,9 @@ def load_assignment():
     if course_id is None:
         editor_information = assignment.for_read_only_editor(student_id, is_quiz)
     else:
-        editor_information = assignment.for_editor(student_id, course_id, is_quiz, with_history)
+        # A missing submission is only created for users who may join this course (see helpers)
+        create = may_create_submission(user, course_id, student_id)
+        editor_information = assignment.for_editor(student_id, course_id, is_quiz, with_history, create=create)
         browser_info = json.dumps(safe_request.get_browser_info())
         submission = editor_information.get('submission', None)
         if submission is None:
