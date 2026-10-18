@@ -224,6 +224,11 @@ class LTI:
             self.session[LTI_SESSION_KEY] = False
             raise
 
+    @staticmethod
+    def _post_timeout():
+        """ Socket timeout for outcome-service calls, from LTI_POST_TIMEOUT (None disables it). """
+        return current_app.config.get('LTI_POST_TIMEOUT', 60)
+
     def get_grade(self, endpoint=None):
         message_identifier_id = self.message_identifier_id()
         operation = 'readResult'
@@ -231,7 +236,7 @@ class LTI:
             endpoint = self.lis_result_sourcedid
         xml = generate_request_xml(message_identifier_id, operation, endpoint)
         successful, full_result = post_message(self._consumers(), self.key,
-                                        self.response_url, xml)
+                                        self.response_url, xml, timeout=self._post_timeout())
 
         if not successful:
             log.error("Post Message Failed for get_grade to %s with result: %s", self.response_url, full_result)
@@ -262,7 +267,7 @@ class LTI:
                 score, message, url, needs_review, when_submitted_at=when_submitted_at,
                 overwrite_human_grades=overwrite_human_grades)
             successful, full_result = post_message(self._consumers(), self.key,
-                                            self.response_url, xml)
+                                            self.response_url, xml, timeout=self._post_timeout())
             if not successful:
                 log.error("Post Message Failed for post_grade to %s with result: %s", self.response_url, full_result)
                 raise LTIPostMessageException(f"Post Message Failed for post_grade to {self.response_url} (see server log)")

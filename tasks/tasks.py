@@ -118,49 +118,99 @@ def check_similarity(user_id, assignment_id, exclude_courses, target_course, pas
     report.finish(result="output/index.html")
 
 
-@current_app.huey.context_task(ctx, context=True)
-def queue_grade_submission(previous_report, attempts, force_update, overwrite_human_grades, submission_score, at_time, task=None):
-    report = Report.new('queue_lti_post_grade', json.dumps(
+#: How many times a failed grade post is re-sent from the worker, and the gap between tries.
+GRADE_RETRY_ATTEMPTS = 3
+GRADE_RETRY_DELAY_SECONDS = 15
+
+
+class GradeRetryFailed(Exception):
+    """ Raised from the retry task so Huey re-queues it; carries the LMS error message. """
+
+
+def schedule_grade_retry(previous_report, force_update, overwrite_human_grades, submission_score, at_time):
+    """
+    Called from grade_submission (inside the request) when the live post to the LMS failed.
+    Creates the Report row that tracks the retries and queues the first attempt.
+
+    :param previous_report: the GradingReport from the request, which already carries the
+        consumer key, the view URL and the pre-failure grading status
+    :return: the tracking Report
+    """
+    tracker = Report.new('queue_lti_post_grade', json.dumps(
         dict(**asdict(previous_report),
-             force_update= force_update,
+             force_update=force_update,
              overwrite_human_grades=overwrite_human_grades,
              submission_score=submission_score,
-             attempts=attempts)
-    ), owner_id=previous_report.grader_id, course_id=previous_report.course_id)
-    success = False
-    while not success and attempts > 0:
-        time.sleep(10)
-        report.start()
+             at_time=at_time,
+             attempts=GRADE_RETRY_ATTEMPTS), default=str
+    ), owner_id=previous_report.grader_id, course_id=previous_report.course_id,
+        message=f"Grade post failed; retrying in {GRADE_RETRY_DELAY_SECONDS} seconds.")
+    queue_grade_submission.schedule(
+        args=(tracker.id, previous_report, force_update, overwrite_human_grades, submission_score, at_time),
+        delay=GRADE_RETRY_DELAY_SECONDS)
+    return tracker
 
-        # Make a new grade post
+
+def retry_grade_post(report_id, previous_report, force_update, overwrite_human_grades,
+                     submission_score, at_time, attempts_left):
+    """
+    One attempt to re-send a grade to the LMS. Needs only an app context, never a request.
+
+    :param attempts_left: how many more attempts Huey will make after this one
+    :return: True when the LMS accepted the grade
+    :raises GradeRetryFailed: when it did not and there are attempts left
+    """
+    report = Report.by_id(report_id)
+    if report is None:
+        report = Report.new('queue_lti_post_grade', "{}", owner_id=previous_report.grader_id,
+                            course_id=previous_report.course_id)
+    report.start(message=f"Re-sending the grade to the LMS ({attempts_left} more attempt(s) after this one).")
+    error = ""
+    success = False
+    try:
         submission = Submission.by_id(previous_report.submission_id)
-        report.update_progress(message="Loaded the submission.")
         course = Course.by_id(previous_report.course_id)
-        report.update_progress(message="Loaded the course.")
-        # student = User.by_id(submission.user)
-        report.update_progress(message="Loaded the student.")
-        grade_post = report.create_grade_post(submission, course,
-                                              force_update, overwrite_human_grades,
-                                              at_time)
-        report.update_progress(message="Created the grade post.")
-        # Try to send the LTI submission bundle
+        if submission is None or course is None:
+            report.error("Giving up: the submission or course no longer exists.")
+            return False
+        # Recompute the score from the current database state (not the stale request), then
+        # post it with the same self-contained GradePost the request used
+        grade_post = previous_report.create_grade_post(submission, course,
+                                                       force_update, overwrite_human_grades, at_time)
         try:
             transmission_status, error = grade_post.submit()
-            report.update_progress(message="Submitted the grade post.")
         except LTIPostMessageException as e:
             transmission_status = TransmissionStatuses.FAILURE
             error = str(e)
-            report.update_progress(message="Error during grade post.")
-        success = report.handle_transmission_result(transmission_status, error, submission,
-                                                    grade_post, submission_score)
+        success = previous_report.handle_transmission_result(transmission_status, error, submission,
+                                                             grade_post, submission_score)
         if success:
-            report.finish()
-        else:
-            attempts -= 1
-            report.error("Retrying after transmission failure:" + str(error))
-    if not success:
-        report.error("Too many retries, giving up.")
+            # The live request marked the submission Failed; put back what it was before
+            restore = previous_report.grading_status_before_failure
+            if restore and submission.grading_status == GradingStatuses.FAILED and restore != GradingStatuses.FAILED:
+                submission.update_grading_status(restore)
+    except Exception as e:  # noqa: broad-except - a retry must never die silently in the worker
+        current_app.logger.exception("Unexpected error while re-sending a grade (report %s)", report_id)
+        error = f"{type(e).__name__}: {e}"
+        success = False
+    if success:
+        report.finish(message="The LMS accepted the grade.")
+        return True
+    if attempts_left > 0:
+        report.error(f"Attempt failed, retrying in {GRADE_RETRY_DELAY_SECONDS} seconds: {error}")
+        raise GradeRetryFailed(error)
+    report.error(f"Too many retries, giving up: {error}")
     return False
+
+
+@current_app.huey.context_task(ctx, context=True,
+                               retries=GRADE_RETRY_ATTEMPTS - 1, retry_delay=GRADE_RETRY_DELAY_SECONDS)
+def queue_grade_submission(report_id, previous_report, force_update, overwrite_human_grades,
+                           submission_score, at_time, task=None):
+    """ Huey wrapper around retry_grade_post; Huey re-queues it while retries remain. """
+    attempts_left = task.retries if task is not None else 0
+    return retry_grade_post(report_id, previous_report, force_update, overwrite_human_grades,
+                            submission_score, at_time, attempts_left)
 
 @current_app.huey.context_task(ctx, context=True)
 def queue_lti_post_grade(json_lti, post_params,

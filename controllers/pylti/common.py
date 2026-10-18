@@ -5,6 +5,7 @@ Common classes and methods for PyLTI module
 import sys
 import logging
 
+import httplib2
 import oauth2
 from oauth2 import STRING_TYPES
 from six.moves.urllib.parse import urlparse, urlencode
@@ -159,7 +160,7 @@ class LTIPostMessageException(LTIException):
 
 
 def _post_patched_request(consumers, lti_key, body,
-                          url, method, content_type):
+                          url, method, content_type, timeout=None):
     """
     Authorization header needs to be capitalized for some LTI clients
     this function ensures that header is capitalized
@@ -167,6 +168,7 @@ def _post_patched_request(consumers, lti_key, body,
     :param body: body of the call
     :param client: OAuth Client
     :param url: outcome url
+    :param timeout: socket timeout in seconds for the whole exchange (None means wait forever)
     :return: response
     """
     # pylint: disable=too-many-locals, too-many-arguments
@@ -179,12 +181,12 @@ def _post_patched_request(consumers, lti_key, body,
     secret = lti_consumer.secret
 
     consumer = oauth2.Consumer(key=lti_key, secret=secret)
-    client = oauth2.Client(consumer)
+    # oauth2.Client forwards keyword arguments to httplib2.Http, whose default is no timeout at all
+    client = oauth2.Client(consumer, timeout=timeout)
 
     if lti_cert:
         client.add_certificate(key=key_cert, cert=lti_cert, domain='')
         log.debug("cert %s", lti_cert)
-    import httplib2
 
     http = httplib2.Http
     # pylint: disable=protected-access
@@ -201,16 +203,19 @@ def _post_patched_request(consumers, lti_key, body,
 
     http._normalize_headers = my_normalize
     monkey_patch_function = normalize
-    response, content = client.request(
-        url,
-        method,
-        body=body.encode('utf-8'),
-        headers={'Content-Type': content_type})
+    try:
+        response, content = client.request(
+            url,
+            method,
+            body=body.encode('utf-8'),
+            headers={'Content-Type': content_type})
+    finally:
+        # Restore the class-level patch even when the request raises, or every later
+        # httplib2 call in this process would keep the patched method
+        http = httplib2.Http
+        # pylint: disable=protected-access
+        http._normalize_headers = monkey_patch_function
 
-    http = httplib2.Http
-    # pylint: disable=protected-access
-    http._normalize_headers = monkey_patch_function
-    
     log.debug("key %s", lti_key)
     # never log the shared secret
     log.debug("url %s", url)
@@ -220,7 +225,7 @@ def _post_patched_request(consumers, lti_key, body,
     return response, content
 
 
-def post_message(consumers, lti_key, url, body):
+def post_message(consumers, lti_key, url, body, timeout=None):
     """
         Posts a signed message to LTI consumer
 
@@ -228,18 +233,29 @@ def post_message(consumers, lti_key, url, body):
     :param lti_key: key to find appropriate consumer
     :param url: post url
     :param body: xml body
+    :param timeout: socket timeout in seconds (None means wait forever)
     :return: success
+    :exception: LTIPostMessageException if the consumer could not be reached at all
     """
     content_type = 'application/xml'
     method = 'POST'
-    (_, content) = _post_patched_request(
-        consumers,
-        lti_key,
-        body,
-        url,
-        method,
-        content_type,
-    )
+    try:
+        (_, content) = _post_patched_request(
+            consumers,
+            lti_key,
+            body,
+            url,
+            method,
+            content_type,
+            timeout=timeout,
+        )
+    except (OSError, httplib2.HttpLib2Error) as error:
+        # DNS failures, refused/reset connections, TLS errors and socket timeouts all land here.
+        # Raise the same exception type as a rejected message so callers take their normal
+        # failure path (mark the submission failed, log it, retry later) instead of a 500.
+        log.error("Could not deliver LTI message to %s: %s: %s", url, type(error).__name__, error)
+        raise LTIPostMessageException(
+            f"Could not reach the LMS at {url} ({type(error).__name__}: {error})") from error
 
     is_success = b"<imsx_codeMajor>success</imsx_codeMajor>" in content
     log.debug("is success %s", is_success)

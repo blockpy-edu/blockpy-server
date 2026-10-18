@@ -109,6 +109,12 @@ class DefaultConfig:
     # LTI and JWT logins set a remember-me cookie; Flask-Login's default is one year.
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
 
+    # LTI outcome service (grade passback to the LMS)
+    # Socket timeout, in seconds, for each readResult/replaceResult call to the LMS. The call runs
+    # inside the student's request, so it must finish before the WSGI worker timeout (see
+    # conf/entrypoint.sh); a timed-out post is recorded as a failure and retried by a Huey task.
+    LTI_POST_TIMEOUT = 60
+
     # Task Settings
     TASK_DB_URI: str
     TASK_QUEUE_STYLE: str

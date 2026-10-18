@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 from flask import Blueprint, url_for, session, request, jsonify, g, render_template, redirect, Response, \
-    send_from_directory, current_app
+    send_from_directory, current_app, has_request_context
 from common.urls import normalize_url
 from common.filesystem import ensure_dirs
 from controllers.auth import get_user, get_consumer_secrets
@@ -33,6 +33,11 @@ class TransmissionStatuses:
 
 @dataclass
 class GradePost:
+    """
+    Everything one replaceResult call to the LMS needs. It is deliberately self-contained: the
+    same `submit` runs inside the student's request and inside the Huey retry task, which has
+    no Flask session or request to read from.
+    """
     total_score: float
     view_url: str
     lis_result_sourcedid: str
@@ -41,23 +46,37 @@ class GradePost:
     date_submitted: str
     send_even_if_equal: bool
     overwrite_human_grades: bool
+    # The LTI consumer key the launch used; falls back to the configured CONSUMER_KEY
+    oauth_consumer_key: str = ""
+
+    def make_lti(self):
+        """ An LTI client bound to this post's consumer key and outcome URL rather than the session. """
+        consumer_key = self.oauth_consumer_key or current_app.config.get('CONSUMER_KEY')
+        return LTI(get_consumer_secrets(current_app), use_session={
+            'oauth_consumer_key': consumer_key,
+            'lis_outcome_service_url': self.lis_outcome_service_url,
+            'lis_result_sourcedid': self.lis_result_sourcedid,
+        })
 
     def submit(self):
-        lti = LTI(get_consumer_secrets(current_app))
-        session['lis_outcome_service_url'] = self.lis_outcome_service_url
-        if lti:
-            existing_grade = lti.get_grade(endpoint=self.lis_result_sourcedid)
-            if existing_grade == self.total_score and not self.send_even_if_equal:
-                return TransmissionStatuses.UNCHANGED, "LTI Error while getting existing grade."
-            successful = lti.post_grade(self.total_score, self.view_url,
-                                        endpoint=self.lis_result_sourcedid, url=True,
-                                        needs_review=self.needs_review,
-                                        when_submitted_at=to_iso_time(self.date_submitted))
-            if successful:
-                return TransmissionStatuses.SUCCESS, ""
-            else:
-                return TransmissionStatuses.FAILURE, "LTI Error: perhaps invalid score?"
-        return TransmissionStatuses.FAILURE, "LTI Error: perhaps invalid configuration?"
+        lti = self.make_lti()
+        # The readResult pre-check is switched off (October 2026). It was meant to skip the
+        # replaceResult when the LMS already held this score, but parse_read_result returns a
+        # string, so the comparison below never matched and every grade post cost two round
+        # trips; a failed readResult also prevented the replaceResult from being sent at all.
+        # replaceResult is idempotent and grade_submission already skips unchanged grades, so
+        # nothing is lost. Restore the block (with float() and a tolerance) if the LMS starts
+        # complaining about repeated identical posts.
+        # existing_grade = lti.get_grade(endpoint=self.lis_result_sourcedid)
+        # if existing_grade == self.total_score and not self.send_even_if_equal:
+        #     return TransmissionStatuses.UNCHANGED, "LTI Error while getting existing grade."
+        successful = lti.post_grade(self.total_score, self.view_url,
+                                    endpoint=self.lis_result_sourcedid, url=True,
+                                    needs_review=self.needs_review,
+                                    when_submitted_at=to_iso_time(self.date_submitted))
+        if successful:
+            return TransmissionStatuses.SUCCESS, ""
+        return TransmissionStatuses.FAILURE, "LTI Error: perhaps invalid score?"
 
 
 @dataclass
@@ -91,6 +110,10 @@ class GradingReport:
     submitted: bool
     # Whether to retry with delayed Task
     retrying: bool
+    # Captured in the request so the retry task can rebuild the GradePost without a session:
+    # the consumer key of the launch, and the grading status to restore if a retry succeeds
+    oauth_consumer_key: str = ""
+    grading_status_before_failure: str = ""
 
     def add_reason(self, reason, details=""):
         self.no_errors = reason == FailureReasons.NO_GRADE_CHANGE
@@ -112,17 +135,22 @@ class GradingReport:
     def create_grade_post(self, submission, course, send_even_if_equal, overwrite_human_grades, at_time):
         #   If the assignment is late, use alternate grading data
         #   Use the date_submitted, not the date_graded
+        # The view URL is built once, in the request, and remembered on the report: the retry
+        # task has no request context (and no SERVER_NAME) to build it from.
         total_score, view_url, explanations = get_outcomes(submission,
                                              self.assignment_group_id,
                                              self.student_id,
                                              course.id,
-                                             at_time)
+                                             at_time,
+                                             view_url=self.view_url or None)
+        self.view_url = view_url
         return GradePost(total_score, view_url,
                          submission.endpoint, course.endpoint,
                          submission.assignment.reviewed and not self.by_human,
                          submission.date_submitted,
                          send_even_if_equal,
-                         overwrite_human_grades)
+                         overwrite_human_grades,
+                         oauth_consumer_key=self.oauth_consumer_key)
 
     def handle_transmission_result(self, transmission_status, error, submission, grade_post, submission_score):
         # If success, log the event
@@ -320,6 +348,10 @@ def grade_submission(submission_id: int, assignment_group_id,
         return report.add_reason(FailureReasons.NOT_GRADED_ASSIGNMENT)
     if not course.endpoint:
         return report.add_reason(FailureReasons.NO_GRADING_CONTEXT)
+    # Remember what the retry task needs and cannot get for itself
+    report.oauth_consumer_key = (session.get('oauth_consumer_key') or "") if has_request_context() else ""
+    grade_post.oauth_consumer_key = report.oauth_consumer_key
+    report.grading_status_before_failure = str(submission.grading_status or "")
     # Try to send the LTI submission bundle
     try:
         transmission_status, error = grade_post.submit()
@@ -330,8 +362,8 @@ def grade_submission(submission_id: int, assignment_group_id,
     transmission_successful = report.handle_transmission_result(transmission_status, error, submission, grade_post, submission_score)
     if not transmission_successful:
         report.retrying = True
-        from tasks.tasks import queue_grade_submission
-        queue_grade_submission(report, 3, force_update, overwrite_human_grades, submission_score, date_submitted)
+        from tasks.tasks import schedule_grade_retry
+        schedule_grade_retry(report, force_update, overwrite_human_grades, submission_score, date_submitted)
         return report.add_reason(FailureReasons.LTI_FAILURE, error)
     return report
 
@@ -358,21 +390,29 @@ def calculate_submissions_score(assignments, submissions, at_time):
     return total_score, total_possible, all_explanations
 
 
-def get_outcomes(submission, assignment_group_id, user_id, course_id, at_time) -> 'Tuple[float, str, list[str]]':
+def get_outcomes(submission, assignment_group_id, user_id, course_id, at_time,
+                 view_url=None) -> 'Tuple[float, str, list[str]]':
+    """
+    The score (0..1) to post for this submission, the URL the LMS should link the grade to,
+    and the late-penalty explanations. Pass `view_url` to reuse a URL computed earlier (the
+    retry task does this, because building one needs a request context).
+    """
     if assignment_group_id is None:
         penalized_score, explanations = submission.penalized_full_score(at_time)
         score = round(penalized_score, 2)
-        url = url_for("assignments.load", _external=True, embed=True,
-                      submission_id=submission.id, grade_mode="single",
-                      _scheme="https")
+        if view_url is None:
+            view_url = url_for("assignments.load", _external=True, embed=True,
+                               submission_id=submission.id, grade_mode="single",
+                               _scheme="https")
     else:
         group, assignments, submissions = get_groups_submissions(assignment_group_id, user_id, course_id)
         total, possible, explanations = calculate_submissions_score(assignments, submissions, at_time)
         score = round(total / possible, 2) if possible else 0.0
-        url = url_for("assignments.load", _external=True, embed=True,
-                      assignment_group_id=assignment_group_id,
-                      course_id=course_id, grade_mode="group", graded_user_id=user_id,
-                      _scheme="https",
-                      #single_arg_hack=f"true-group-{assignment_group_id}-{course_id}-{user_id}"
-                      )
-    return score, url, explanations
+        if view_url is None:
+            view_url = url_for("assignments.load", _external=True, embed=True,
+                               assignment_group_id=assignment_group_id,
+                               course_id=course_id, grade_mode="group", graded_user_id=user_id,
+                               _scheme="https",
+                               #single_arg_hack=f"true-group-{assignment_group_id}-{course_id}-{user_id}"
+                               )
+    return score, view_url, explanations

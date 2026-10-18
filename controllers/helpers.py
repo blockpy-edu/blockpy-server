@@ -486,8 +486,10 @@ def client_time_fields():
 
 def make_log_entry(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                    event_type, file_path='', category='', label='', message='', timestamp=None, timezone=None, extended=False):
-    timestamp = request.values.get('timestamp') if timestamp is None else timestamp
-    timezone = request.values.get('timezone') if timezone is None else timezone
+    # Fall back to the client's reported time only inside a request; background tasks have none
+    client_timestamp, client_timezone = client_time_fields()
+    timestamp = client_timestamp if timestamp is None else timestamp
+    timezone = client_timezone if timezone is None else timezone
     return Log.new(submission_id, submission_version, assignment_id, assignment_version, course_id, user_id,
                    event_type, file_path, category, label, message, timestamp, timezone, extended)
 
