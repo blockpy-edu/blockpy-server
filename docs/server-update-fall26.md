@@ -10,13 +10,13 @@ reasons are in the notes under each step.
 
 ## Summary of what changes
 
-| Area | Change | Action needed on the server |
-|---|---|---|
-| Database schema | Five foreign keys dropped from the log tables, one index added | Run `fall26_audit_log_fk.sql` by hand **before** the new code starts |
-| Filesystem | Uploads and reports move from `static/uploads`, `static/reports` to `data/uploads`, `data/reports` | New `data_volume`; copy the old files across once |
-| nginx | Only TLS 1.2 and 1.3 are offered | Recreate the nginx container so the template is re-rendered |
-| Config | New defaults: 1-day JWT lifetime, 14-day remember cookie, course-creation limits | Nothing required; override in `instance/configuration.py` only if you want different values |
-| Scheduled work | `error_log` grows with every unhandled error | Add a cron entry for `manage.py prune_error_logs` |
+| Area            | Change                                                                                             | Action needed on the server                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Database schema | Five foreign keys dropped from the log tables, one index added                                     | Run `fall26_audit_log_fk.sql` by hand **before** the new code starts                        |
+| Filesystem      | Uploads and reports move from `static/uploads`, `static/reports` to `data/uploads`, `data/reports` | New `data_volume`; copy the old files across once                                           |
+| nginx           | Only TLS 1.2 and 1.3 are offered                                                                   | Recreate the nginx container so the template is re-rendered                                 |
+| Config          | New defaults: 1-day JWT lifetime, 14-day remember cookie, course-creation limits                   | Nothing required; override in `instance/configuration.py` only if you want different values |
+| Scheduled work  | `error_log` grows with every unhandled error                                                       | Add a cron entry for `manage.py prune_error_logs`                                           |
 
 There are no new tables or columns. Every enum value the new code writes fits the existing
 `VARCHAR` columns created by `sum25_upgrade_sql.sql`.
@@ -126,14 +126,14 @@ the host's crontab:
 None of these need a change for the deploy to work. The defaults live in `config.py`; override
 in `instance/configuration.py`.
 
-| Key | Default | Meaning |
-|---|---|---|
-| `JWT_ACCESS_TOKEN_EXPIRES` | 1 day (was 30) | Lifetime of the token embedded in editor pages for LTI iframes. A fresh LTI launch mints a new one; tokens issued before the deploy stay valid until their own expiry |
-| `REMEMBER_COOKIE_DURATION` | 14 days (was Flask-Login's one year) | Remember-me cookie set by LTI and JWT logins |
-| `COURSE_CREATION_NEW_ACCOUNT_HOURS` / `_LIMIT` | 24 / 1 | Accounts younger than this may own at most this many courses |
-| `COURSE_CREATION_DAILY_LIMIT` | 5 | Courses any non-exempt account may create per rolling day |
-| `COURSE_CREATION_PUBLIC_AFTER_DAYS` | 7 | Younger, unconfirmed accounts have `public` downgraded to `private` with a flash message |
-| `PREFERRED_LOGIN_URL` | `None` | Where anonymous users are redirected by `login_required`. Replaces the old `PREFERRED_LOGIN` key; set it if your instance config used the old name |
+| Key                                            | Default                              | Meaning                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_ACCESS_TOKEN_EXPIRES`                     | 1 day (was 30)                       | Lifetime of the token embedded in editor pages for LTI iframes. A fresh LTI launch mints a new one; tokens issued before the deploy stay valid until their own expiry |
+| `REMEMBER_COOKIE_DURATION`                     | 14 days (was Flask-Login's one year) | Remember-me cookie set by LTI and JWT logins                                                                                                                          |
+| `COURSE_CREATION_NEW_ACCOUNT_HOURS` / `_LIMIT` | 24 / 1                               | Accounts younger than this may own at most this many courses                                                                                                          |
+| `COURSE_CREATION_DAILY_LIMIT`                  | 5                                    | Courses any non-exempt account may create per rolling day                                                                                                             |
+| `COURSE_CREATION_PUBLIC_AFTER_DAYS`            | 7                                    | Younger, unconfirmed accounts have `public` downgraded to `private` with a flash message                                                                              |
+| `PREFERRED_LOGIN_URL`                          | `None`                               | Where anonymous users are redirected by `login_required`. Replaces the old `PREFERRED_LOGIN` key; set it if your instance config used the old name                    |
 
 Admins and anyone holding a grading role in an LMS-linked course are exempt from the
 course-creation limits. Set a limit to `0` to disable that rule.
@@ -157,9 +157,3 @@ course-creation limits. Set a limit to `0` to disable that rule.
 
 - Check production for duplicate `assignment.url` and `assignment_group.url` values, then add
   unique constraints so the application check is backed by the database.
-- The remaining open security items, in order of weight: CSRF on state-changing forms (needs a
-  token header in the client), email-confirmation account hijack (needs `SECURITY_CONFIRMABLE`
-  and a backfill), LTI nonce replay, rate limiting on login/reset/register, and the
-  query-string JWT location.
-- Decide whether to rotate the LTI consumer secret. It was shown to anonymous visitors on the
-  `add_canvas` page before this deploy; the page is now admin-only, but the secret is unchanged.
