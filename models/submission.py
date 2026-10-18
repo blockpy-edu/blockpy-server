@@ -997,10 +997,16 @@ class Submission(EnhancedBase):
         # If we are late and the late policy forbids this, we get a zero
         if not late_policy.allowed:
             return 0, ["Late policy forbids submission"]
-        # Create the list of grading events
+        # Create the list of grading events.
+        # grade_history.date_submitted is a plain DateTime column, so it comes back naive even
+        # though it was written as UTC; date_due is a UtcDateTime and comes back aware. Tag the
+        # naive values as UTC before any comparison or subtraction (see User.has_activity).
+        def as_utc(moment):
+            return moment.replace(tzinfo=timezone.utc) if moment.tzinfo is None else moment
+        at_time = as_utc(at_time)
         grade_changes = []
-        for event in sorted(self.grade_history, key=lambda x: x.date_submitted):
-            date_submitted = event.date_submitted
+        for event in sorted(self.grade_history, key=lambda x: as_utc(x.date_submitted)):
+            date_submitted = as_utc(event.date_submitted)
             offset = date_submitted.astimezone().utcoffset()
             grade_changes.append((date_submitted, offset, event.score))
         grade_changes.append((at_time, at_time.astimezone().utcoffset(), actual_score))

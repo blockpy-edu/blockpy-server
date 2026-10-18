@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, TYPE_CHECKING
 
+from flask import current_app
 from flask_security import UserMixin
 from flask_security.utils import hash_password
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
@@ -303,13 +304,24 @@ class User(Base, UserMixin):
         stale_roles = [old_role for old_role in old_roles
                        if old_role.name.lower() not in new_role_names]
         old_role_names = set(role.name.lower() for role in old_roles)
-        added_roles = []
+        added_roles, added_role_names = [], set()
         for new_role_name in new_roles:
-            if new_role_name.lower() not in old_role_names:
-                new_role = models.Role(name=new_role_name.lower(), user_id=self.id,
-                                       course_id=course_id)
-                db.session.add(new_role)
-                added_roles.append(new_role)
+            new_role_name = new_role_name.lower()
+            if new_role_name in old_role_names or new_role_name in added_role_names:
+                continue
+            # role.name is an Enum column: SQLAlchemy stores any string but raises LookupError
+            # when it reads one back that is not a UserRoles value, which would break every page
+            # for this user. LMSes send roles we have no use for (Observer, SysAdmin, ...); drop them.
+            try:
+                UserRoles(new_role_name)
+            except ValueError:
+                current_app.logger.warning("Ignoring unknown LTI role %r for user %s in course %s",
+                                           new_role_name, self.id, course_id)
+                continue
+            new_role = models.Role(name=new_role_name, user_id=self.id, course_id=course_id)
+            db.session.add(new_role)
+            added_roles.append(new_role)
+            added_role_names.add(new_role_name)
         if not stale_roles and not added_roles:
             return
         for stale_role in stale_roles:

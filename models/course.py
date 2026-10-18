@@ -212,6 +212,10 @@ class Course(Base):
         models.Assignment.query.filter(models.Assignment.forked_id.in_(owned_assignments)).update({"forked_id": None}, **quietly)
         models.Assignment.query.filter(models.Assignment.course_id == course_id).delete(**quietly)
         models.AssignmentGroup.query.filter(models.AssignmentGroup.forked_id.in_(owned_groups)).update({"forked_id": None}, **quietly)
+        # Other courses' submissions may point at this course's groups (exam groups live in a
+        # template course and are taken elsewhere); detach them as AssignmentGroup.remove does
+        (models.Submission.query.filter(models.Submission.assignment_group_id.in_(owned_groups))
+         .update({"assignment_group_id": None}, **quietly))
         models.AssignmentGroup.query.filter(models.AssignmentGroup.course_id == course_id).delete(**quietly)
         # The course's own rows
         models.AssignmentTag.query.filter(models.AssignmentTag.course_id == course_id).delete(**quietly)

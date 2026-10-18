@@ -77,8 +77,7 @@ def client(app):
 @pytest.fixture
 def runner(app):
     """A test runner for the app's Click commands."""
-    with app.test_cli_runner() as runner:
-        yield runner
+    yield app.test_cli_runner()
 
 
 @contextmanager

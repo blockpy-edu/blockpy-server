@@ -202,12 +202,13 @@ def delete_course(course_id, remove_linked):
                                    f"Archive it, or pass --remove-linked to destroy the student work too.")
     what = f"course {course_id} ({course.name!r})" + (f" and its {blocking} submission(s)" if blocking else "")
     if click.confirm(f"Are you sure you want to delete {what}?"):
-        # Command-line deletions are attributed to the seeded admin user (id 1)
-        CourseLog.new(course_id, 1, CourseLogEvent.DELETE)
         try:
             Course.remove(course_id, remove_linked)
         except CourseHasSubmissions as blocked:
             raise click.ClickException(str(blocked))
+        # Logged after the delete succeeds; command-line deletions are attributed to the seeded
+        # admin user (id 1). course_log has no foreign key to course, so the row can outlive it.
+        CourseLog.new(course_id, 1, CourseLogEvent.DELETE)
         click.echo(f"Deleted {what}.")
 
 

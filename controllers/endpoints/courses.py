@@ -210,13 +210,14 @@ def remove_course():
         flash(f"Course not removed: it has {blocking} submission(s). Set its visibility to archived instead; "
               f"an administrator can delete it completely from the command line.")
         return redirect(url_for('courses.index'))
-    # Log first, since the course row is about to go away
-    CourseLog.new(course_id, g.user.id, CourseLogEvent.DELETE, None, None, *client_time_fields())
     try:
         Course.remove(course_id)
     except CourseHasSubmissions as blocked:
         flash(str(blocked))
         return redirect(url_for('courses.index'))
+    # Log after the delete, so a refused or failed delete never leaves a "delete" audit row
+    # (course_log has no foreign key to course, so the row can outlive it)
+    CourseLog.new(course_id, g.user.id, CourseLogEvent.DELETE, None, None, *client_time_fields())
     flash('Course removed')
     return redirect(url_for('courses.index'))
 
