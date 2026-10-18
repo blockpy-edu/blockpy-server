@@ -17,6 +17,8 @@ reasons are in the notes under each step.
 | nginx           | Only TLS 1.2 and 1.3 are offered                                                                   | Recreate the nginx container so the template is re-rendered                                 |
 | Config          | New defaults: 1-day JWT lifetime, 14-day remember cookie, course-creation limits                   | Nothing required; override in `instance/configuration.py` only if you want different values |
 | Scheduled work  | `error_log` grows with every unhandled error                                                       | Add a cron entry for `manage.py prune_error_logs`                                           |
+| WSGI server     | gunicorn worker timeout raised from 30 s to 120 s; uWSGI packages, template and socket volume removed | `docker compose build web huey` (the entrypoint is baked into the image), then `up -d`     |
+| Grade passback  | Posts to Canvas time out after `LTI_POST_TIMEOUT` (60 s) and failed posts are retried from the `huey` worker | Nothing required; keep the `huey` container running, it now does real work for grades |
 
 There are no new tables or columns. Every enum value the new code writes fits the existing
 `VARCHAR` columns created by `sum25_upgrade_sql.sql`.
@@ -69,6 +71,20 @@ docker compose exec nginx nginx -T | grep ssl_protocols
 The frontend bundle (`static/libs/blockpy_server/frontend.js`) is committed, so no webpack build
 is needed on the server.
 
+The `web` image must be rebuilt, not just restarted: `conf/entrypoint.sh` is copied into the image
+at build time, and it now starts gunicorn with `--timeout 120 --graceful-timeout 30`. Confirm with:
+
+```bash
+docker compose exec web ps -o args= -C gunicorn | head -1
+```
+
+The `uwsgi_socket` volume is no longer declared. `up -d` recreates `web` and `nginx` without the
+mount; the old volume stays on disk until you remove it:
+
+```bash
+docker volume rm blockpy-server_uwsgi_socket   # name may differ; see `docker volume ls`
+```
+
 ## 4. Copy uploads and reports into the new folder
 
 The old folders still exist inside `static_volume`, so the copy can happen from inside the
@@ -111,6 +127,24 @@ Log in as an admin and open:
 Make one harmless change (rename a course and rename it back) and confirm two `course_log`
 rows appear in the feed. The raw tables are also listed under "Logs" in the Flask-Admin panel.
 
+## 5b. Check grade passback
+
+Grade posts to Canvas are the most important code path in the system and this deploy changes
+how they fail. From a Canvas launch, run an assignment to a passing state and confirm the grade
+reaches the gradebook; the submission's history (assignment manager → History) should show one
+`X-Submission.LMS` row and no `X-Submission.LMS.Failure` rows.
+
+Failed posts are now retried three times, fifteen seconds apart, by the `huey` worker. Each
+retry chain is one row in `report` with `task = 'queue_lti_post_grade'`; a chain that is still
+`started` or `error` an hour later means the LMS kept refusing, and the submission stays
+`Failed` for the instructor's failed-grades page. Before this deploy that task crashed on its
+first attempt every time, so any old rows in `started` state are from the old code and can be
+ignored or deleted:
+
+```sql
+SELECT status, COUNT(*) FROM report WHERE task = 'queue_lti_post_grade' GROUP BY status;
+```
+
 ## 6. Schedule error-log pruning
 
 `error_log` keeps full tracebacks, which can contain student code, emails and LTI parameters.
@@ -134,6 +168,7 @@ in `instance/configuration.py`.
 | `COURSE_CREATION_DAILY_LIMIT`                  | 5                                    | Courses any non-exempt account may create per rolling day                                                                                                             |
 | `COURSE_CREATION_PUBLIC_AFTER_DAYS`            | 7                                    | Younger, unconfirmed accounts have `public` downgraded to `private` with a flash message                                                                              |
 | `PREFERRED_LOGIN_URL`                          | `None`                               | Where anonymous users are redirected by `login_required`. Replaces the old `PREFERRED_LOGIN` key; set it if your instance config used the old name                    |
+| `LTI_POST_TIMEOUT`                             | 60 seconds                           | Socket timeout for each grade post to Canvas (previously unlimited). Keep it below gunicorn's `--timeout` in `conf/entrypoint.sh` (120 s), or the worker is killed before the failure is recorded |
 
 Admins and anyone holding a grading role in an LMS-linked course are exempt from the
 course-creation limits. Set a limit to `0` to disable that rule.
@@ -152,8 +187,29 @@ course-creation limits. Set a limit to `0` to disable that rule.
   the database yet; see the follow-ups.
 - **Similarity reports only cover courses the requester grades**, and downloads always arrive
   as attachments.
+- **The submission table offers only "Regrade as human".** The old autograder "Regrade" button
+  (and its bulk variant) never sent anything to Canvas. The human regrade re-sends the grade
+  from the instructor's account and marks the submission fully graded. The quiz report page
+  keeps its own regrade button, which does re-grade the quiz server-side.
+- **Failed grade posts are retried automatically.** When Canvas cannot be reached or rejects a
+  grade, the submission is marked `Failed` as before, and the worker retries three times over
+  the next minute. A successful retry puts the grading status back to what it was before the
+  failure, so the submission leaves the failed-grades page on its own.
+- **Deleting a template course detaches its exam groups** from other courses' submissions
+  instead of failing with a database error. The audit row is written only after the delete
+  succeeds.
+- **LTI roles BlockPy does not know (Observer, SysAdmin, ...) are ignored** on launch instead
+  of being stored; storing one used to break every page for that user.
+- **Two dead instructor pages are gone**: `blockpy/browse_submissions` and `blockpy/watch`.
+  Both crashed on use; the grader dashboard's watch view is a different, working page.
 
 ## Follow-ups (not part of this deploy)
 
 - Check production for duplicate `assignment.url` and `assignment_group.url` values, then add
   unique constraints so the application check is backed by the database.
+- Deferred from the October 2026 backend review, in the order they were weighed: uniqueness
+  for `submission (assignment_id, user_id, course_id)`, `authentication (type, value)`,
+  `role (user_id, course_id, name)` and `lower("user".email)` (run the duplicate-detection
+  queries first); caps and streaming for the unbounded `submission_log` reads (`load_history`,
+  `student_report`, `external/dump_logs`, `estimate_duration`); the broken
+  `clear_old_anonymous_users` command; and bringing Alembic back in line with production.
