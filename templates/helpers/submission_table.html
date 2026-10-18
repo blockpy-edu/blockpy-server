@@ -8,23 +8,9 @@
     <span id="bulk-regrade-status"></span>
     <div class="btn-group mt-2">
         <button
-                data-as-human="false"
                 class="bulk-regrade btn btn-outline-secondary"
-                title="Simulate clicking on all of the regrade buttons, forcing the grades to sync with Canvas">
-            Bulk regrade</button>
-        <!-- Dropdown -->
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
-                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <span class="caret"></span>
-            <span class="sr-only">Toggle Dropdown</span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right">
-            <button
-                data-as-human="true"
-                class="bulk-regrade btn btn-outline-secondary"
-                title="Simulate clicking on all of the regrade as human buttons, forcing the grades to sync with Canvas. This resubmits the grades with your instructor account, not the autograder. You probably don't want to use this one unless you know what you are doing.">
+                title="Click every row's 'Regrade as human' button in turn, re-sending each grade to Canvas from your instructor account">
             Bulk regrade (as human)</button>
-        </div>
     </div>
     </div>
 
@@ -224,19 +210,15 @@
                        title="Launches a new window to help you transfer this submission to another course, if the student transfers"
                     >Copy to Course</a>
                     <!---------------------------------------------------------------------->
-                    {% for as_human in [False, True] %}
+                    {# Only the human regrade is offered: the old autograder "Regrade" posted no
+                       score or status, so the server saw no change and sent nothing to Canvas #}
                     <button class="dropdown-item re-autograde-btn" type="button"
-                            onclick="regrade(this, {{ submission[0].id }}, {{ (not as_human)|tojson }})"
+                            onclick="regrade(this, {{ submission[0].id }}, false)"
                             data-submission-id="{{ submission[0].id }}"
                             data-assignment-name="{{ submission[2].title() }}"
                             data-user-name="{{ submission[1].name() }}"
-                            data-as-human="{{ as_human|tojson }}"
                             style="cursor: pointer"
-                            {% if as_human %}
-                            title="Force a regrade of the submission, but do so as a human instead of the autograder."
-                            {% else %}
-                            title="Force a regrade of the submission, but do so as the autograder. Forces resync with canvas."
-                            {% endif %}
+                            title="Re-send this submission's grade to Canvas from your instructor account (marks it fully graded)."
                     >{% if submission[0].grading_status == "FullyGraded" %}
                         <span class="green-check-mark">&#10004;</span>
                     {% elif submission[0].grading_status == 'Failed' %}
@@ -246,13 +228,8 @@
                     {% else %}
                         <span style="color: transparent"></span>
                     {% endif %}
-                        {% if as_human %}
-                            Regrade as human
-                        {% else %}
-                            Regrade
-                        {% endif %}
+                        Regrade as human
                     </button>
-                    {% endfor %}
                     <!---------------------------------------------------------------------->
                 {%- endif %}
 
@@ -281,9 +258,7 @@
 
         let WAIT = 200;
         $(".bulk-regrade").click(function() {
-            const asHuman = $(this).data("as-human");
-            // Only select buttons if the data attribute as-human the same as asHuman
-            const regradeButtons = document.querySelectorAll(`button.re-autograde-btn[data-as-human="${asHuman}"]`);
+            const regradeButtons = document.querySelectorAll(`button.re-autograde-btn`);
             $(".overlay").show();
             let finished = 0;
             $(`#bulk-regrade-status`).text(`Bulk regrading... (${finished}/${regradeButtons.length})`);
