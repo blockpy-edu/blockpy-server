@@ -115,8 +115,8 @@ Using Git will allow you to pull in the inevitable bug fixes we'll be publishing
 
 ## VirtualEnv
 
-BlockPy's server is a Python 3.8+ Flask application, and it will eventually be run using a system called UWSGI. However,
-you won't want to use your systems' Python version. Instead, you should use a Virtual Environment via VirtualEnv. There
+BlockPy's server is a Python 3.11 Flask application, served in production by Gunicorn (which `requirements.txt`
+installs). You won't want to use your systems' Python version. Instead, you should use a Virtual Environment via VirtualEnv. There
 are many tutorials for setting up a Virtual Env, such
 as [this SO post](https://stackoverflow.com/questions/29934032/virtualenv-python-3-ubuntu-14-04-64-bit?answertab=active#tab-top).
 We put our `venv/` folder directly in the `/var/www/blockpy-server/` folder.
@@ -125,12 +125,6 @@ Make sure you install the server's required libraries:
 
 ```bash
 $ venv/bin/pip install -r requirements.txt
-```
-
-We also need UWSGI to daemonize the server:
-
-```bash
-$ venv/bin/pip install uwsgi
 ```
 
 ## Filesystem Directories
@@ -393,9 +387,6 @@ external SSL certificate, but it might be used to set up outbound SSL communicat
 > openssl dhparam 2048 -out /etc/nginx/cert/dhparam.pem
 ```
 
-We also had a lot of headaches with permissions for `/run/uwsgi/blockpy.sock` particularly on server reloads. Keep an
-eye on it and choose appropriate permissions for the users you choose.
-
 You can test your Nginx sites with:
 
 ```bash
@@ -408,40 +399,37 @@ And reload them when they're ready:
 $ nginx -s reload
 ```
 
-## INI File Setup
+## Gunicorn Setup
 
-You'll need to create a `uwsgi.ini` file to configure UWSGI; replace the `${BASE_DIR}` with the appropriate directory
-if you have a different directory than `/var/www/blockpy-server/`.
-We've included our `blockpy.ini` file for now as an example.
-
-## UWSGI Setup
-
-You'll need to register your UWSGI script with your server's `systemd` or equivalent. Here's
-our `/etc/systemd/system/uwsgi.service` file:
+The application server is Gunicorn, started the same way the Docker image's `conf/entrypoint.sh` starts it. Register
+it with your server's `systemd` or equivalent; here is a minimal `/etc/systemd/system/blockpy.service`:
 
 ```ini
 [Unit]
-Description = uWSGI Emperor service
+Description = BlockPy server (gunicorn)
+After = network.target
 
 [Service]
-ExecStartPre=/bin/bash -c 'mkdir -p /run/uwsgi; chown -R www-data:www-data /run/uwsgi'
-ExecStart=/var/www/blockpy-server/env/bin/uwsgi --emperor /etc/uwsgi/sites
-Restart=always
-KillSignal=SIGQUIT
-Type=notify
-NotifyAccess=all
+User = www-data
+Group = www-data
+WorkingDirectory = /var/www/blockpy-server
+ExecStart = /var/www/blockpy-server/venv/bin/gunicorn -w 4 -b 127.0.0.1:8888 wsgi:application \
+    --timeout 120 --graceful-timeout 30 \
+    --error-logfile logs/gunicorn_error.log --access-logfile logs/gunicorn_access.log
+Restart = always
 
 [Install]
-WantedBy=multi-user.target
+WantedBy = multi-user.target
 ```
 
-This version demonstrates using Emperor mode, which is a bit more complicated but allows you to run multiple UWSGI
-and handle restarting on crash. Alternatively, you can rely on Docker for all this.
+Point the `proxy_pass` in your Nginx site at `http://127.0.0.1:8888`. Keep `--timeout` above the `LTI_POST_TIMEOUT`
+setting (60 seconds by default), so a grade post waiting on a slow LMS can time out and be recorded before the worker is
+killed. Alternatively, you can rely on Docker for all this.
 
-Don't forget to start/restart UWSGI (you'll do this when pulling new versions of the github repo too):
+Don't forget to restart the service when pulling new versions of the GitHub repo:
 
 ```bash
-$ sudo systemctl restart uwsgi
+$ sudo systemctl restart blockpy
 ```
 
 ## Setup Redis

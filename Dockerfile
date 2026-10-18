@@ -33,17 +33,14 @@ RUN /usr/src/app/venv/bin/pip wheel --no-cache-dir --no-deps --wheel-dir /usr/sr
 #########
 FROM python:3.11
 
-# Install uWSGI and other necessary packages
+# Install the system packages the app and its entrypoint need (gunicorn itself comes from requirements.txt)
 RUN apt-get update && apt-get install -y netcat-traditional  \
     htop gettext-base less \
-    uwsgi uwsgi-plugin-python3 \
     python3-dev libc-dev libpq-dev gcc postgresql-client \
     curl
 
 # Create a list of directories and iterate over it to create them
-RUN DIRS="/run/uwsgi \
-    /etc/uwsgi/sites \
-    /usr/src/app/logs \
+RUN DIRS="/usr/src/app/logs \
     /usr/src/app/data/uploads \
     /usr/src/app/data/uploads/submission_blocks \
     /usr/src/app/data/reports \
@@ -70,8 +67,7 @@ RUN pip install --no-cache /wheels/*
 # add app
 COPY --chown=www-data:www-data . /usr/src/app
 
-# Copy the uWSGI template and entrypoint script
-# COPY ./uwsgi.ini.template /etc/uwsgi/sites/uwsgi.ini.template
+# Copy the entrypoint script (it starts gunicorn; see conf/entrypoint.sh)
 COPY ./conf/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

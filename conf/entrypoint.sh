@@ -21,7 +21,6 @@ DIRS="/usr/src/app/logs \
     /usr/src/app/static/.webassets-cache \
     /usr/src/app/backups \
     /usr/src/app/instance \
-    /run/uwsgi \
     /usr/src/app/instance/certs"
 
 # Create directories if they don't exist
@@ -32,7 +31,6 @@ done
 touch /usr/src/app/logs/blockpy_errors.log
 touch /usr/src/app/logs/blockpy_events.log
 touch /usr/src/app/logs/blockpy_tasks.log
-touch /usr/src/app/logs/uwsgi_blockpy.log
 touch /usr/src/app/logs/gunicorn_error.log
 touch /usr/src/app/logs/gunicorn_access.log
 
@@ -60,13 +58,9 @@ python3 /usr/src/app/manage.py create_seeded_db
 echo "Database ready"
 # fi
 
-# Substitute environment variables in the uWSGI configuration
-# envsubst < /etc/uwsgi/sites/uwsgi.ini.template > /etc/uwsgi/sites/uwsgi.ini
-# rm /etc/uwsgi/sites/uwsgi.ini.template
-
-# Confirm that the environment variables were substituted
-# ls -l /etc/uwsgi/sites/uwsgi.ini
-
-# Start the uWSGI Emperor
-# exec uwsgi --emperor /etc/uwsgi/sites --uid www-data --gid www-data
-exec gunicorn --chdir /usr/src/app -w 4 -b 0.0.0.0:8888 wsgi:application --error-logfile /usr/src/app/logs/gunicorn_error.log --access-logfile /usr/src/app/logs/gunicorn_access.log
+# Start gunicorn (the production WSGI server; nginx proxies to port 8888).
+# --timeout must exceed LTI_POST_TIMEOUT (config.py, 60 s): a grade post that waits on a slow
+# LMS has to be able to time out and record its failure before the worker is killed.
+exec gunicorn --chdir /usr/src/app -w 4 -b 0.0.0.0:8888 wsgi:application \
+    --timeout 120 --graceful-timeout 30 \
+    --error-logfile /usr/src/app/logs/gunicorn_error.log --access-logfile /usr/src/app/logs/gunicorn_access.log

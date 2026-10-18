@@ -7,11 +7,11 @@ update_datasets_dev:
 update_datasets:
 	py3 manage.py update_datasets
 check_log:
-	less +G /var/log/uwsgi/kennel.log
+	docker compose logs --tail=200 web
 check_interactions:
 	less +G log/student_interactions/student_interactions.log
 restart_server:
-	sudo systemctl restart uwsgi
+	docker compose restart web
 redo_database:
 	python.exe manage.py reset_db
 	python.exe manage.py populate_db
