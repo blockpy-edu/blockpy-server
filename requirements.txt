@@ -39,11 +39,7 @@ apispec-webframeworks==0.5.2
 WTForms==3.1.1
 
 # --- DB drivers ---
-psycopg==3.2.1                # ACTIVE driver (postgresql+psycopg://)
-psycopg2==2.9.9               # template + prod_config.py still resolve here; remove deliberately later
-
-
-
+psycopg[binary]>=3.2,<4       # ACTIVE driver (postgresql+psycopg://); psycopg2 is no longer installed in prod
 
 # --- Serving / queue ---
 gunicorn>=22.0,<24            # BUMP: CVE-2024-1135; gunicorn IS the production server
