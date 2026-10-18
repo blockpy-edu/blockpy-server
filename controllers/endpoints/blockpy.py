@@ -1,4 +1,3 @@
-from datetime import datetime
 import time
 import os
 import re
@@ -38,7 +37,6 @@ from controllers.helpers import (ajax_failure, parse_assignment_load, require_re
                                  get_course_id, maybe_int, check_resource_exists, ajax_success,
                                  login_required, require_course_instructor, require_course_grader, maybe_bool,
                                  make_log_entry, check_permissions, client_time_fields)
-from common.highlighters import highlight_python_code
 from tasks.tasks import queue_lti_post_grade
 from models.user import User
 
@@ -1135,86 +1133,6 @@ def load_file():
     except IOError as e:
         return jsonify(success=False, message=str(e), ip=request.remote_addr)
         """
-
-
-GAP_THRESHOLD = 2 * 60
-
-
-def process_history(history):
-    if len(history) <= 1:
-        return 0
-    total_duration = 0.0
-    previous_time = None
-    for a_time in history:
-        parsed_time = datetime.strptime(a_time[:15], "%Y%m%d-%H%M%S")
-        if previous_time != None:
-            diff = (parsed_time - previous_time).seconds
-            if diff < GAP_THRESHOLD:
-                total_duration += diff
-        previous_time = parsed_time
-    return total_duration / 60.
-
-
-@blueprint_blockpy.route('/browse_submissions', methods=['GET', 'POST'])
-@blueprint_blockpy.route('/browse_submissions/', methods=['GET', 'POST'])
-def browse_submissions():
-    """
-    TODO: Check if this is deprecated?
-    :return:
-    """
-    assignment_id = request.values.get('assignment_id', None)
-    if assignment_id is None:
-        return ajax_failure("No Assignment ID given!")
-    assignment_id = int(assignment_id)
-    course_id = request.values.get('course_id', g.course.id if 'course' in g else None)
-    if course_id == None or course_id == "":
-        return ajax_failure("No Course ID given!")
-    if g.user is None or not g.user.is_instructor(int(course_id)):
-        return ajax_failure("You are not an instructor in this assignments' course.")
-    submissions = Submission.by_assignment(assignment_id, int(course_id))
-    for submission, user, assignment in submissions:
-        submission.highlighted_code = highlight_python_code(submission.code)
-        submission.history = process_history([h['time']
-                                              for h in reversed(submission.get_history())])
-    return render_template('blockpy/browse_submissions.html',
-                           course_id=course_id,
-                           assignment_id=assignment_id,
-                           submissions=submissions,
-                           ip=request.remote_addr)
-
-
-@blueprint_blockpy.route('/watch', methods=['GET', 'POST'])
-@blueprint_blockpy.route('/watch/', methods=['GET', 'POST'])
-def watch():
-    assignment_list = request.values.get('assignments', '')
-    assignments = [int(aid) for aid in assignment_list.split(',') if len(aid) > 0]
-    course_id = request.values.get('course_id', g.course.id if 'course' in g else None)
-    if course_id == None or course_id == "":
-        return ajax_failure("No Course ID given!")
-    if g.user is None or not g.user.is_instructor(int(course_id)):
-        return ajax_failure("You are not an instructor in this assignments' course.")
-    update = request.values.get('update', 'false') == "true"
-    if update:
-        data = []
-        for aid in assignments:
-            submissions = Submission.by_assignment(aid, int(course_id))
-            completions = sum([int(sua[0].correct) for sua in submissions])
-            workings = Submission.get_latest(aid, int(course_id))
-            histories = [process_history([h['time'] for h in sua[0].get_history()])
-                         for sua in submissions]
-            touches = [int(sua[0].version) for sua in submissions]
-            feedbacks = [l[0] for l in Log.calculate_feedbacks(aid, course_id)]
-            data.append({'id': aid,
-                         'Completions': completions,
-                         'Workings': workings,
-                         'Time': histories,
-                         'Touches': touches,
-                         'Feedbacks': feedbacks})
-        return jsonify(success=True, data=data)
-    else:
-        assignments = [Assignment.by_id(aid) for aid in assignments]
-        return render_template('blockpy/watch.html', course_id=course_id, assignments=assignments,
-                               assignment_list=assignment_list)
 
 
 @blueprint_blockpy.route('/images/<path:path>', methods=['GET', 'POST'])
