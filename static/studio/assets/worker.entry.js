@@ -1,19 +1,19 @@
-var Fe = Object.defineProperty;
-var Le = (n, e, t) => e in n ? Fe(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
+var Le = Object.defineProperty;
+var Fe = (n, e, t) => e in n ? Le(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
 var De = (n, e) => () => (e || n((e = { exports: {} }).exports, e), e.exports);
-var h = (n, e, t) => Le(n, typeof e != "symbol" ? e + "" : e, t);
-var an = De((ln, j) => {
+var h = (n, e, t) => Fe(n, typeof e != "symbol" ? e + "" : e, t);
+var on = De((dn, j) => {
   var Ce = Object.defineProperty, o = (n, e) => Ce(n, "name", { value: e, configurable: !0 }), X = ((n) => typeof require < "u" ? require : typeof Proxy < "u" ? new Proxy(n, { get: (e, t) => (typeof require < "u" ? require : e)[t] }) : n)(function(n) {
     if (typeof require < "u") return require.apply(this, arguments);
     throw Error('Dynamic require of "' + n + '" is not supported');
-  }), Me = (() => {
+  }), Ue = (() => {
     for (var n = new Uint8Array(128), e = 0; e < 64; e++) n[e < 26 ? e + 65 : e < 52 ? e + 71 : e < 62 ? e - 4 : e * 4 - 205] = e;
     return (t) => {
-      for (var s = t.length, r = new Uint8Array((s - (t[s - 1] == "=") - (t[s - 2] == "=")) * 3 / 4 | 0), i = 0, a = 0; i < s; ) {
-        var c = n[t.charCodeAt(i++)], u = n[t.charCodeAt(i++)], l = n[t.charCodeAt(i++)], d = n[t.charCodeAt(i++)];
-        r[a++] = c << 2 | u >> 4, r[a++] = u << 4 | l >> 2, r[a++] = l << 6 | d;
+      for (var r = t.length, s = new Uint8Array((r - (t[r - 1] == "=") - (t[r - 2] == "=")) * 3 / 4 | 0), a = 0, i = 0; a < r; ) {
+        var d = n[t.charCodeAt(a++)], u = n[t.charCodeAt(a++)], l = n[t.charCodeAt(a++)], c = n[t.charCodeAt(a++)];
+        s[i++] = d << 2 | u >> 4, s[i++] = u << 4 | l >> 2, s[i++] = l << 6 | c;
       }
-      return r;
+      return s;
     };
   })();
   function Y(n) {
@@ -24,18 +24,18 @@ var an = De((ln, j) => {
     return n.charAt(0).toUpperCase() + n.substring(1);
   }
   o(b, "_capitalize");
-  function F(n) {
+  function L(n) {
     return function() {
       return this[n];
     };
   }
-  o(F, "_getter");
-  var x = ["isConstructor", "isEval", "isNative", "isToplevel"], N = ["columnNumber", "lineNumber"], S = ["fileName", "functionName", "source"], Ue = ["args"], je = ["evalOrigin"], A = x.concat(N, S, Ue, je);
-  function m(n) {
+  o(L, "_getter");
+  var x = ["isConstructor", "isEval", "isNative", "isToplevel"], N = ["columnNumber", "lineNumber"], S = ["fileName", "functionName", "source"], Me = ["args"], je = ["evalOrigin"], A = x.concat(N, S, Me, je);
+  function f(n) {
     if (n) for (var e = 0; e < A.length; e++) n[A[e]] !== void 0 && this["set" + b(A[e])](n[A[e]]);
   }
-  o(m, "StackFrame");
-  m.prototype = { getArgs: o(function() {
+  o(f, "StackFrame");
+  f.prototype = { getArgs: o(function() {
     return this.args;
   }, "getArgs"), setArgs: o(function(n) {
     if (Object.prototype.toString.call(n) !== "[object Array]") throw new TypeError("Args must be an Array");
@@ -43,37 +43,37 @@ var an = De((ln, j) => {
   }, "setArgs"), getEvalOrigin: o(function() {
     return this.evalOrigin;
   }, "getEvalOrigin"), setEvalOrigin: o(function(n) {
-    if (n instanceof m) this.evalOrigin = n;
-    else if (n instanceof Object) this.evalOrigin = new m(n);
+    if (n instanceof f) this.evalOrigin = n;
+    else if (n instanceof Object) this.evalOrigin = new f(n);
     else throw new TypeError("Eval Origin must be an Object or StackFrame");
   }, "setEvalOrigin"), toString: o(function() {
-    var n = this.getFileName() || "", e = this.getLineNumber() || "", t = this.getColumnNumber() || "", s = this.getFunctionName() || "";
-    return this.getIsEval() ? n ? "[eval] (" + n + ":" + e + ":" + t + ")" : "[eval]:" + e + ":" + t : s ? s + " (" + n + ":" + e + ":" + t + ")" : n + ":" + e + ":" + t;
+    var n = this.getFileName() || "", e = this.getLineNumber() || "", t = this.getColumnNumber() || "", r = this.getFunctionName() || "";
+    return this.getIsEval() ? n ? "[eval] (" + n + ":" + e + ":" + t + ")" : "[eval]:" + e + ":" + t : r ? r + " (" + n + ":" + e + ":" + t + ")" : n + ":" + e + ":" + t;
   }, "toString") };
-  m.fromString = o(function(n) {
-    var e = n.indexOf("("), t = n.lastIndexOf(")"), s = n.substring(0, e), r = n.substring(e + 1, t).split(","), i = n.substring(t + 1);
-    if (i.indexOf("@") === 0) var a = /@(.+?)(?::(\d+))?(?::(\d+))?$/.exec(i, ""), c = a[1], u = a[2], l = a[3];
-    return new m({ functionName: s, args: r || void 0, fileName: c, lineNumber: u || void 0, columnNumber: l || void 0 });
+  f.fromString = o(function(n) {
+    var e = n.indexOf("("), t = n.lastIndexOf(")"), r = n.substring(0, e), s = n.substring(e + 1, t).split(","), a = n.substring(t + 1);
+    if (a.indexOf("@") === 0) var i = /@(.+?)(?::(\d+))?(?::(\d+))?$/.exec(a, ""), d = i[1], u = i[2], l = i[3];
+    return new f({ functionName: r, args: s || void 0, fileName: d, lineNumber: u || void 0, columnNumber: l || void 0 });
   }, "StackFrame$$fromString");
-  for (w = 0; w < x.length; w++) m.prototype["get" + b(x[w])] = F(x[w]), m.prototype["set" + b(x[w])] = /* @__PURE__ */ (function(n) {
+  for (w = 0; w < x.length; w++) f.prototype["get" + b(x[w])] = L(x[w]), f.prototype["set" + b(x[w])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       this[n] = !!e;
     };
   })(x[w]);
   var w;
-  for (E = 0; E < N.length; E++) m.prototype["get" + b(N[E])] = F(N[E]), m.prototype["set" + b(N[E])] = /* @__PURE__ */ (function(n) {
+  for (E = 0; E < N.length; E++) f.prototype["get" + b(N[E])] = L(N[E]), f.prototype["set" + b(N[E])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       if (!Y(e)) throw new TypeError(n + " must be a Number");
       this[n] = Number(e);
     };
   })(N[E]);
   var E;
-  for (k = 0; k < S.length; k++) m.prototype["get" + b(S[k])] = F(S[k]), m.prototype["set" + b(S[k])] = /* @__PURE__ */ (function(n) {
+  for (k = 0; k < S.length; k++) f.prototype["get" + b(S[k])] = L(S[k]), f.prototype["set" + b(S[k])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       this[n] = String(e);
     };
   })(S[k]);
-  var k, L = m;
+  var k, F = f;
   function Q() {
     var n = /^\s*at .*(\S+:\d+|\(native\))/m, e = /^(eval@)?(\[native code])?$/;
     return { parse: o(function(t) {
@@ -82,48 +82,48 @@ var an = De((ln, j) => {
       throw new Error("Cannot parse given Error object");
     }, "ErrorStackParser$$parse"), extractLocation: o(function(t) {
       if (t.indexOf(":") === -1) return [t];
-      var s = /(.+?)(?::(\d+))?(?::(\d+))?$/, r = s.exec(t.replace(/[()]/g, ""));
-      return [r[1], r[2] || void 0, r[3] || void 0];
+      var r = /(.+?)(?::(\d+))?(?::(\d+))?$/, s = r.exec(t.replace(/[()]/g, ""));
+      return [s[1], s[2] || void 0, s[3] || void 0];
     }, "ErrorStackParser$$extractLocation"), parseV8OrIE: o(function(t) {
-      var s = t.stack.split(`
-`).filter(function(r) {
-        return !!r.match(n);
+      var r = t.stack.split(`
+`).filter(function(s) {
+        return !!s.match(n);
       }, this);
-      return s.map(function(r) {
-        r.indexOf("(eval ") > -1 && (r = r.replace(/eval code/g, "eval").replace(/(\(eval at [^()]*)|(,.*$)/g, ""));
-        var i = r.replace(/^\s+/, "").replace(/\(eval code/g, "(").replace(/^.*?\s+/, ""), a = i.match(/ (\(.+\)$)/);
-        i = a ? i.replace(a[0], "") : i;
-        var c = this.extractLocation(a ? a[1] : i), u = a && i || void 0, l = ["eval", "<anonymous>"].indexOf(c[0]) > -1 ? void 0 : c[0];
-        return new L({ functionName: u, fileName: l, lineNumber: c[1], columnNumber: c[2], source: r });
+      return r.map(function(s) {
+        s.indexOf("(eval ") > -1 && (s = s.replace(/eval code/g, "eval").replace(/(\(eval at [^()]*)|(,.*$)/g, ""));
+        var a = s.replace(/^\s+/, "").replace(/\(eval code/g, "(").replace(/^.*?\s+/, ""), i = a.match(/ (\(.+\)$)/);
+        a = i ? a.replace(i[0], "") : a;
+        var d = this.extractLocation(i ? i[1] : a), u = i && a || void 0, l = ["eval", "<anonymous>"].indexOf(d[0]) > -1 ? void 0 : d[0];
+        return new F({ functionName: u, fileName: l, lineNumber: d[1], columnNumber: d[2], source: s });
       }, this);
     }, "ErrorStackParser$$parseV8OrIE"), parseFFOrSafari: o(function(t) {
-      var s = t.stack.split(`
-`).filter(function(r) {
-        return !r.match(e);
+      var r = t.stack.split(`
+`).filter(function(s) {
+        return !s.match(e);
       }, this);
-      return s.map(function(r) {
-        if (r.indexOf(" > eval") > -1 && (r = r.replace(/ line (\d+)(?: > eval line \d+)* > eval:\d+:\d+/g, ":$1")), r.indexOf("@") === -1 && r.indexOf(":") === -1) return new L({ functionName: r });
-        var i = /((.*".+"[^@]*)?[^@]*)(?:@)/, a = r.match(i), c = a && a[1] ? a[1] : void 0, u = this.extractLocation(r.replace(i, ""));
-        return new L({ functionName: c, fileName: u[0], lineNumber: u[1], columnNumber: u[2], source: r });
+      return r.map(function(s) {
+        if (s.indexOf(" > eval") > -1 && (s = s.replace(/ line (\d+)(?: > eval line \d+)* > eval:\d+:\d+/g, ":$1")), s.indexOf("@") === -1 && s.indexOf(":") === -1) return new F({ functionName: s });
+        var a = /((.*".+"[^@]*)?[^@]*)(?:@)/, i = s.match(a), d = i && i[1] ? i[1] : void 0, u = this.extractLocation(s.replace(a, ""));
+        return new F({ functionName: d, fileName: u[0], lineNumber: u[1], columnNumber: u[2], source: s });
       }, this);
     }, "ErrorStackParser$$parseFFOrSafari") };
   }
   o(Q, "ErrorStackParser");
-  var qe = new Q(), Be = qe;
+  var Be = new Q(), qe = Be;
   function Z() {
-    var a;
+    var i;
     if (typeof API < "u" && API !== globalThis.API) return API.runtimeEnv;
-    let n = typeof Bun < "u", e = typeof Deno < "u", t = typeof process == "object" && typeof process.versions == "object" && typeof process.versions.node == "string" && !process.browser, s = typeof navigator == "object" && typeof navigator.userAgent == "string" && navigator.userAgent.indexOf("Chrome") === -1 && navigator.userAgent.indexOf("Safari") > -1, r = typeof read == "function" && typeof load == "function", i = typeof navigator == "object" && ((a = navigator.userAgent) == null ? void 0 : a.includes("Cloudflare-Workers"));
-    return ee({ IN_BUN: n, IN_DENO: e, IN_NODE: t, IN_SAFARI: s, IN_SHELL: r, IN_WORKERD: i });
+    let n = typeof Bun < "u", e = typeof Deno < "u", t = typeof process == "object" && typeof process.versions == "object" && typeof process.versions.node == "string" && !process.browser, r = typeof navigator == "object" && typeof navigator.userAgent == "string" && navigator.userAgent.indexOf("Chrome") === -1 && navigator.userAgent.indexOf("Safari") > -1, s = typeof read == "function" && typeof load == "function", a = typeof navigator == "object" && ((i = navigator.userAgent) == null ? void 0 : i.includes("Cloudflare-Workers"));
+    return ee({ IN_BUN: n, IN_DENO: e, IN_NODE: t, IN_SAFARI: r, IN_SHELL: s, IN_WORKERD: a });
   }
   o(Z, "getGlobalRuntimeEnv");
-  var _ = Z();
+  var m = Z();
   function ee(n) {
-    let e = n.IN_NODE && typeof j < "u" && j.exports && typeof X == "function" && typeof __dirname == "string", t = n.IN_NODE && !e, s = !n.IN_NODE && !n.IN_DENO && !n.IN_BUN, r = s && typeof window < "u" && typeof window.document < "u" && typeof document.createElement == "function" && "sessionStorage" in window && typeof globalThis.importScripts != "function", i = s && typeof globalThis.WorkerGlobalScope < "u" && typeof globalThis.self < "u" && globalThis.self instanceof globalThis.WorkerGlobalScope;
-    if (i && ne()) throw new Error("Classic web workers are not supported");
-    let a = { ...n, IN_BROWSER: s, IN_BROWSER_MAIN_THREAD: r, IN_BROWSER_WEB_WORKER: i, IN_NODE_COMMONJS: e, IN_NODE_ESM: t };
-    if (!(a.IN_BROWSER_MAIN_THREAD || a.IN_BROWSER_WEB_WORKER || a.IN_NODE || a.IN_SHELL || a.IN_WORKERD)) throw new Error(`Cannot determine runtime environment: ${JSON.stringify(a)}`);
-    return a;
+    let e = n.IN_NODE && typeof j < "u" && j.exports && typeof X == "function" && typeof __dirname == "string", t = n.IN_NODE && !e, r = !n.IN_NODE && !n.IN_DENO && !n.IN_BUN, s = r && typeof window < "u" && typeof window.document < "u" && typeof document.createElement == "function" && "sessionStorage" in window && typeof globalThis.importScripts != "function", a = r && typeof globalThis.WorkerGlobalScope < "u" && typeof globalThis.self < "u" && globalThis.self instanceof globalThis.WorkerGlobalScope;
+    if (a && ne()) throw new Error("Classic web workers are not supported");
+    let i = { ...n, IN_BROWSER: r, IN_BROWSER_MAIN_THREAD: s, IN_BROWSER_WEB_WORKER: a, IN_NODE_COMMONJS: e, IN_NODE_ESM: t };
+    if (!(i.IN_BROWSER_MAIN_THREAD || i.IN_BROWSER_WEB_WORKER || i.IN_NODE || i.IN_SHELL || i.IN_WORKERD)) throw new Error(`Cannot determine runtime environment: ${JSON.stringify(i)}`);
+    return i;
   }
   o(ee, "calculateDerivedFlags");
   function ne() {
@@ -134,216 +134,216 @@ var an = De((ln, j) => {
     }
   }
   o(ne, "isClassicWorker");
-  var te, C, z, q;
-  async function B() {
-    if (!_.IN_NODE || (te = (await Promise.resolve().then(function() {
+  var te, C, V, B;
+  async function q() {
+    if (!m.IN_NODE || (te = (await Promise.resolve().then(function() {
       return g;
-    })).default, z = await Promise.resolve().then(function() {
+    })).default, V = await Promise.resolve().then(function() {
       return g;
-    }), q = await Promise.resolve().then(function() {
+    }), B = await Promise.resolve().then(function() {
       return g;
     }), (await Promise.resolve().then(function() {
       return g;
     })).default, C = await Promise.resolve().then(function() {
       return g;
     }), J = C.sep, typeof X < "u")) return;
-    let n = z, e = await Promise.resolve().then(function() {
+    let n = V, e = await Promise.resolve().then(function() {
       return g;
     }), t = await Promise.resolve().then(function() {
       return g;
-    }), s = await Promise.resolve().then(function() {
+    }), r = await Promise.resolve().then(function() {
       return g;
-    }), r = { fs: n, crypto: e, ws: t, child_process: s };
-    globalThis.require = function(i) {
-      return r[i];
+    }), s = { fs: n, crypto: e, ws: t, child_process: r };
+    globalThis.require = function(a) {
+      return s[a];
     };
   }
-  o(B, "initNodeModules");
-  function re(n, e) {
+  o(q, "initNodeModules");
+  function se(n, e) {
     return C.resolve(e || ".", n);
   }
-  o(re, "node_resolvePath");
-  function se(n, e) {
+  o(se, "node_resolvePath");
+  function re(n, e) {
     return e === void 0 && (e = location), new URL(n, e).toString();
   }
-  o(se, "browser_resolvePath");
-  var P;
-  _.IN_NODE ? P = re : _.IN_SHELL ? P = o((n) => n, "resolvePath") : P = se;
+  o(re, "browser_resolvePath");
+  var I;
+  m.IN_NODE ? I = se : m.IN_SHELL ? I = o((n) => n, "resolvePath") : I = re;
   var J;
-  _.IN_NODE || (J = "/");
-  function ie(n, e) {
-    return n.startsWith("file://") && (n = n.slice(7)), n.includes("://") ? { response: fetch(n) } : { binary: q.readFile(n).then((t) => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)) };
-  }
-  o(ie, "node_getBinaryResponse");
+  m.IN_NODE || (J = "/");
   function ae(n, e) {
+    return n.startsWith("file://") && (n = n.slice(7)), n.includes("://") ? { response: fetch(n) } : { binary: B.readFile(n).then((t) => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)) };
+  }
+  o(ae, "node_getBinaryResponse");
+  function ie(n, e) {
     if (n.startsWith("file://") && (n = n.slice(7)), n.includes("://")) throw new Error("Shell cannot fetch urls");
     return { binary: Promise.resolve(new Uint8Array(readbuffer(n))) };
   }
-  o(ae, "shell_getBinaryResponse");
+  o(ie, "shell_getBinaryResponse");
   function oe(n, e) {
     let t = new URL(n, location);
     return { response: fetch(t, e ? { integrity: e } : {}) };
   }
   o(oe, "browser_getBinaryResponse");
-  var I;
-  _.IN_NODE ? I = ie : _.IN_SHELL ? I = ae : I = oe;
+  var T;
+  m.IN_NODE ? T = ae : m.IN_SHELL ? T = ie : T = oe;
   async function le(n, e) {
-    let { response: t, binary: s } = I(n, e);
-    if (s) return s;
-    let r = await t;
-    if (!r.ok) throw new Error(`Failed to load '${n}': request failed.`);
-    return new Uint8Array(await r.arrayBuffer());
+    let { response: t, binary: r } = T(n, e);
+    if (r) return r;
+    let s = await t;
+    if (!s.ok) throw new Error(`Failed to load '${n}': request failed.`);
+    return new Uint8Array(await s.arrayBuffer());
   }
   o(le, "loadBinaryFile");
-  var M;
-  _.IN_NODE ? M = ce : M = o(async (n) => await import(n), "loadScript");
-  async function ce(n) {
+  var U;
+  m.IN_NODE ? U = de : U = o(async (n) => await import(n), "loadScript");
+  async function de(n) {
     return n.startsWith("file://") && (n = n.slice(7)), n.includes("://") ? await import(n) : await import(te.pathToFileURL(n).href);
   }
-  o(ce, "nodeLoadScript");
+  o(de, "nodeLoadScript");
   async function ue(n) {
-    if (_.IN_NODE) {
-      await B();
-      let e = await q.readFile(n, { encoding: "utf8" });
+    if (m.IN_NODE) {
+      await q();
+      let e = await B.readFile(n, { encoding: "utf8" });
       return JSON.parse(e);
-    } else if (_.IN_SHELL) {
+    } else if (m.IN_SHELL) {
       let e = read(n);
       return JSON.parse(e);
     } else return await (await fetch(n)).json();
   }
   o(ue, "loadLockFile");
-  async function de() {
-    if (_.IN_NODE_COMMONJS) return __dirname;
+  async function ce() {
+    if (m.IN_NODE_COMMONJS) return __dirname;
     let n;
     try {
       throw new Error();
-    } catch (s) {
-      n = s;
+    } catch (r) {
+      n = r;
     }
-    let e = Be.parse(n)[0].fileName;
-    if (_.IN_NODE && !e.startsWith("file://") && (e = `file://${e}`), _.IN_NODE_ESM) {
-      let s = await Promise.resolve().then(function() {
+    let e = qe.parse(n)[0].fileName;
+    if (m.IN_NODE && !e.startsWith("file://") && (e = `file://${e}`), m.IN_NODE_ESM) {
+      let r = await Promise.resolve().then(function() {
         return g;
       });
       return (await Promise.resolve().then(function() {
         return g;
-      })).fileURLToPath(s.dirname(e));
+      })).fileURLToPath(r.dirname(e));
     }
     let t = e.lastIndexOf(J);
     if (t === -1) throw new Error("Could not extract indexURL path from pyodide module location. Please pass the indexURL explicitly to loadPyodide.");
     return e.slice(0, t);
   }
-  o(de, "calculateDirname");
+  o(ce, "calculateDirname");
   function pe(n) {
     var e;
     return n.substring(0, n.lastIndexOf("/") + 1) || ((e = globalThis.location) == null ? void 0 : e.toString()) || ".";
   }
   o(pe, "calculateInstallBaseUrl");
-  function fe(n) {
-    let e = n.FS, t = n.FS.filesystems.MEMFS, s = n.PATH, r = { DIR_MODE: 16895, FILE_MODE: 33279, mount: o(function(i) {
-      if (!i.opts.fileSystemHandle) throw new Error("opts.fileSystemHandle is required");
+  function _e(n) {
+    let e = n.FS, t = n.FS.filesystems.MEMFS, r = n.PATH, s = { DIR_MODE: 16895, FILE_MODE: 33279, mount: o(function(a) {
+      if (!a.opts.fileSystemHandle) throw new Error("opts.fileSystemHandle is required");
       return t.mount.apply(null, arguments);
-    }, "mount"), syncfs: o(async (i, a, c) => {
+    }, "mount"), syncfs: o(async (a, i, d) => {
       try {
-        let u = r.getLocalSet(i), l = await r.getRemoteSet(i), d = a ? l : u, f = a ? u : l;
-        await r.reconcile(i, d, f), c(null);
+        let u = s.getLocalSet(a), l = await s.getRemoteSet(a), c = i ? l : u, _ = i ? u : l;
+        await s.reconcile(a, c, _), d(null);
       } catch (u) {
-        c(u);
+        d(u);
       }
-    }, "syncfs"), getLocalSet: o((i) => {
-      let a = /* @__PURE__ */ Object.create(null);
-      function c(d) {
-        return d !== "." && d !== "..";
+    }, "syncfs"), getLocalSet: o((a) => {
+      let i = /* @__PURE__ */ Object.create(null);
+      function d(c) {
+        return c !== "." && c !== "..";
       }
-      o(c, "isRealDir");
-      function u(d) {
-        return (f) => s.join2(d, f);
+      o(d, "isRealDir");
+      function u(c) {
+        return (_) => r.join2(c, _);
       }
       o(u, "toAbsolute");
-      let l = e.readdir(i.mountpoint).filter(c).map(u(i.mountpoint));
+      let l = e.readdir(a.mountpoint).filter(d).map(u(a.mountpoint));
       for (; l.length; ) {
-        let d = l.pop(), f = e.stat(d);
-        e.isDir(f.mode) && l.push.apply(l, e.readdir(d).filter(c).map(u(d))), a[d] = { timestamp: f.mtime, mode: f.mode };
+        let c = l.pop(), _ = e.stat(c);
+        e.isDir(_.mode) && l.push.apply(l, e.readdir(c).filter(d).map(u(c))), i[c] = { timestamp: _.mtime, mode: _.mode };
       }
-      return { type: "local", entries: a };
-    }, "getLocalSet"), getRemoteSet: o(async (i) => {
-      let a = /* @__PURE__ */ Object.create(null), c = await Je(i.opts.fileSystemHandle);
-      for (let [u, l] of c) u !== "." && (a[s.join2(i.mountpoint, u)] = { timestamp: l.kind === "file" ? new Date((await l.getFile()).lastModified) : /* @__PURE__ */ new Date(), mode: l.kind === "file" ? r.FILE_MODE : r.DIR_MODE });
-      return { type: "remote", entries: a, handles: c };
-    }, "getRemoteSet"), loadLocalEntry: o((i) => {
-      let a = e.lookupPath(i, {}).node, c = e.stat(i);
-      if (e.isDir(c.mode)) return { timestamp: c.mtime, mode: c.mode };
-      if (e.isFile(c.mode)) return a.contents = t.getFileDataAsTypedArray(a), { timestamp: c.mtime, mode: c.mode, contents: a.contents };
+      return { type: "local", entries: i };
+    }, "getLocalSet"), getRemoteSet: o(async (a) => {
+      let i = /* @__PURE__ */ Object.create(null), d = await Je(a.opts.fileSystemHandle);
+      for (let [u, l] of d) u !== "." && (i[r.join2(a.mountpoint, u)] = { timestamp: l.kind === "file" ? new Date((await l.getFile()).lastModified) : /* @__PURE__ */ new Date(), mode: l.kind === "file" ? s.FILE_MODE : s.DIR_MODE });
+      return { type: "remote", entries: i, handles: d };
+    }, "getRemoteSet"), loadLocalEntry: o((a) => {
+      let i = e.lookupPath(a, {}).node, d = e.stat(a);
+      if (e.isDir(d.mode)) return { timestamp: d.mtime, mode: d.mode };
+      if (e.isFile(d.mode)) return i.contents = t.getFileDataAsTypedArray(i), { timestamp: d.mtime, mode: d.mode, contents: i.contents };
       throw new Error("node type not supported");
-    }, "loadLocalEntry"), storeLocalEntry: o((i, a) => {
-      if (e.isDir(a.mode)) e.mkdirTree(i, a.mode);
-      else if (e.isFile(a.mode)) e.writeFile(i, a.contents, { canOwn: !0 });
+    }, "loadLocalEntry"), storeLocalEntry: o((a, i) => {
+      if (e.isDir(i.mode)) e.mkdirTree(a, i.mode);
+      else if (e.isFile(i.mode)) e.writeFile(a, i.contents, { canOwn: !0 });
       else throw new Error("node type not supported");
-      e.chmod(i, a.mode), e.utime(i, a.timestamp, a.timestamp);
-    }, "storeLocalEntry"), removeLocalEntry: o((i) => {
-      var a = e.stat(i);
-      e.isDir(a.mode) ? e.rmdir(i) : e.isFile(a.mode) && e.unlink(i);
-    }, "removeLocalEntry"), loadRemoteEntry: o(async (i) => {
-      if (i.kind === "file") {
-        let a = await i.getFile();
-        return { contents: new Uint8Array(await a.arrayBuffer()), mode: r.FILE_MODE, timestamp: new Date(a.lastModified) };
+      e.chmod(a, i.mode), e.utime(a, i.timestamp, i.timestamp);
+    }, "storeLocalEntry"), removeLocalEntry: o((a) => {
+      var i = e.stat(a);
+      e.isDir(i.mode) ? e.rmdir(a) : e.isFile(i.mode) && e.unlink(a);
+    }, "removeLocalEntry"), loadRemoteEntry: o(async (a) => {
+      if (a.kind === "file") {
+        let i = await a.getFile();
+        return { contents: new Uint8Array(await i.arrayBuffer()), mode: s.FILE_MODE, timestamp: new Date(i.lastModified) };
       } else {
-        if (i.kind === "directory") return { mode: r.DIR_MODE, timestamp: /* @__PURE__ */ new Date() };
-        throw new Error("unknown kind: " + i.kind);
+        if (a.kind === "directory") return { mode: s.DIR_MODE, timestamp: /* @__PURE__ */ new Date() };
+        throw new Error("unknown kind: " + a.kind);
       }
-    }, "loadRemoteEntry"), storeRemoteEntry: o(async (i, a, c) => {
-      let u = i.get(s.dirname(a)), l = e.isFile(c.mode) ? await u.getFileHandle(s.basename(a), { create: !0 }) : await u.getDirectoryHandle(s.basename(a), { create: !0 });
+    }, "loadRemoteEntry"), storeRemoteEntry: o(async (a, i, d) => {
+      let u = a.get(r.dirname(i)), l = e.isFile(d.mode) ? await u.getFileHandle(r.basename(i), { create: !0 }) : await u.getDirectoryHandle(r.basename(i), { create: !0 });
       if (l.kind === "file") {
-        let d = await l.createWritable();
-        await d.write(c.contents), await d.close();
+        let c = await l.createWritable();
+        await c.write(d.contents), await c.close();
       }
-      i.set(a, l);
-    }, "storeRemoteEntry"), removeRemoteEntry: o(async (i, a) => {
-      await i.get(s.dirname(a)).removeEntry(s.basename(a)), i.delete(a);
-    }, "removeRemoteEntry"), reconcile: o(async (i, a, c) => {
+      a.set(i, l);
+    }, "storeRemoteEntry"), removeRemoteEntry: o(async (a, i) => {
+      await a.get(r.dirname(i)).removeEntry(r.basename(i)), a.delete(i);
+    }, "removeRemoteEntry"), reconcile: o(async (a, i, d) => {
       let u = 0, l = [];
-      Object.keys(a.entries).forEach(function(p) {
-        let y = a.entries[p], v = c.entries[p];
+      Object.keys(i.entries).forEach(function(p) {
+        let y = i.entries[p], v = d.entries[p];
         (!v || e.isFile(y.mode) && y.timestamp.getTime() > v.timestamp.getTime()) && (l.push(p), u++);
       }), l.sort();
-      let d = [];
-      if (Object.keys(c.entries).forEach(function(p) {
-        a.entries[p] || (d.push(p), u++);
-      }), d.sort().reverse(), !u) return;
-      let f = a.type === "remote" ? a.handles : c.handles;
+      let c = [];
+      if (Object.keys(d.entries).forEach(function(p) {
+        i.entries[p] || (c.push(p), u++);
+      }), c.sort().reverse(), !u) return;
+      let _ = i.type === "remote" ? i.handles : d.handles;
       for (let p of l) {
-        let y = s.normalize(p.replace(i.mountpoint, "/")).substring(1);
-        if (c.type === "local") {
-          let v = f.get(y), T = await r.loadRemoteEntry(v);
-          r.storeLocalEntry(p, T);
+        let y = r.normalize(p.replace(a.mountpoint, "/")).substring(1);
+        if (d.type === "local") {
+          let v = _.get(y), O = await s.loadRemoteEntry(v);
+          s.storeLocalEntry(p, O);
         } else {
-          let v = r.loadLocalEntry(p);
-          await r.storeRemoteEntry(f, y, v);
+          let v = s.loadLocalEntry(p);
+          await s.storeRemoteEntry(_, y, v);
         }
       }
-      for (let p of d) if (c.type === "local") r.removeLocalEntry(p);
+      for (let p of c) if (d.type === "local") s.removeLocalEntry(p);
       else {
-        let y = s.normalize(p.replace(i.mountpoint, "/")).substring(1);
-        await r.removeRemoteEntry(f, y);
+        let y = r.normalize(p.replace(a.mountpoint, "/")).substring(1);
+        await s.removeRemoteEntry(_, y);
       }
     }, "reconcile") };
-    n.FS.filesystems.NATIVEFS_ASYNC = r;
+    n.FS.filesystems.NATIVEFS_ASYNC = s;
   }
-  o(fe, "initializeNativeFS");
+  o(_e, "initializeNativeFS");
   var Je = o(async (n) => {
     let e = [];
-    async function t(r) {
-      for await (let i of r.values()) e.push(i), i.kind === "directory" && await t(i);
+    async function t(s) {
+      for await (let a of s.values()) e.push(a), a.kind === "directory" && await t(a);
     }
     o(t, "collect"), await t(n);
-    let s = /* @__PURE__ */ new Map();
-    s.set(".", n);
-    for (let r of e) {
-      let i = (await n.resolve(r)).join("/");
-      s.set(i, r);
+    let r = /* @__PURE__ */ new Map();
+    r.set(".", n);
+    for (let s of e) {
+      let a = (await n.resolve(s)).join("/");
+      r.set(a, s);
     }
-    return s;
-  }, "getFsHandles"), We = Me("AGFzbQEAAAABDANfAGAAAW9gAW8BfwMDAgECBygCE0pzdl9HZXRFcnJvcl9pbXBvcnQAAA5Kc3ZFcnJvcl9DaGVjawABChMCBwD7AQD7GwsJACAA+xr7FAAL"), Ge = (async function() {
+    return r;
+  }, "getFsHandles"), We = Ue("AGFzbQEAAAABDANfAGAAAW9gAW8BfwMDAgECBygCE0pzdl9HZXRFcnJvcl9pbXBvcnQAAA5Kc3ZFcnJvcl9DaGVjawABChMCBwD7AQD7GwsJACAA+xr7FAAL"), Ge = (async function() {
     if (!(globalThis.navigator && (/iPad|iPhone|iPod/.test(navigator.userAgent) || navigator.platform === "MacIntel" && typeof navigator.maxTouchPoints < "u" && navigator.maxTouchPoints > 1))) try {
       let n = await WebAssembly.compile(We);
       return await WebAssembly.instantiate(n);
@@ -352,27 +352,27 @@ var an = De((ln, j) => {
       throw n;
     }
   })();
-  async function me() {
+  async function fe() {
     let n = await Ge;
     if (n) return n.exports;
     let e = Symbol("error marker");
     return { Jsv_GetError_import: o(() => e, "Jsv_GetError_import"), JsvError_Check: o((t) => t === e, "JsvError_Check") };
   }
-  o(me, "getJsvErrorImport");
-  function _e(n) {
-    let e = { config: n, runtimeEnv: _ }, t = { noImageDecoding: !0, noAudioDecoding: !0, noWasmDecoding: !1, preRun: we(n), print: n.stdout, printErr: n.stderr, onExit(s) {
-      t.exitCode = s;
-    }, thisProgram: n._sysExecutable, arguments: n.args, API: e, locateFile: o((s) => n.indexURL + s, "locateFile"), instantiateWasm: Ee(n.indexURL) };
+  o(fe, "getJsvErrorImport");
+  function me(n) {
+    let e = { config: n, runtimeEnv: m }, t = { noImageDecoding: !0, noAudioDecoding: !0, noWasmDecoding: !1, preRun: we(n), print: n.stdout, printErr: n.stderr, onExit(r) {
+      t.exitCode = r;
+    }, thisProgram: n._sysExecutable, arguments: n.args, API: e, locateFile: o((r) => n.indexURL + r, "locateFile"), instantiateWasm: Ee(n.indexURL) };
     return t;
   }
-  o(_e, "createSettings");
+  o(me, "createSettings");
   function he(n) {
     return function(e) {
       let t = "/";
       try {
         e.FS.mkdirTree(n);
-      } catch (s) {
-        console.error(`Error occurred while making a home directory '${n}':`), console.error(s), console.error(`Using '${t}' for a home directory instead`), n = t;
+      } catch (r) {
+        console.error(`Error occurred while making a home directory '${n}':`), console.error(r), console.error(`Using '${t}' for a home directory instead`), n = t;
       }
       e.FS.chdir(n);
     };
@@ -396,21 +396,21 @@ var an = De((ln, j) => {
   }
   o(ye, "callFsInitHook");
   function ve(n) {
-    let e = n.HEAPU32[n._Py_Version >>> 2], t = e >>> 24 & 255, s = e >>> 16 & 255, r = e >>> 8 & 255;
-    return [t, s, r];
+    let e = n.HEAPU32[n._Py_Version >>> 2], t = e >>> 24 & 255, r = e >>> 16 & 255, s = e >>> 8 & 255;
+    return [t, r, s];
   }
   o(ve, "computeVersionTuple");
   function be(n) {
     let e = le(n);
     return async (t) => {
       t.API.pyVersionTuple = ve(t);
-      let [s, r] = t.API.pyVersionTuple;
-      t.FS.mkdirTree("/lib"), t.API.sitePackages = `/lib/python${s}.${r}/site-packages`, t.FS.mkdirTree(t.API.sitePackages), t.addRunDependency("install-stdlib");
+      let [r, s] = t.API.pyVersionTuple;
+      t.FS.mkdirTree("/lib"), t.API.sitePackages = `/lib/python${r}.${s}/site-packages`, t.FS.mkdirTree(t.API.sitePackages), t.addRunDependency("install-stdlib");
       try {
-        let i = await e;
-        t.FS.writeFile(`/lib/python${s}${r}.zip`, i);
-      } catch (i) {
-        console.error("Error occurred while installing the standard library:"), console.error(i);
+        let a = await e;
+        t.FS.writeFile(`/lib/python${r}${s}.zip`, a);
+      } catch (a) {
+        console.error("Error occurred while installing the standard library:"), console.error(a);
       } finally {
         t.removeRunDependency("install-stdlib");
       }
@@ -419,21 +419,21 @@ var an = De((ln, j) => {
   o(be, "installStdlib");
   function we(n) {
     let e;
-    return n.stdLibURL != null ? e = n.stdLibURL : e = n.indexURL + "python_stdlib.zip", [be(e), he(n.env.HOME), ge(n.env), fe, ...ye(n.fsInit)];
+    return n.stdLibURL != null ? e = n.stdLibURL : e = n.indexURL + "python_stdlib.zip", [be(e), he(n.env.HOME), ge(n.env), _e, ...ye(n.fsInit)];
   }
   o(we, "getFileSystemInitializationFuncs");
   function Ee(n) {
     if (typeof WasmOffsetConverter < "u") return;
-    let { binary: e, response: t } = I(n + "pyodide.asm.wasm"), s = me();
-    return function(r, i) {
+    let { binary: e, response: t } = T(n + "pyodide.asm.wasm"), r = fe();
+    return function(s, a) {
       return (async function() {
-        let { Jsv_GetError_import: a, JsvError_Check: c } = await s;
-        r.env.Jsv_GetError_import = a, r.env.JsvError_Check = c;
+        let { Jsv_GetError_import: i, JsvError_Check: d } = await r;
+        s.env.Jsv_GetError_import = i, s.env.JsvError_Check = d;
         try {
           let u;
-          t ? u = await WebAssembly.instantiateStreaming(t, r) : u = await WebAssembly.instantiate(await e, r);
-          let { instance: l, module: d } = u;
-          i(l, d);
+          t ? u = await WebAssembly.instantiateStreaming(t, s) : u = await WebAssembly.instantiate(await e, s);
+          let { instance: l, module: c } = u;
+          a(l, c);
         } catch (u) {
           console.warn("wasm instantiation failed!"), console.warn(u);
         }
@@ -446,35 +446,35 @@ var an = De((ln, j) => {
     return n === void 0 || n.endsWith("/") ? n : n + "/";
   }
   o(R, "withTrailingSlash");
-  var U = $e;
+  var M = $e;
   async function ke(n = {}) {
-    var r, i;
-    if (await B(), n.lockFileContents && n.lockFileURL) throw new Error("Can't pass both lockFileContents and lockFileURL");
-    let e = n.indexURL || await de();
-    if (e = R(P(e)), n.packageBaseUrl = R(n.packageBaseUrl), n.cdnUrl = R(n.packageBaseUrl ?? `https://cdn.jsdelivr.net/pyodide/v${U}/full/`), !n.lockFileContents) {
-      let a = n.lockFileURL ?? e + "pyodide-lock.json";
-      n.lockFileContents = ue(a), n.packageBaseUrl ?? (n.packageBaseUrl = pe(a));
+    var s, a;
+    if (await q(), n.lockFileContents && n.lockFileURL) throw new Error("Can't pass both lockFileContents and lockFileURL");
+    let e = n.indexURL || await ce();
+    if (e = R(I(e)), n.packageBaseUrl = R(n.packageBaseUrl), n.cdnUrl = R(n.packageBaseUrl ?? `https://cdn.jsdelivr.net/pyodide/v${M}/full/`), !n.lockFileContents) {
+      let i = n.lockFileURL ?? e + "pyodide-lock.json";
+      n.lockFileContents = ue(i), n.packageBaseUrl ?? (n.packageBaseUrl = pe(i));
     }
-    n.indexURL = e, n.packageCacheDir && (n.packageCacheDir = R(P(n.packageCacheDir)));
-    let t = { jsglobals: globalThis, stdin: globalThis.prompt ? () => globalThis.prompt() : void 0, args: [], env: {}, packages: [], packageCacheDir: n.packageBaseUrl, enableRunUntilComplete: !0, checkAPIVersion: !0, BUILD_ID: "a4189f0fe3d610ecd603639c08596362b70a34b106c58c9a93486c22df4c89a5" }, s = Object.assign(t, n);
-    return (r = s.env).HOME ?? (r.HOME = "/home/pyodide"), (i = s.env).PYTHONINSPECT ?? (i.PYTHONINSPECT = "1"), s;
+    n.indexURL = e, n.packageCacheDir && (n.packageCacheDir = R(I(n.packageCacheDir)));
+    let t = { jsglobals: globalThis, stdin: globalThis.prompt ? () => globalThis.prompt() : void 0, args: [], env: {}, packages: [], packageCacheDir: n.packageBaseUrl, enableRunUntilComplete: !0, checkAPIVersion: !0, BUILD_ID: "a4189f0fe3d610ecd603639c08596362b70a34b106c58c9a93486c22df4c89a5" }, r = Object.assign(t, n);
+    return (s = r.env).HOME ?? (s.HOME = "/home/pyodide"), (a = r.env).PYTHONINSPECT ?? (a.PYTHONINSPECT = "1"), r;
   }
   o(ke, "initializeConfiguration");
   function xe(n) {
-    let e = _e(n), t = e.API;
+    let e = me(n), t = e.API;
     return t.lockFilePromise = Promise.resolve(n.lockFileContents), e;
   }
   o(xe, "createEmscriptenSettings");
   async function Ne(n) {
     if (n.createPyodideModule) return n.createPyodideModule;
     let e = `${n.indexURL}pyodide.asm.mjs`;
-    return (await M(e)).default;
+    return (await U(e)).default;
   }
   o(Ne, "loadWasmScript");
   async function Se(n, e) {
     if (!n._loadSnapshot) return;
-    let t = await n._loadSnapshot, s = ArrayBuffer.isView(t) ? t : new Uint8Array(t);
-    return e.noInitialRun = !0, e.INITIAL_MEMORY = s.length, s;
+    let t = await n._loadSnapshot, r = ArrayBuffer.isView(t) ? t : new Uint8Array(t);
+    return e.noInitialRun = !0, e.INITIAL_MEMORY = r.length, r;
   }
   o(Se, "prepareSnapshot");
   async function Re(n, e) {
@@ -483,35 +483,35 @@ var an = De((ln, j) => {
     return t;
   }
   o(Re, "instantiatePyodideModule");
-  function Pe(n, e) {
+  function Ie(n, e) {
     let t = n.API;
-    if (e.pyproxyToStringRepr && t.setPyProxyToStringMethod(!0), e.convertNullToNone && t.setCompatNullToNone(!0), e.toJsLiteralMap && t.setCompatToJsLiteralMap(!0), t.version !== U && e.checkAPIVersion) throw new Error(`Pyodide version does not match: '${U}' <==> '${t.version}'. If you updated the Pyodide version, make sure you also updated the 'indexURL' parameter passed to loadPyodide.`);
-    n.locateFile = (s) => {
-      throw s.endsWith(".so") ? new Error(`Failed to find dynamic library "${s}"`) : new Error(`Unexpected call to locateFile("${s}")`);
+    if (e.pyproxyToStringRepr && t.setPyProxyToStringMethod(!0), e.convertNullToNone && t.setCompatNullToNone(!0), e.toJsLiteralMap && t.setCompatToJsLiteralMap(!0), t.version !== M && e.checkAPIVersion) throw new Error(`Pyodide version does not match: '${M}' <==> '${t.version}'. If you updated the Pyodide version, make sure you also updated the 'indexURL' parameter passed to loadPyodide.`);
+    n.locateFile = (r) => {
+      throw r.endsWith(".so") ? new Error(`Failed to find dynamic library "${r}"`) : new Error(`Unexpected call to locateFile("${r}")`);
     };
   }
-  o(Pe, "configureAPI");
-  function Ie(n, e, t) {
-    let s = n.API, r;
-    return e && (r = s.restoreSnapshot(e)), s.finalizeBootstrap(r, t._snapshotDeserializer);
+  o(Ie, "configureAPI");
+  function Te(n, e, t) {
+    let r = n.API, s;
+    return e && (s = r.restoreSnapshot(e)), r.finalizeBootstrap(s, t._snapshotDeserializer);
   }
-  o(Ie, "bootstrapPyodide");
-  async function Te(n, e) {
+  o(Te, "bootstrapPyodide");
+  async function Oe(n, e) {
     let t = n._api;
     return t.sys.path.insert(0, ""), t._pyodide.set_excepthook(), await t.packageIndexReady, t.initializeStreams(e.stdin, e.stdout, e.stderr), n;
   }
-  o(Te, "finalizeSetup");
-  async function Oe(n = {}) {
-    let e = await ke(n), t = xe(e), s = await Ne(e), r = await Se(e, t), i = await Re(s, t);
-    Pe(i, e);
-    let a = Ie(i, r, e);
-    return await Te(a, e);
+  o(Oe, "finalizeSetup");
+  async function Pe(n = {}) {
+    let e = await ke(n), t = xe(e), r = await Ne(e), s = await Se(e, t), a = await Re(r, t);
+    Ie(a, e);
+    let i = Te(a, s, e);
+    return await Oe(i, e);
   }
-  o(Oe, "loadPyodide");
-  function ze(n) {
+  o(Pe, "loadPyodide");
+  function Ve(n) {
     return n.crossOriginIsolated === !0 && typeof n.SharedArrayBuffer == "function" ? "isolated" : "compat";
   }
-  var He = `# The in-worker Python runtime, installed into Pyodide once at boot
+  var ze = `# The in-worker Python runtime, installed into Pyodide once at boot
 # (bundled as a string via a Vite \`?raw\` import - see raw.d.ts). Implements
 # per-job isolation (spec 6.2): fresh __main__ module dict per job,
 # sys.modules snapshot/restore, FS staging under /mnt/blockpy with artifact
@@ -1124,7 +1124,7 @@ class StudioRuntime:
 
 
 _studio_runtime = StudioRuntime()
-`, Ve = `# The Pedal "blockpy environment" contract for Studio (spec 10.1) - a
+`, He = `# The Pedal "blockpy environment" contract for Studio (spec 10.1) - a
 # faithful port of the legacy instructor wrappers:
 #   blockpy/src/engine/on_run.js   WRAP_INSTRUCTOR_CODE  (grading pass)
 #   blockpy/src/engine/on_eval.js  WRAP_INSTRUCTOR_CODE  (console-eval pass)
@@ -1228,6 +1228,257 @@ def _studio_patch_pedal_traceback():
     fake_frame._studio_patched = True
 
 
+def _studio_patch_ast_legacy_nodes():
+    """Python 3.14 removed ast.Num/Str/Bytes/NameConstant/Ellipsis (+ .n/.s).
+
+    pedal 3.0.3 still tests \`isinstance(node, ast.Str)\` (types/normalize,
+    tifa, type_definitions, ast_tools) and reads \`node.s\` / \`node.n\`.
+    Its only guard, in pedal.types.normalize, is \`ast.Str = None\` when the
+    attribute is missing - so \`isinstance(value, None)\` raises TypeError
+    for every annotation that is not a bare name or constant: a student
+    function annotated \`list[int]\` / \`list[list[int]]\` turned EVERY
+    \`ensure_function(...)\` pass into an Internal Grading Error (bakery
+    8B1.1 Zero Out Matrix). Reinstate the CPython 3.13 compatibility
+    classes (an \`isinstance\` that inspects \`Constant.value\`, constructors
+    that build a Constant) and the \`Constant.n\` / \`Constant.s\` aliases.
+    Idempotent; a no-op where \`ast\` still provides them (<= 3.13). Until
+    the upstream fix ships (SERVER-TEAM/PEDAL FLAG: \`ast.Constant\` +
+    \`.value\` throughout, drop the \`ast.Str = None\` guard).
+    """
+    import ast
+
+    constant = ast.Constant
+    if isinstance(getattr(ast, 'Str', None), type) and hasattr(constant, 's'):
+        return  # 3.13-: the stdlib still provides them (deprecated)
+
+    const_types = {}
+    const_types_not = {}
+
+    class _LegacyConstantMeta(type):
+        def __instancecheck__(cls, inst):
+            if not isinstance(inst, constant):
+                return False
+            if cls in const_types:
+                try:
+                    value = inst.value
+                except AttributeError:
+                    return False
+                return (isinstance(value, const_types[cls])
+                        and not isinstance(value, const_types_not.get(cls, ())))
+            return type.__instancecheck__(cls, inst)
+
+    def _new(cls, *args, **kwargs):
+        if cls in const_types:
+            return constant(*args, **kwargs)
+        return constant.__new__(cls, *args, **kwargs)
+
+    class Num(constant, metaclass=_LegacyConstantMeta):
+        _fields = ('n',)
+        __new__ = _new
+
+    class Str(constant, metaclass=_LegacyConstantMeta):
+        _fields = ('s',)
+        __new__ = _new
+
+    class Bytes(constant, metaclass=_LegacyConstantMeta):
+        _fields = ('s',)
+        __new__ = _new
+
+    class NameConstant(constant, metaclass=_LegacyConstantMeta):
+        __new__ = _new
+
+    class Ellipsis(constant, metaclass=_LegacyConstantMeta):
+        _fields = ()
+
+        def __new__(cls, *args, **kwargs):
+            if cls is Ellipsis:
+                return constant(..., *args, **kwargs)
+            return constant.__new__(cls, *args, **kwargs)
+
+    const_types.update({
+        Num: (int, float, complex),
+        Str: (str,),
+        Bytes: (bytes,),
+        NameConstant: (type(None), bool),
+        Ellipsis: (type(...),),
+    })
+    const_types_not[Num] = (bool,)
+
+    for legacy in (Num, Str, Bytes, NameConstant, Ellipsis):
+        legacy.__doc__ = 'Deprecated AST node class. Use ast.Constant instead'
+        legacy.__module__ = 'ast'
+        if not isinstance(getattr(ast, legacy.__name__, None), type):
+            setattr(ast, legacy.__name__, legacy)
+
+    def _value_getter(self):
+        return self.value
+
+    def _value_setter(self, value):
+        self.value = value
+
+    for alias in ('n', 's'):
+        if not hasattr(constant, alias):
+            setattr(constant, alias, property(_value_getter, _value_setter))
+
+
+_studio_patch_ast_legacy_nodes()
+
+
+# Legacy \`get_model_info\` values for the current grading pass (assignment
+# name, user name, ...), supplied by the client per request.
+_STUDIO_MODEL_INFO = {}
+# The console expression of the current on_eval pass (legacy get_evaluation).
+_STUDIO_EVALUATION = ''
+# The instructor namespace of the LAST on_run pass. Legacy ran on_eval with
+# the on_run globals (on_eval.js:108 \`Sk.globals = execution.instructor.globals\`),
+# so on_eval scripts use names on_run imported (\`ensure_function_call\`
+# without any import of their own) - LD-132.
+_STUDIO_INSTRUCTOR_NAMESPACE = None
+# Lines the instructor \`!answer_prefix.py\` adds above the student's code in
+# the graded program (legacy getStudentCode, blockpy.js:994-1005) - LD-133.
+_STUDIO_PREFIX_LINES = 0
+
+
+def _studio_install_utility_module():
+    """The legacy \`utility\` instructor module (LD-131).
+
+    Legacy BlockPy registered its Skulpt instructor module
+    (sk_mod_instructor.js) as \`src/lib/utility\` and star-imported it into
+    EVERY grader (on_run.js:32, on_eval.js:13) - so curriculum graders call
+    \`console_debug\`, \`limit_execution_time\`, \`get_model_info\` without
+    importing anything, and a few \`from utility import *\` explicitly. Each
+    name maps onto the Pedal command that replaced it; the Skulpt-only ones
+    (execution limits, scrolling, downloads, trace hooks) are no-ops, since
+    Pyodide cannot preempt a running loop and the worker wall clock is the
+    only guard. Idempotent; the module object is rebuilt only once.
+    """
+    import types
+
+    if 'utility' in sys.modules and getattr(sys.modules['utility'], '_studio_shim', False):
+        return
+
+    def _dev_console(label, items):
+        # Pedal's log/debug become \`system\` feedback the client already
+        # routes to the instructor dev console (final.systems, on_run.js:90-95).
+        # Not pedal's debug(): in 3.0.4 it drops positional items and emits
+        # nothing for message= - build the muted system feedback directly.
+        from pedal.core.commands import feedback
+        from pedal.core.feedback import Feedback
+        text = ' '.join(str(item) for item in items)
+        feedback(message=text, label=label, category=Feedback.CATEGORIES.SYSTEM,
+                 muted=True, valence=Feedback.NEUTRAL_VALENCE)
+
+    def console_log(*items):
+        _dev_console('log', items)
+
+    def console_debug(*items):
+        _dev_console('debug', items)
+
+    def get_model_info(key, default=None):
+        """\`assignment.name\`, \`user.name\`, ...: dotted lookup, flat keys too."""
+        if key in _STUDIO_MODEL_INFO:
+            return _STUDIO_MODEL_INFO[key]
+        value = _STUDIO_MODEL_INFO
+        for part in str(key).split('.'):
+            if isinstance(value, dict) and part in value:
+                value = value[part]
+            else:
+                return default
+        return value
+
+    def get_program(report=None):
+        from pedal.core.report import MAIN_REPORT
+        from pedal.source import get_program as pedal_get_program
+        return pedal_get_program(report=report or MAIN_REPORT)
+
+    def get_output(report=None):
+        from pedal.core.report import MAIN_REPORT
+        from pedal.sandbox.commands import get_output as pedal_get_output
+        return pedal_get_output(report=report or MAIN_REPORT)
+
+    def reset_output(report=None):
+        from pedal.core.report import MAIN_REPORT
+        from pedal.sandbox.commands import clear_output
+        return clear_output(report=report or MAIN_REPORT)
+
+    def get_evaluation():
+        """The console expression of the current on_eval pass (legacy mod.get_evaluation)."""
+        return _STUDIO_EVALUATION
+
+    def get_plots(report=None):
+        from pedal.core.report import MAIN_REPORT
+        from pedal.extensions.plotting import get_plots as pedal_get_plots
+        return pedal_get_plots(report=report or MAIN_REPORT)
+
+    def start_trace(report=None):
+        from pedal.core.report import MAIN_REPORT
+        from pedal.sandbox.commands import start_trace as pedal_start_trace
+        return pedal_start_trace(report=report or MAIN_REPORT)
+
+    def limit_execution_time():
+        """Skulpt swapped its execution limit around a run; nothing to do here."""
+
+    def unlimit_execution_time():
+        """See limit_execution_time."""
+
+    def had_execution_time_error():
+        return False
+
+    def set_instructions(*_args, **_kwargs):
+        """Legacy replaced the instructions pane; Pedal's resolver carries instructions now."""
+
+    def _noop(*_args, **_kwargs):
+        return None
+
+    class timeit:
+        """Legacy timing context manager; measures nothing here."""
+
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+    module = types.ModuleType('utility', _studio_install_utility_module.__doc__)
+    names = {
+        'console_log': console_log,
+        'console_debug': console_debug,
+        'get_model_info': get_model_info,
+        'get_program': get_program,
+        'get_output': get_output,
+        'reset_output': reset_output,
+        'get_evaluation': get_evaluation,
+        'get_plots': get_plots,
+        'start_trace': start_trace,
+        'limit_execution_time': limit_execution_time,
+        'unlimit_execution_time': unlimit_execution_time,
+        'had_execution_time_error': had_execution_time_error,
+        'set_instructions': set_instructions,
+        'timeit': timeit,
+        # Skulpt-only hooks: accepted and ignored.
+        'queue_input': _noop,
+        'trace_lines': _noop,
+        'trace_calls': _noop,
+        'stop_trace': _noop,
+        'get_student_error': _noop,
+        'suppress_scrolling': _noop,
+        'get_student_data': _noop,
+        'clear_existing_student_imports': _noop,
+        'download_file': _noop,
+    }
+    for name, value in names.items():
+        setattr(module, name, value)
+    module.__all__ = sorted(names)
+    module._studio_shim = True
+    sys.modules['utility'] = module
+
+
+_studio_install_utility_module()
+
+
 def _studio_safe_name(name, base):
     """Validate a prefix-stripped staging name: relative, inside the cwd.
 
@@ -1290,6 +1541,16 @@ def _studio_pedal_stage(files):
     for module_name in list(sys.modules):
         if module_name == _INSTRUCTOR_PKG or module_name.startswith(_INSTRUCTOR_PKG + '.'):
             del sys.modules[module_name]
+    # ...and of every module imported FROM the staging directory by an
+    # earlier pass (student code's \`from hands import has_pair\`): the
+    # interpreter is shared across assignments, so a neighbour's hands.py
+    # was otherwise graded as this assignment's (LD-130). Mirrors the
+    # per-run purge runtime.py does for student runs.
+    stage_dir = os.getcwd().rstrip('/') + '/'
+    for module_name, module in list(sys.modules.items()):
+        file = getattr(module, '__file__', None) or ''
+        if file.startswith(stage_dir):
+            del sys.modules[module_name]
     importlib.invalidate_caches()
 
 
@@ -1297,6 +1558,9 @@ def _studio_pedal_stage(files):
 # (on_run.js:33-36 / on_eval.js:15-18) - graders may use parse_program and
 # the sandbox/core commands without importing them.
 _INSTRUCTOR_PRELUDE = (
+    # Legacy on_run.js:32 / on_eval.js:13: the instructor module first, so
+    # Pedal's own commands shadow its delegating copies.
+    'from utility import *\\n'
     'from pedal.cait.cait_api import parse_program\\n'
     'from pedal.sandbox.commands import *\\n'
     'from pedal.core.commands import *\\n'
@@ -1375,6 +1639,10 @@ def _studio_pedal_resolve():
         location = data.get('location') if isinstance(data, dict) else None
         if location is not None:
             line = getattr(location, 'line', None)
+        # The editor shows the student's own lines (§6.3): subtract the
+        # instructor prefix the graded program carries (LD-133).
+        if isinstance(line, int) and _STUDIO_PREFIX_LINES:
+            line = line - _STUDIO_PREFIX_LINES if line > _STUDIO_PREFIX_LINES else None
     except Exception:  # noqa: BLE001 - highlight is best-effort
         line = None
 
@@ -1418,6 +1686,34 @@ def _studio_fail_soft():
                    'Please report this to your instructor.',
         'system_error': _tb.format_exc(),
     }
+
+
+def _studio_staged_text(staged, name):
+    """A staged instructor file by bare name, whichever prefix it arrived with."""
+    for key in ('!' + name, '?' + name, '&' + name, name):
+        value = staged.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ''
+
+
+def _studio_compose_answer(code, prefix, suffix):
+    """Legacy getStudentCode (blockpy.js:994-1005): \`!answer_prefix.py\` +
+    the student's code + \`!answer_suffix.py\` is what BOTH the student run
+    and the grader saw as answer.py (instructor.js:69). Joined on newlines
+    like runtime.py (LD-95) so pieces never fuse into a SyntaxError.
+    Returns the program and the number of prefix lines."""
+    if prefix and not prefix.endswith('\\n'):
+        prefix += '\\n'
+    if suffix and code and not code.endswith('\\n'):
+        code += '\\n'
+    return prefix + code + suffix, prefix.count('\\n')
+
+
+def _studio_set_model_info(model_info):
+    _STUDIO_MODEL_INFO.clear()
+    if isinstance(model_info, dict):
+        _STUDIO_MODEL_INFO.update(model_info)
 
 
 def _studio_submission_files(student_code, student_files):
@@ -1468,9 +1764,17 @@ def _studio_pedal_grade_captured(student_code, on_run, files_json, inputs, optio
     from pedal.core.report import MAIN_REPORT
 
     _studio_patch_pedal_traceback()
+    _studio_patch_ast_legacy_nodes()
+    # runtime.py's per-run purge drops modules without a file (student runs
+    # between grading passes): reinstall the utility module each pass.
+    _studio_install_utility_module()
     MAIN_REPORT.clear()
     options = json.loads(options_json) if options_json else {}
-    _studio_pedal_stage(json.loads(files_json) if files_json else {})
+    _studio_set_model_info(options.get('model_info'))
+    global _STUDIO_EVALUATION, _STUDIO_INSTRUCTOR_NAMESPACE, _STUDIO_PREFIX_LINES
+    _STUDIO_EVALUATION = ''
+    staged_files = json.loads(files_json) if files_json else {}
+    _studio_pedal_stage(staged_files)
 
     try:
         # bakery's module-level student_tests ledger lives in site-packages
@@ -1492,6 +1796,12 @@ def _studio_pedal_grade_captured(student_code, on_run, files_json, inputs, optio
         # imports); the submission gets the student view.
         student_code, student_files = _studio_submission_files(
             student_code, options.get('student_files'))
+        # The graded program is prefix + answer + suffix (LD-133).
+        student_code, _STUDIO_PREFIX_LINES = _studio_compose_answer(
+            student_code,
+            _studio_staged_text(staged_files, 'answer_prefix.py'),
+            _studio_staged_text(staged_files, 'answer_suffix.py'))
+        student_files['answer.py'] = student_code
         _studio_write_sources(student_files, on_run)
 
         # setup_environment = BlockPyEnvironment: HtmlFormatter + verify +
@@ -1522,8 +1832,9 @@ def _studio_pedal_grade_captured(student_code, on_run, files_json, inputs, optio
                 pass
 
         student = env.fields['student']
-        exec(compile(on_run, 'on_run.py', 'exec'),
-             _studio_instructor_globals(student, student_code))
+        namespace = _studio_instructor_globals(student, student_code)
+        _STUDIO_INSTRUCTOR_NAMESPACE = namespace
+        exec(compile(on_run, 'on_run.py', 'exec'), namespace)
         return _studio_pedal_resolve()
     except BaseException:  # noqa: BLE001 - grading must fail soft
         return _studio_fail_soft()
@@ -1543,8 +1854,15 @@ def _studio_pedal_evaluate_captured(evaluation, on_eval, options_json):
     # on_eval script; re-resolve.
     from pedal.core.report import MAIN_REPORT
 
-    del options_json  # reserved (parity with _studio_pedal_grade)
+    options = json.loads(options_json) if options_json else {}
+    _studio_set_model_info(options.get('model_info'))
+    global _STUDIO_EVALUATION
+    _STUDIO_EVALUATION = evaluation
     _studio_patch_pedal_traceback()
+    _studio_patch_ast_legacy_nodes()
+    # runtime.py's per-run purge drops modules without a file (student runs
+    # between grading passes): reinstall the utility module each pass.
+    _studio_install_utility_module()
     try:
         MAIN_REPORT.feedback.clear()
         # Suppressed feedback is presented too (the resolver walks it) -
@@ -1553,14 +1871,32 @@ def _studio_pedal_evaluate_captured(evaluation, on_eval, options_json):
         from pedal.sandbox.commands import evaluate, get_sandbox
         student = get_sandbox(report=MAIN_REPORT)
         evaluate(evaluation, report=MAIN_REPORT)
-        exec(compile(on_eval, 'on_eval.py', 'exec'),
-             _studio_instructor_globals(student, evaluation))
+        # Legacy on_eval ran in the on_run pass's globals (LD-132): keep
+        # everything the grader imported or defined, refresh the prelude.
+        if _STUDIO_INSTRUCTOR_NAMESPACE is not None:
+            namespace = dict(_STUDIO_INSTRUCTOR_NAMESPACE)
+            namespace['student'] = student
+            namespace['student_code'] = evaluation
+            exec(compile(_INSTRUCTOR_PRELUDE, '<pedal prelude>', 'exec'), namespace)
+        else:
+            namespace = _studio_instructor_globals(student, evaluation)
+        exec(compile(on_eval, 'on_eval.py', 'exec'), namespace)
         return _studio_pedal_resolve()
     except BaseException:  # noqa: BLE001 - grading must fail soft
         return _studio_fail_soft()
 `;
-  const Ae = ["pedal>=3.0.3", "curriculum-sneks", "bakery"];
-  function Ke(n) {
+  const Ke = [
+    "import os",
+    "os.environ.setdefault('DRAFTER_SKIP', '1')",
+    "for _mock in ('watchfiles', 'uvicorn', 'typer', 'shellingham', 'annotated-doc', 'starlette', 'rich'):",
+    "    try:",
+    "        micropip.add_mock_package(_mock, '0.0.0')",
+    "    except Exception:",
+    "        pass"
+  ].join(`
+`) + `
+`, Ae = ["pedal>=3.0.4", "curriculum-sneks", "bakery"];
+  function Xe(n) {
     return {
       ...n,
       score: n.score ?? 0,
@@ -1568,8 +1904,8 @@ def _studio_pedal_evaluate_captured(evaluation, on_eval, options_json):
       line: n.line ?? null
     };
   }
-  const H = (n) => {
-    const e = Ke(n.toJs({ dict_converter: Object.fromEntries }));
+  const z = (n) => {
+    const e = Xe(n.toJs({ dict_converter: Object.fromEntries }));
     return n.destroy(), e;
   };
   class W {
@@ -1582,15 +1918,17 @@ def _studio_pedal_evaluate_captured(evaluation, on_eval, options_json):
      * via MAIN_REPORT.clear() (verified in Spike S3).
      */
     static async install(e, t = Ae) {
-      await e.loadPackage("micropip"), await e.runPythonAsync(
+      await e.loadPackage("micropip");
+      const r = t.some((i) => /^drafter\b/.test(i));
+      await e.runPythonAsync(
         `import micropip
-await micropip.install(${JSON.stringify(t)})`
-      ), e.runPython(Ve);
-      const s = e.globals.get("_studio_pedal_grade"), r = e.globals.get("_studio_pedal_evaluate");
-      return new W(s, r);
+${r ? Ke : ""}await micropip.install(${JSON.stringify(t)})`
+      ), e.runPython(He);
+      const s = e.globals.get("_studio_pedal_grade"), a = e.globals.get("_studio_pedal_evaluate");
+      return new W(s, a);
     }
     grade(e, t = {}) {
-      return H(
+      return z(
         this.grade_(
           e.studentCode,
           e.onRun,
@@ -1600,7 +1938,8 @@ await micropip.install(${JSON.stringify(t)})`
             skip_tifa: e.skipTifa ?? !1,
             skip_run: e.skipRun ?? !1,
             seed: e.seed ?? null,
-            student_files: e.studentFiles ?? {}
+            student_files: e.studentFiles ?? {},
+            model_info: e.modelInfo ?? {}
           }),
           t.onStdout ?? null,
           t.onStderr ?? null
@@ -1612,35 +1951,35 @@ await micropip.install(${JSON.stringify(t)})`
      * report/sandbox in this interpreter - call only after a grading pass.
      */
     evaluateGrade(e, t = {}) {
-      return H(
+      return z(
         this.evaluate_(
           e.evaluation,
           e.onEval,
-          "{}",
+          JSON.stringify({ model_info: e.modelInfo ?? {} }),
           t.onStdout ?? null,
           t.onStderr ?? null
         )
       );
     }
   }
-  const Xe = () => typeof WebAssembly.Suspending == "function", V = (n) => {
+  const Ye = () => typeof WebAssembly.Suspending == "function", H = (n) => {
     const e = n.toJs({ dict_converter: Object.fromEntries });
     return n.destroy(), e;
   };
-  function Ye(n) {
-    var t, s;
+  function Qe(n) {
+    var t, r;
     const e = [
       // Joined the way runtime.py run() executes them (LD-95): a newline
       // between pieces that lack one, so a prefix without a trailing newline
       // does not fuse with the student's first line and hide every import.
-      Qe(n.answerPrefix ?? "", n.code, n.answerSuffix ?? ""),
-      ...Object.entries(n.files).filter(([r]) => r.endsWith(".py")).map(([, r]) => r),
+      Ze(n.answerPrefix ?? "", n.code, n.answerSuffix ?? ""),
+      ...Object.entries(n.files).filter(([s]) => s.endsWith(".py")).map(([, s]) => s),
       ((t = n.pedal) == null ? void 0 : t.onRun) ?? "",
-      ((s = n.pedal) == null ? void 0 : s.evaluation) ?? ""
+      ((r = n.pedal) == null ? void 0 : r.evaluation) ?? ""
     ];
-    return [...new Set(e.filter((r) => r.trim() !== ""))];
+    return [...new Set(e.filter((s) => s.trim() !== ""))];
   }
-  function Qe(...n) {
+  function Ze(...n) {
     return n.reduce(
       (e, t) => t === "" || e === "" || e.endsWith(`
 `) ? e + t : `${e}
@@ -1658,7 +1997,7 @@ ${t}`
     }
     /** Install the runtime module into a loaded Pyodide instance. */
     static create(e) {
-      e.runPython(He);
+      e.runPython(ze);
       const t = e.globals.get("_studio_runtime");
       return new G(e, t);
     }
@@ -1707,9 +2046,9 @@ pyodide_http.patch_all()`
     async loadImports(e) {
       const t = this.pyodide.loadPackagesFromImports;
       if (t)
-        for (const s of Ye(e))
+        for (const r of Qe(e))
           try {
-            await t.call(this.pyodide, s);
+            await t.call(this.pyodide, r);
           } catch {
           }
     }
@@ -1721,13 +2060,13 @@ pyodide_http.patch_all()`
      * grading with the first job's set.
      */
     async ensurePedal(e) {
-      const t = e ?? Ae, s = t.filter((r) => !this.pedalPackages.has(r));
-      if (this.pedalEnv === null || s.length > 0) {
+      const t = e ?? Ae, r = t.filter((s) => !this.pedalPackages.has(s));
+      if (this.pedalEnv === null || r.length > 0) {
         this.pedalEnv = await W.install(
           this.pyodide,
-          this.pedalEnv === null ? t : s
+          this.pedalEnv === null ? t : r
         );
-        for (const r of t) this.pedalPackages.add(r);
+        for (const s of t) this.pedalPackages.add(s);
       }
       return this.pedalEnv;
     }
@@ -1737,69 +2076,71 @@ pyodide_http.patch_all()`
      * Pedal crashes are fail-soft inside the environment (`system_error`
      * feedback); only wheel-install failures surface as job errors.
      */
-    async executePedal(e, t, s) {
+    async executePedal(e, t, r) {
       var u;
-      const r = e.pedal;
-      let i = "", a = "";
-      const c = {
+      const s = e.pedal;
+      let a = "", i = "";
+      const d = {
         onStdout: (l) => {
-          var d;
-          i += l, (d = s.onStdout) == null || d.call(s, l);
+          var c;
+          a += l, (c = r.onStdout) == null || c.call(r, l);
         },
         onStderr: (l) => {
-          var d;
-          a += l, (d = s.onStderr) == null || d.call(s, l);
+          var c;
+          i += l, (c = r.onStderr) == null || c.call(r, l);
         }
       };
       try {
         await this.loadImports(e);
-        const l = await this.ensurePedal(r.packages);
-        (u = s.onStarted) == null || u.call(s);
-        const d = r.evaluation !== void 0 ? (
+        const l = await this.ensurePedal(s.packages);
+        (u = r.onStarted) == null || u.call(r);
+        const c = s.evaluation !== void 0 ? (
           // on_eval pipeline (on_eval.js): reuses the last grading
           // pass's report/sandbox - no staging, no student re-run.
           l.evaluateGrade(
             {
-              evaluation: r.evaluation,
-              onEval: r.onRun
+              evaluation: s.evaluation,
+              onEval: s.onRun,
+              modelInfo: s.modelInfo
             },
-            c
+            d
           )
         ) : l.grade(
           {
             studentCode: e.code,
-            onRun: r.onRun,
+            onRun: s.onRun,
             files: e.files,
-            inputs: r.inputs ?? e.inputsPrefill,
-            studentFiles: r.studentFiles,
-            skipTifa: r.skipTifa,
-            skipRun: r.skipRun,
-            seed: r.seed
+            inputs: s.inputs ?? e.inputsPrefill,
+            studentFiles: s.studentFiles,
+            skipTifa: s.skipTifa,
+            skipRun: s.skipRun,
+            seed: s.seed,
+            modelInfo: s.modelInfo
           },
-          c
+          d
         );
         return {
           jobId: e.id,
           success: !0,
-          stdout: i,
-          stderr: a,
+          stdout: a,
+          stderr: i,
           artifacts: {},
-          feedback: d,
+          feedback: c,
           durationMs: Date.now() - t
         };
       } catch (l) {
-        const d = l instanceof Error ? l.message : String(l);
+        const c = l instanceof Error ? l.message : String(l);
         return {
           jobId: e.id,
           success: !1,
-          stdout: i,
-          stderr: a,
+          stdout: a,
+          stderr: i,
           error: {
             type: "PedalEnvironmentError",
-            message: d,
+            message: c,
             line: null,
             studentLine: null,
-            traceback: d + `
+            traceback: c + `
 `
           },
           artifacts: {},
@@ -1808,10 +2149,10 @@ pyodide_http.patch_all()`
       }
     }
     async execute(e, t = {}) {
-      var v, T, $;
-      const s = Date.now();
+      var v, O, $;
+      const r = Date.now();
       if (e.pedal)
-        return this.executePedal(e, s, t);
+        return this.executePedal(e, r, t);
       if (await this.loadImports(e), e.allowRealRequests)
         try {
           await this.ensureRealRequests();
@@ -1822,13 +2163,13 @@ pyodide_http.patch_all()`
           await this.ensurePedal();
         } catch {
         }
-      const r = e.phase === "student.eval" || e.phase === "instructor.on_eval";
-      r || this.pyodide.runPython(
+      const s = e.phase === "student.eval" || e.phase === "instructor.on_eval";
+      s || this.pyodide.runPython(
         `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(
           JSON.stringify(e.files)
         )}))`
       );
-      const i = t.onStdout ?? null, a = t.onStderr ?? null, c = (e.interactiveInput ? t.onInput : void 0) ?? null, u = [
+      const a = t.onStdout ?? null, i = t.onStderr ?? null, d = (e.interactiveInput ? t.onInput : void 0) ?? null, u = [
         e.code,
         e.filename ?? "answer.py",
         e.answerPrefix ?? "",
@@ -1838,17 +2179,17 @@ pyodide_http.patch_all()`
         e.phase === "quiz.preprocess",
         e.trace ?? !1,
         ((v = e.limits) == null ? void 0 : v.traceSteps) ?? null,
-        i,
         a,
+        i,
         e.allowRealRequests ?? !1,
-        c,
+        d,
         // The REPL namespace (§6.4) follows the student's run only.
         e.phase === "student.run"
-      ], [l, d] = r ? [this.runtime.evaluate, [e.code, i, a, c]] : [this.runtime.run, u], f = l;
-      (T = t.onStarted) == null || T.call(t);
-      const p = V(
-        c !== null && Xe() && typeof f.callPromising == "function" ? await f.callPromising(...d) : f(...d)
-      ), y = V(this.runtime.collect_artifacts());
+      ], [l, c] = s ? [this.runtime.evaluate, [e.code, a, i, d]] : [this.runtime.run, u], _ = l;
+      (O = t.onStarted) == null || O.call(t);
+      const p = H(
+        d !== null && Ye() && typeof _.callPromising == "function" ? await _.callPromising(...c) : _(...c)
+      ), y = H(this.runtime.collect_artifacts());
       return {
         jobId: e.id,
         // pyodide's toJs maps Python None to undefined (not null): normalize
@@ -1864,25 +2205,25 @@ pyodide_http.patch_all()`
           traceback: p.error.traceback
         } : void 0,
         value: p.value ?? void 0,
-        trace: p.trace ? p.trace.map((O) => ({
-          event: O.event,
-          line: O.line,
-          studentLine: O.student_line,
-          locals: O.locals
+        trace: p.trace ? p.trace.map((P) => ({
+          event: P.event,
+          line: P.line,
+          studentLine: P.student_line,
+          locals: P.locals
         })) : void 0,
         images: ($ = p.images) != null && $.length ? p.images : void 0,
         artifacts: y,
-        durationMs: Date.now() - s
+        durationMs: Date.now() - r
       };
     }
   }
-  const Ze = /call stack|stack overflow|fatally failed/i, en = "The Python engine crashed - this usually means unbounded recursion (a function calling itself forever). The engine has been restarted; check your code and run again.", K = () => {
-  }, D = (n) => n instanceof Error ? n.message : String(n), nn = (n) => {
+  const en = /call stack|stack overflow|fatally failed/i, nn = "The Python engine crashed - this usually means unbounded recursion (a function calling itself forever). The engine has been restarted; check your code and run again.", K = () => {
+  }, D = (n) => n instanceof Error ? n.message : String(n), tn = (n) => {
     const e = n.split(`
 `).filter((t) => t.trim() !== "");
     return e.length > 0 ? e[e.length - 1].trim() : n;
   };
-  class tn {
+  class sn {
     constructor(e) {
       h(this, "runner", null);
       h(this, "interrupted", /* @__PURE__ */ new Set());
@@ -1968,7 +2309,7 @@ pyodide_http.patch_all()`
       );
     }
     async runJob(e) {
-      var r, i, a, c;
+      var s, a, i, d;
       if (!this.runner) {
         this.options.post({
           kind: "result",
@@ -2023,13 +2364,13 @@ pyodide_http.patch_all()`
           onStderr: (u) => this.options.post({ kind: "stderr", jobId: e.id, chunk: u }),
           // Interactive input() (spec §6.5): the run suspends on this
           // promise until an 'input-response' arrives for the job.
-          onInput: (u) => new Promise((l, d) => {
-            this.pendingInputs.set(e.id, { resolve: l, reject: d }), this.options.post({ kind: "input-request", jobId: e.id, prompt: u });
+          onInput: (u) => new Promise((l, c) => {
+            this.pendingInputs.set(e.id, { resolve: l, reject: c }), this.options.post({ kind: "input-request", jobId: e.id, prompt: u });
           })
         });
       } catch (u) {
         this.pendingInputs.delete(e.id);
-        const l = D(u), d = Ze.test(l), f = d || ((i = (r = this.runner).healthCheck) == null ? void 0 : i.call(r)) === !1 ? this.reloadRunner() : null;
+        const l = D(u), c = en.test(l), _ = c || ((a = (s = this.runner).healthCheck) == null ? void 0 : a.call(s)) === !1 ? this.reloadRunner() : null;
         this.options.post({
           kind: "result",
           result: {
@@ -2041,8 +2382,8 @@ pyodide_http.patch_all()`
               // EngineCrash = recovered fatal: the student-facing message is
               // instructive; the raw cause stays in the traceback for the
               // dev console / bug-icon dialog.
-              type: d ? "EngineCrash" : "EngineError",
-              message: d ? en : nn(l),
+              type: c ? "EngineCrash" : "EngineError",
+              message: c ? nn : tn(l),
               line: null,
               studentLine: null,
               traceback: l + `
@@ -2051,28 +2392,28 @@ pyodide_http.patch_all()`
             artifacts: {},
             durationMs: 0
           }
-        }), f && await f;
+        }), _ && await _;
         return;
       }
       this.pendingInputs.delete(e.id);
-      const s = ((c = (a = this.runner).healthCheck) == null ? void 0 : c.call(a)) === !1 ? this.reloadRunner() : null;
-      this.options.post({ kind: "result", result: t }), s && await s;
+      const r = ((d = (i = this.runner).healthCheck) == null ? void 0 : d.call(i)) === !1 ? this.reloadRunner() : null;
+      this.options.post({ kind: "result", result: t }), r && await r;
     }
   }
-  const rn = new tn({
+  const rn = new sn({
     post: (n) => self.postMessage(n),
     loadRunner: async (n) => {
-      const e = await Oe(n ? { indexURL: n } : void 0);
+      const e = await Pe(n ? { indexURL: n } : void 0);
       return G.create(e);
     },
-    mode: ze(self)
+    mode: Ve(self)
   });
   self.onmessage = (n) => {
     rn.handle(n.data);
   };
-  var sn = {}, g = /* @__PURE__ */ Object.freeze({
+  var an = {}, g = /* @__PURE__ */ Object.freeze({
     __proto__: null,
-    default: sn
+    default: an
   });
 });
-export default an();
+export default on();
