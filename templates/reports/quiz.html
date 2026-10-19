@@ -136,7 +136,7 @@
                             data-target="#{{ unique_id }}"
                             aria-expanded="true" aria-controls="{{ unique_id }}">
                         Quiz Question {{ loop.index }}:
-                        {% if feedback is not None %}
+                        {% if feedback is not none %}
                             {%  if feedback.get('correct', False) %}
                                 ✔️ Correct! ({{- question['points'] }} points
                             {%- else -%}
