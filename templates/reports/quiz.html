@@ -136,22 +136,26 @@
                             data-target="#{{ unique_id }}"
                             aria-expanded="true" aria-controls="{{ unique_id }}">
                         Quiz Question {{ loop.index }}:
-                        {%  if feedback.get('correct', False) %}
-                            ✔️ Correct! ({{- question['points'] }} points
-                        {%- else -%}
-                            ❌ Incorrect (
-                                {{- feedback.get('status') }}
-                                as {{ (feedback.get('score', 0)*100)|round()|int }}%
-                                for {{ (question['points'] * feedback.get('score', 0))|float|round(2) -}}/
-                                {{- question['points'] }}
-                                points
-                        {%- endif -%}
-                        {%- if 'summary' in code -%}
-                            {% if 'summary' in code and code['summary'].get('points_possible', 0) > 0 %}
-                            , or {{ ((100*feedback.get('score', 0)*question.get('points', 0)) / code['summary']['points_possible'])|round(1) -}}%
-                            overall
-                            {% endif %}
-                        {%- endif -%})
+                        {% if feedback is not None %}
+                            {%  if feedback.get('correct', False) %}
+                                ✔️ Correct! ({{- question['points'] }} points
+                            {%- else -%}
+                                ❌ Incorrect (
+                                    {{- feedback.get('status') }}
+                                    as {{ (feedback.get('score', 0)*100)|round()|int }}%
+                                    for {{ (question['points'] * feedback.get('score', 0))|float|round(2) -}}/
+                                    {{- question['points'] }}
+                                    points
+                            {%- endif -%}
+                            {%- if 'summary' in code -%}
+                                {% if 'summary' in code and code['summary'].get('points_possible', 0) > 0 %}
+                                , or {{ ((100*feedback.get('score', 0)*question.get('points', 0)) / code['summary']['points_possible'])|round(1) -}}%
+                                overall
+                                {% endif %}
+                            {%- endif -%})
+                        {% else %}
+                            No feedback available.
+                        {% endif %}
                     </button>
                 </h3>
             </div>

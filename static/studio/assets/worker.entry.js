@@ -1827,7 +1827,11 @@ def _studio_pedal_grade_captured(student_code, on_run, files_json, inputs, optio
         if seed is not None and seed != '':
             try:
                 from pedal.questions import set_seed
-                set_seed(str(seed))
+                # Legacy seeded with str(submission.id), which Pedal HASHES
+                # into the question index; an int seed indexes the pool
+                # directly (choices[seed % len]) - what the conformance
+                # suite uses to enumerate a pedal.questions pool.
+                set_seed(seed if isinstance(seed, int) and not isinstance(seed, bool) else str(seed))
             except Exception:  # noqa: BLE001
                 pass
 
