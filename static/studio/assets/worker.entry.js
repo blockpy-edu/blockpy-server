@@ -20,10 +20,10 @@ var on = De((dn, j) => {
     return !isNaN(parseFloat(n)) && isFinite(n);
   }
   o(Y, "_isNumber");
-  function b(n) {
+  function v(n) {
     return n.charAt(0).toUpperCase() + n.substring(1);
   }
-  o(b, "_capitalize");
+  o(v, "_capitalize");
   function L(n) {
     return function() {
       return this[n];
@@ -32,7 +32,7 @@ var on = De((dn, j) => {
   o(L, "_getter");
   var x = ["isConstructor", "isEval", "isNative", "isToplevel"], N = ["columnNumber", "lineNumber"], S = ["fileName", "functionName", "source"], Me = ["args"], je = ["evalOrigin"], A = x.concat(N, S, Me, je);
   function f(n) {
-    if (n) for (var e = 0; e < A.length; e++) n[A[e]] !== void 0 && this["set" + b(A[e])](n[A[e]]);
+    if (n) for (var e = 0; e < A.length; e++) n[A[e]] !== void 0 && this["set" + v(A[e])](n[A[e]]);
   }
   o(f, "StackFrame");
   f.prototype = { getArgs: o(function() {
@@ -55,20 +55,20 @@ var on = De((dn, j) => {
     if (a.indexOf("@") === 0) var i = /@(.+?)(?::(\d+))?(?::(\d+))?$/.exec(a, ""), d = i[1], u = i[2], l = i[3];
     return new f({ functionName: r, args: s || void 0, fileName: d, lineNumber: u || void 0, columnNumber: l || void 0 });
   }, "StackFrame$$fromString");
-  for (w = 0; w < x.length; w++) f.prototype["get" + b(x[w])] = L(x[w]), f.prototype["set" + b(x[w])] = /* @__PURE__ */ (function(n) {
+  for (w = 0; w < x.length; w++) f.prototype["get" + v(x[w])] = L(x[w]), f.prototype["set" + v(x[w])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       this[n] = !!e;
     };
   })(x[w]);
   var w;
-  for (E = 0; E < N.length; E++) f.prototype["get" + b(N[E])] = L(N[E]), f.prototype["set" + b(N[E])] = /* @__PURE__ */ (function(n) {
+  for (E = 0; E < N.length; E++) f.prototype["get" + v(N[E])] = L(N[E]), f.prototype["set" + v(N[E])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       if (!Y(e)) throw new TypeError(n + " must be a Number");
       this[n] = Number(e);
     };
   })(N[E]);
   var E;
-  for (k = 0; k < S.length; k++) f.prototype["get" + b(S[k])] = L(S[k]), f.prototype["set" + b(S[k])] = /* @__PURE__ */ (function(n) {
+  for (k = 0; k < S.length; k++) f.prototype["get" + v(S[k])] = L(S[k]), f.prototype["set" + v(S[k])] = /* @__PURE__ */ (function(n) {
     return function(e) {
       this[n] = String(e);
     };
@@ -109,7 +109,7 @@ var on = De((dn, j) => {
     }, "ErrorStackParser$$parseFFOrSafari") };
   }
   o(Q, "ErrorStackParser");
-  var Be = new Q(), qe = Be;
+  var qe = new Q(), Be = qe;
   function Z() {
     var i;
     if (typeof API < "u" && API !== globalThis.API) return API.runtimeEnv;
@@ -134,13 +134,13 @@ var on = De((dn, j) => {
     }
   }
   o(ne, "isClassicWorker");
-  var te, C, V, B;
-  async function q() {
+  var te, C, V, q;
+  async function B() {
     if (!m.IN_NODE || (te = (await Promise.resolve().then(function() {
       return g;
     })).default, V = await Promise.resolve().then(function() {
       return g;
-    }), B = await Promise.resolve().then(function() {
+    }), q = await Promise.resolve().then(function() {
       return g;
     }), (await Promise.resolve().then(function() {
       return g;
@@ -158,7 +158,7 @@ var on = De((dn, j) => {
       return s[a];
     };
   }
-  o(q, "initNodeModules");
+  o(B, "initNodeModules");
   function se(n, e) {
     return C.resolve(e || ".", n);
   }
@@ -172,7 +172,7 @@ var on = De((dn, j) => {
   var J;
   m.IN_NODE || (J = "/");
   function ae(n, e) {
-    return n.startsWith("file://") && (n = n.slice(7)), n.includes("://") ? { response: fetch(n) } : { binary: B.readFile(n).then((t) => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)) };
+    return n.startsWith("file://") && (n = n.slice(7)), n.includes("://") ? { response: fetch(n) } : { binary: q.readFile(n).then((t) => new Uint8Array(t.buffer, t.byteOffset, t.byteLength)) };
   }
   o(ae, "node_getBinaryResponse");
   function ie(n, e) {
@@ -203,8 +203,8 @@ var on = De((dn, j) => {
   o(de, "nodeLoadScript");
   async function ue(n) {
     if (m.IN_NODE) {
-      await q();
-      let e = await B.readFile(n, { encoding: "utf8" });
+      await B();
+      let e = await q.readFile(n, { encoding: "utf8" });
       return JSON.parse(e);
     } else if (m.IN_SHELL) {
       let e = read(n);
@@ -220,7 +220,7 @@ var on = De((dn, j) => {
     } catch (r) {
       n = r;
     }
-    let e = qe.parse(n)[0].fileName;
+    let e = Be.parse(n)[0].fileName;
     if (m.IN_NODE && !e.startsWith("file://") && (e = `file://${e}`), m.IN_NODE_ESM) {
       let r = await Promise.resolve().then(function() {
         return g;
@@ -303,8 +303,8 @@ var on = De((dn, j) => {
     }, "removeRemoteEntry"), reconcile: o(async (a, i, d) => {
       let u = 0, l = [];
       Object.keys(i.entries).forEach(function(p) {
-        let y = i.entries[p], v = d.entries[p];
-        (!v || e.isFile(y.mode) && y.timestamp.getTime() > v.timestamp.getTime()) && (l.push(p), u++);
+        let y = i.entries[p], b = d.entries[p];
+        (!b || e.isFile(y.mode) && y.timestamp.getTime() > b.timestamp.getTime()) && (l.push(p), u++);
       }), l.sort();
       let c = [];
       if (Object.keys(d.entries).forEach(function(p) {
@@ -314,11 +314,11 @@ var on = De((dn, j) => {
       for (let p of l) {
         let y = r.normalize(p.replace(a.mountpoint, "/")).substring(1);
         if (d.type === "local") {
-          let v = _.get(y), O = await s.loadRemoteEntry(v);
+          let b = _.get(y), O = await s.loadRemoteEntry(b);
           s.storeLocalEntry(p, O);
         } else {
-          let v = s.loadLocalEntry(p);
-          await s.storeRemoteEntry(_, y, v);
+          let b = s.loadLocalEntry(p);
+          await s.storeRemoteEntry(_, y, b);
         }
       }
       for (let p of c) if (d.type === "local") s.removeLocalEntry(p);
@@ -395,15 +395,15 @@ var on = De((dn, j) => {
     }] : [];
   }
   o(ye, "callFsInitHook");
-  function ve(n) {
+  function be(n) {
     let e = n.HEAPU32[n._Py_Version >>> 2], t = e >>> 24 & 255, r = e >>> 16 & 255, s = e >>> 8 & 255;
     return [t, r, s];
   }
-  o(ve, "computeVersionTuple");
-  function be(n) {
+  o(be, "computeVersionTuple");
+  function ve(n) {
     let e = le(n);
     return async (t) => {
-      t.API.pyVersionTuple = ve(t);
+      t.API.pyVersionTuple = be(t);
       let [r, s] = t.API.pyVersionTuple;
       t.FS.mkdirTree("/lib"), t.API.sitePackages = `/lib/python${r}.${s}/site-packages`, t.FS.mkdirTree(t.API.sitePackages), t.addRunDependency("install-stdlib");
       try {
@@ -416,10 +416,10 @@ var on = De((dn, j) => {
       }
     };
   }
-  o(be, "installStdlib");
+  o(ve, "installStdlib");
   function we(n) {
     let e;
-    return n.stdLibURL != null ? e = n.stdLibURL : e = n.indexURL + "python_stdlib.zip", [be(e), he(n.env.HOME), ge(n.env), _e, ...ye(n.fsInit)];
+    return n.stdLibURL != null ? e = n.stdLibURL : e = n.indexURL + "python_stdlib.zip", [ve(e), he(n.env.HOME), ge(n.env), _e, ...ye(n.fsInit)];
   }
   o(we, "getFileSystemInitializationFuncs");
   function Ee(n) {
@@ -449,7 +449,7 @@ var on = De((dn, j) => {
   var M = $e;
   async function ke(n = {}) {
     var s, a;
-    if (await q(), n.lockFileContents && n.lockFileURL) throw new Error("Can't pass both lockFileContents and lockFileURL");
+    if (await B(), n.lockFileContents && n.lockFileURL) throw new Error("Can't pass both lockFileContents and lockFileURL");
     let e = n.indexURL || await ce();
     if (e = R(I(e)), n.packageBaseUrl = R(n.packageBaseUrl), n.cdnUrl = R(n.packageBaseUrl ?? `https://cdn.jsdelivr.net/pyodide/v${M}/full/`), !n.lockFileContents) {
       let i = n.lockFileURL ?? e + "pyodide-lock.json";
@@ -520,8 +520,11 @@ var on = De((dn, j) => {
 # legacy Skulpt did), live stdout/stderr tee streaming, and opt-in
 # sys.settrace tracing whose step counter doubles as the instruction limit
 # (E3, spec 6.2).
+import ast
 import builtins
 import contextlib
+import importlib
+import importlib.util
 import io
 import json
 import linecache
@@ -651,6 +654,77 @@ class StudioRuntime:
                 if self.staged.get(rel) != contents:
                     artifacts[rel] = contents
         return artifacts
+
+    # -- package pre-import (setup phase) --------------------------------------
+
+    def preload_imports(self, sources, skip=()):
+        """Import the installed packages a job's sources name, before it runs.
+
+        The package auto-loader (loadPackagesFromImports) only unpacks a
+        wheel into site-packages: the FIRST \`import matplotlib.pyplot\` in
+        a fresh interpreter still initializes the package, measured at
+        3-12 s - longer than the student's 5 s execution budget, which is
+        armed when the job reports 'started'. Doing that cold import here,
+        in the setup phase, keeps it under the setup ceiling; the module
+        is then adopted into the baseline by restore_modules, so no later
+        run (or grading pass) pays it again.
+
+        Only site-packages modules qualify: mount modules (student and
+        instructor files) and the stdlib are left to the run - their
+        import is cheap, and a mount module's side effects belong to the
+        program. Fail-soft throughout: a source that does not parse or an
+        import that fails is reported by the run itself, with the
+        student's traceback, never from here. \`skip\` names top-level
+        modules the run replaces anyway (the \`requests\` mock, spec 10.4):
+        importing the real package first would only shadow the mock's
+        eviction after the job.
+        """
+        for source in sources:
+            for name in self.find_imports(source):
+                top = name.partition('.')[0]
+                if name in sys.modules or top in skip:
+                    continue
+                try:
+                    spec = importlib.util.find_spec(top)
+                except Exception:  # noqa: BLE001 - a broken top-level module
+                    continue
+                if not self.is_site_package(spec):
+                    continue
+                try:
+                    importlib.import_module(name)
+                except Exception:  # noqa: BLE001 - the run reports it
+                    pass
+
+    @staticmethod
+    def find_imports(source):
+        """Absolute module names a source imports.
+
+        \`import a.b\` -> a.b; \`from a import b\` -> a and a.b (b may be a
+        submodule - matplotlib.pyplot - or a plain attribute, which the
+        pre-import then fails to import and skips). Relative imports and
+        \`*\` are left alone; a source that does not parse names nothing.
+        """
+        try:
+            tree = ast.parse(source)
+        except (SyntaxError, ValueError):
+            return []
+        names = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names.extend(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names.append(node.module)
+                names.extend(
+                    node.module + '.' + alias.name for alias in node.names if alias.name != '*'
+                )
+        return names
+
+    @staticmethod
+    def is_site_package(spec):
+        if spec is None:
+            return False
+        locations = [spec.origin or '', *(spec.submodule_search_locations or [])]
+        return any('/site-packages/' in location for location in locations)
 
     # -- per-job isolation (spec 6.2) ----------------------------------------
 
@@ -955,8 +1029,8 @@ class StudioRuntime:
         except BaseException as exc:  # noqa: BLE001 - full error report needed
             error = self.format_error(exc, filename, prefix_lines)
         finally:
-            # Snapshot plots BEFORE the module restore unloads matplotlib -
-            # figures drawn before an error still surface (spec 10.2).
+            # Snapshot plots before the module restore - figures drawn
+            # before an error still surface (spec 10.2).
             images = self.capture_figures()
             builtins.input = old_input
             if old_main is not None:
@@ -2041,20 +2115,37 @@ pyodide_http.patch_all()`
     }
     /**
      * Fetch the Pyodide packages a job's sources import (numpy, matplotlib,
-     * …). One call per source: Pyodide parses each with `ast`, so a syntax
-     * error in one piece (the student's broken program) must not hide the
-     * imports of another (the grader). Fail-soft: offline/unknown imports
-     * surface as the natural Python ModuleNotFoundError instead of a
-     * transport error.
+     * …) and import them once. One fetch per source: Pyodide parses each
+     * with `ast`, so a syntax error in one piece (the student's broken
+     * program) must not hide the imports of another (the grader). Fail-soft:
+     * offline/unknown imports surface as the natural Python
+     * ModuleNotFoundError instead of a transport error.
+     *
+     * The fetch only unpacks wheels: the FIRST `import matplotlib.pyplot` in
+     * an interpreter still initializes the package (3-12 s measured), which
+     * used to run inside the student's program - under the 5 s execution
+     * watchdog armed on 'started' - and killed every cold run of a plotting
+     * assignment (and the respawn made the next run cold again). The
+     * runtime pre-imports the fetched site-packages modules here, in the
+     * setup phase, so that cost sits under the setup ceiling instead.
      */
     async loadImports(e) {
-      const t = this.pyodide.loadPackagesFromImports;
-      if (t)
-        for (const r of Qe(e))
+      const t = Qe(e), r = this.pyodide.loadPackagesFromImports;
+      if (r)
+        for (const a of t)
           try {
-            await t.call(this.pyodide, r);
+            await r.call(this.pyodide, a);
           } catch {
           }
+      const s = e.allowRealRequests ? [] : ["requests"];
+      try {
+        this.pyodide.runPython(
+          `_studio_runtime.preload_imports(*__import__('json').loads(${JSON.stringify(
+            JSON.stringify([t, s])
+          )}))`
+        );
+      } catch {
+      }
     }
     /**
      * Lazy Pedal environment - wheels install on the first grading job. The
@@ -2153,7 +2244,7 @@ pyodide_http.patch_all()`
       }
     }
     async execute(e, t = {}) {
-      var v, O, $;
+      var b, O, $;
       const r = Date.now();
       if (e.pedal)
         return this.executePedal(e, r, t);
@@ -2182,7 +2273,7 @@ pyodide_http.patch_all()`
         "exec",
         e.phase === "quiz.preprocess",
         e.trace ?? !1,
-        ((v = e.limits) == null ? void 0 : v.traceSteps) ?? null,
+        ((b = e.limits) == null ? void 0 : b.traceSteps) ?? null,
         a,
         i,
         e.allowRealRequests ?? !1,
