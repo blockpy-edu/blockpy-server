@@ -245,6 +245,11 @@
                     <li class="nav-item">
                         <a class="nav-link" id='blockpy.index' href="{{ url_for('blockpy.load') }}">Try Editor</a>
                     </li>
+                    {% if g.user and not g.user.anonymous %}
+                        <li class="nav-item">
+                            <a class="nav-link" id='basic.react_dashboard' href="{{ url_for('basic.react_dashboard') }}">Dashboard</a>
+                        </li>
+                    {% endif %}
                     {% if g.user and g.user.is_admin() %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.index') }}">Admin</a>
