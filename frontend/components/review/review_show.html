@@ -1,0 +1,12 @@
+<!-- ko if: $root.canSeeFeedback -->
+<div class="individual-review-show-box">
+    <code data-bind="text: getScore"></code>
+    <span data-bind="text: getText"></span>
+    <!-- ko if: $root.canEditFeedback() -->
+    <button type="button" class="btn btn-sm btn-danger float-right"
+        data-bind="click: remove">Remove</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary mr-2 float-right"
+        data-bind="click: edit">Edit</button>
+    <!-- /ko -->
+</div>
+<!-- /ko -->

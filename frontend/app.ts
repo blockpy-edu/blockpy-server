@@ -33,7 +33,7 @@ import "./components/feedback/feedback";
 //import "./components/java";
 import './components/kettle/kettle';
 import './components/explanations/explain';
-import "./components/review_interface";
+import "./components/review/review";
 import "./components/blockpy/blockpy_interface";
 //import "./components/textbook";
 

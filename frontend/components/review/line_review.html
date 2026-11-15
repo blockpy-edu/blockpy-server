@@ -1,0 +1,32 @@
+<!-- ko if: canSeeFeedback -->
+<div data-bind="template: {afterRender: fixPopoverPosition }"
+    class="line-review-box">
+<span class="line-review-quick-button fas"
+      data-bind="click: quickButtonClick,
+                 class: quickButtonIcon"></span>
+<div class="popover bs-popover-right static-popover"
+    data-bind="css: {inactive: reviewInterface() == null},
+               click: takeFocus" style="display:none">
+<!-- ko if: reviewInterface() !== null -->
+    <div class="arrow"></div>
+    <div class="popover-body popover-header-sm">
+    <!-- ko if: !reviewInterface().isEditing() -->
+        <code data-bind="text: reviewInterface().getScoreText()"></code>
+        <span data-bind="text: reviewInterface().getText()"></span>
+        <!-- ko if: canEditFeedback() -->
+        <span class="fas fa-trash float-right popover-control"
+              data-bind="click: remove"></span>
+        <span class="fas fa-edit float-right mr-2 popover-control"
+              data-bind="click: edit"></span>
+        <span class="fas fa-chevron-left float-right mr-2 popover-control"
+              data-bind="click: collapse"></span>
+        <!-- /ko -->
+    <!-- /ko -->
+    <!-- ko if: reviewInterface().isEditing() -->
+        <div data-bind='component: {name: "individual-review-editor", params: reviewInterface}'></div>
+    <!-- /ko -->
+    </div>
+<!-- /ko -->
+</div>
+</div>
+<!-- /ko -->

@@ -1,0 +1,116 @@
+<!-- ko if: canSeeFeedback -->
+
+<!-- Errors -->
+<!-- ko if: !isLtiActive() && canEditFeedback() -->
+    <div class="alert alert-warning" role="alert">
+        You are not in a grading LTI session for this course.
+        Launch an LTI session by opening the BlockPy Dashboard from within Canvas.
+        This will store a cookie that lets Canvas recognize that you can grade questions!
+    </div>
+<!-- /ko -->
+
+<!-- Controls -->
+<!-- ko if: canEditFeedback -->
+<div class="row">
+<p class="col-2">
+    <button type="button" class="btn btn-sm"
+        data-bind="text: closeSubmissionLabel, click: closeSubmission,
+                    class: closeSubmissionColor"></button>
+</p><p class="col-10">
+    <span data-bind="html: closeSubmissionExplanation"></span>
+</p>
+<p class="col-2">
+    <button type="button" class="btn btn-sm"
+        data-bind="text: releaseFeedbackLabel, click: releaseFeedback,
+                    class: releaseFeedbackColor"></button>
+</p><p class="col-10">
+    <span data-bind="html: releaseFeedbackExplanation"></span>
+</p>
+<p class="col-2">
+    <button type="button" class="btn btn-sm btn-info"
+        data-bind="click: ()=>markAs('Passed human review'), enabled: canMarkCorrect,
+                    css: { disabled: !canMarkCorrect()} ">Mark as Fully Correct</button>
+</p><p class="col-10">
+    Use this button to add a new General Feedback (<code>Passed human review</code>) that is worth all the remaining points of the assignment.<br>
+</p>
+<p class="col-2">
+    <button type="button" class="btn btn-sm btn-info"
+        data-bind="click: ()=>markAs('Caught Cheating'), enabled: canMarkCheating,
+                    css: { disabled: !canMarkCheating()} ">Mark as Caught Cheating</button>
+</p><p class="col-10">
+    Use this button to add a new General Feedback (<code>Caught Cheating</code>) that is worth a huge number of negative points, sure to take their score down to zero.<br>
+</p>
+</div>
+<!-- /ko -->
+
+
+<!-- Summary Area -->
+<div class="col-xl-6 col-md-12">
+<table class="review-report table table-bordered table-hover table-sm">
+    <thead>
+        <th>Grading</th>
+        <th>Score</th>
+    </thead>
+    <tr data-bind="visible: hasAutoFeedback() || submission.correct()">
+        <td>Passed all autograder tests?</td>
+        <td data-bind="html: submission.correct() ? '✔' : '❌'"></td>
+    </tr>
+    <tr data-bind="visible: hasAutoFeedback() || submission.score() > 0">
+        <td>Autograder submission score:</td>
+        <td data-bind="text: 100*submission.score()"></td>
+    </tr>
+    <tr data-bind="visible: generalReviews().length > 0">
+        <th>General Feedback</th>
+        <th></th>
+    </tr>
+    <!-- ko foreach: generalReviews -->
+    <tr>
+        <td data-bind="text: $data.getText(), css: {'draft-comment': $data.state() === 'DRAFT'}"></td>
+        <td data-bind="text: $data.getScoreText()"></td>
+    </tr>
+    <!-- /ko -->
+    <tr data-bind="visible: lineReviews().length > 0">
+        <th>Feedback on specific lines</th>
+        <th></th>
+    </tr>
+    <!-- ko foreach: lineReviews -->
+    <tr>
+        <!-- TODO: Markdown -->
+        <td data-bind="markdowned: {value: $data.getText(), assignment: null, submission: null}, css: {'draft-comment': $data.state() === 'DRAFT'}"></td>
+        <td data-bind="text: $data.getScoreText()"></td>
+    </tr>
+    <!-- /ko -->
+    <tr class="table-active total-row">
+        <td>Total</td>
+        <td data-bind="text: totalScore()+'/100'"></td>
+    </tr>
+</table>
+</div>
+
+<!-- General Feedback -->
+<div class="col-xl-6 col-md-12" data-bind="visible: generalReviews().length > 0 || canEditFeedback()">
+    <h4>General Feedback</h4>
+
+    <!-- ko if: canEditFeedback -->
+    <button type="button" class="btn btn-sm btn-success"
+        data-bind="click: addGeneralFeedback">Add feedback</button>
+    <!-- /ko -->
+
+    <div class="list-group d-flex w-100 justify-content-between"
+         data-bind="foreach: generalReviews">
+        <!-- ko if: state() !== 'SAVED' -->
+        <div data-bind='component: {name: "individual-review-editor", params: $data}'></div>
+        <!-- /ko -->
+        <!-- ko if: state() === 'SAVED' -->
+        <div data-bind='component: {name: "individual-review-show", params: $data}'></div>
+        <!-- /ko -->
+    </div>
+
+</div>
+
+<!-- Line Feedback -->
+<!--<div class="col-xl-6 col-md-12">
+    <h4>Line Feedback</h4>
+</div>-->
+
+<!-- /ko -->
