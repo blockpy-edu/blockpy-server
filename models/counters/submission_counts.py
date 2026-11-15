@@ -40,7 +40,7 @@ class SubmissionCounts(Base):
     submission_id: Mapped[int] = mapped_column(Integer, ForeignKey('submission.id'))
     submission: Mapped["models.Submission"] = db.relationship(back_populates='counts')
 
-    metric: Mapped[str] = mapped_column(Enum(SubmissionMetrics, values_callable=get_enum_values))
+    metric: Mapped[str] = mapped_column(Enum(SubmissionMetrics, values_callable=get_enum_values, native_enum=False))
     value: Mapped[int] = mapped_column(BigInteger(), default=0)
 
     __table_args__ = (

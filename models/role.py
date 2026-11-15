@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 class Role(Base):
     __tablename__ = "role"
-    name: Mapped[UserRoles] = mapped_column(Enum(UserRoles, values_callable=get_enum_values), default=UserRoles.LEARNER)
+    name: Mapped[UserRoles] = mapped_column(Enum(UserRoles, values_callable=get_enum_values, native_enum=False), default=UserRoles.LEARNER)
     subname: Mapped[str] = mapped_column(String(80), default="")
     user_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     course_id: Mapped[Optional[int]] = mapped_column(ForeignKey('course.id'), default=None, nullable=True)

@@ -26,7 +26,7 @@ class AssignmentGroup(EnhancedBase):
                                                nullable=True)
     forked_id: Mapped[Optional[int]] = mapped_column(Integer(), ForeignKey('assignment_group.id'),
                                                      nullable=True)
-    category: Mapped[AssignmentGroupCategory] = mapped_column(Enum(AssignmentGroupCategory, values_callable=get_enum_values), default=AssignmentGroupCategory.NONE)
+    category: Mapped[AssignmentGroupCategory] = mapped_column(Enum(AssignmentGroupCategory, values_callable=get_enum_values, native_enum=False), default=AssignmentGroupCategory.NONE)
     forked_version: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
     owner_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))

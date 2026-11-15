@@ -40,10 +40,10 @@ class Assignment(EnhancedBase):
     url: Mapped[Optional[str]] = mapped_column(String(255),
                                                default=make_flavored_uuid_generator('assignment'),
                                                nullable=True)
-    status: Mapped[AssignmentStatus] = mapped_column(Enum(AssignmentStatus, values_callable=get_enum_values), default=AssignmentStatus.DRAFT)
+    status: Mapped[AssignmentStatus] = mapped_column(Enum(AssignmentStatus, values_callable=get_enum_values, native_enum=False), default=AssignmentStatus.DRAFT)
 
     # Settings
-    type: Mapped[AssignmentTypes] = mapped_column(Enum(AssignmentTypes, values_callable=get_enum_values), default=AssignmentTypes.READING)
+    type: Mapped[AssignmentTypes] = mapped_column(Enum(AssignmentTypes, values_callable=get_enum_values, native_enum=False), default=AssignmentTypes.READING)
     instructions: Mapped[str] = mapped_column(Text(), default="")
     # Should we suggest this assignment's submissions be reviewed manually?
     reviewed: Mapped[bool] = mapped_column(Boolean(), default=False)

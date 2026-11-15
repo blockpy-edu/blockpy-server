@@ -47,5 +47,14 @@ def make_copy(url: str) -> str:
 def get_enum_values(enum_class):
     """
     Get the values of the enum class as a list.
+
+    Enum columns are declared as
+    `Enum(SomeEnum, values_callable=get_enum_values, native_enum=False)`.
+    The `native_enum=False` matters: the production database stores these
+    columns as plain VARCHAR and has no Postgres enum types. Without it,
+    SQLAlchemy assumes a type named after the class exists and casts to it
+    whenever it inserts several rows in one statement, which fails with
+    `type "..." does not exist`. Inserting one row at a time never names the
+    type, so the mistake stays hidden until something writes rows in bulk.
     """
     return [member.value for member in enum_class]

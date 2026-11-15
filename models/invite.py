@@ -22,10 +22,10 @@ class Invite(Base, RoleMixin):
     url: Mapped[str] = mapped_column(String(80), default=make_flavored_uuid_generator("invite"))
     user_id: Mapped[Optional[int]] = mapped_column(Integer(), ForeignKey('user.id'), default=None, nullable=True)
     course_id: Mapped[int] = mapped_column(Integer(), ForeignKey('course.id'))
-    role: Mapped[Optional[UserRoles]] = mapped_column(Enum(UserRoles, values_callable=get_enum_values), default=UserRoles.LEARNER)
+    role: Mapped[Optional[UserRoles]] = mapped_column(Enum(UserRoles, values_callable=get_enum_values, native_enum=False), default=UserRoles.LEARNER)
     expires: Mapped[Optional[datetime]] = mapped_column(UtcDateTime)
-    kind: Mapped[InviteKind] = mapped_column(Enum(InviteKind, values_callable=get_enum_values), default=InviteKind.COURSE_INVITE)
-    status: Mapped[InviteStatus] = mapped_column(Enum(InviteStatus, values_callable=get_enum_values), default=InviteStatus.PENDING)
+    kind: Mapped[InviteKind] = mapped_column(Enum(InviteKind, values_callable=get_enum_values, native_enum=False), default=InviteKind.COURSE_INVITE)
+    status: Mapped[InviteStatus] = mapped_column(Enum(InviteStatus, values_callable=get_enum_values, native_enum=False), default=InviteStatus.PENDING)
     approver_id: Mapped[Optional[int]] = mapped_column(Integer(), ForeignKey('user.id'), default=None, nullable=True)
 
     course: Mapped["Course"] = db.relationship(back_populates="invites")

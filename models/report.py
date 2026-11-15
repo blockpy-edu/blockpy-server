@@ -49,7 +49,7 @@ class Report(Base):
 
     __tablename__ = "report"
     #: Queued -> Started -> [ Finished, Error ]
-    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus, values_callable=get_enum_values), default=ReportStatus.QUEUED)
+    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus, values_callable=get_enum_values, native_enum=False), default=ReportStatus.QUEUED)
     attempt: Mapped[int] = mapped_column(Integer(), default=0)
     result: Mapped[str] = mapped_column(String(255), default="output.html")
     date_started: Mapped[Optional[datetime]] = mapped_column(DateTime(), default=None, nullable=True)
@@ -66,7 +66,7 @@ class Report(Base):
     parameters: Mapped[str] = mapped_column(Text(), default="")
 
     #: "public", "private", "course", "assignment", "user"
-    visibility: Mapped[ReportVisibility] = mapped_column(Enum(ReportVisibility, values_callable=get_enum_values), default=ReportVisibility.PRIVATE)
+    visibility: Mapped[ReportVisibility] = mapped_column(Enum(ReportVisibility, values_callable=get_enum_values, native_enum=False), default=ReportVisibility.PRIVATE)
 
     #: Specific user that this Report originates from
     owner_id: Mapped[Optional[int]] = mapped_column(Integer(), ForeignKey('user.id'), nullable=True)

@@ -22,11 +22,11 @@ if TYPE_CHECKING:
 class Review(VersionedBase):
     __tablename__ = "review"
     comment: Mapped[str] = mapped_column(Text(), default="")
-    comment_format: Mapped[ReviewCommentFormat] = mapped_column(Enum(ReviewCommentFormat, values_callable=get_enum_values), default=ReviewCommentFormat.MARKDOWN)
+    comment_format: Mapped[ReviewCommentFormat] = mapped_column(Enum(ReviewCommentFormat, values_callable=get_enum_values, native_enum=False), default=ReviewCommentFormat.MARKDOWN)
     location: Mapped[str] = mapped_column(Text(), default="")
     generic: Mapped[bool] = mapped_column(Boolean(), default=False)
     tag_id: Mapped[Optional[int]] = mapped_column(Integer(), ForeignKey('assignment_tag.id'), nullable=True)
-    status: Mapped[ReviewStatus] = mapped_column(Enum(ReviewStatus, values_callable=get_enum_values), default=ReviewStatus.DRAFT)
+    status: Mapped[ReviewStatus] = mapped_column(Enum(ReviewStatus, values_callable=get_enum_values, native_enum=False), default=ReviewStatus.DRAFT)
     extra_data: Mapped[str] = mapped_column(Text(), default="")
     # Should be treated as out of X/100
     score: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)

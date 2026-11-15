@@ -67,11 +67,11 @@ class Submission(EnhancedBase):
     score: Mapped[int] = mapped_column(Integer(), default=0)
     correct: Mapped[bool] = mapped_column(Boolean(), default=False)
     submission_status: Mapped[SubmissionStatuses] = mapped_column(
-        Enum(SubmissionStatuses, values_callable=get_enum_values),
+        Enum(SubmissionStatuses, values_callable=get_enum_values, native_enum=False),
         default=SubmissionStatuses.STARTED,
     )
     grading_status: Mapped[GradingStatuses] = mapped_column(
-        Enum(GradingStatuses, values_callable=get_enum_values),
+        Enum(GradingStatuses, values_callable=get_enum_values, native_enum=False),
         default=GradingStatuses.NOT_READY,
     )
     feedback: Mapped[str] = mapped_column(Text(), default="")

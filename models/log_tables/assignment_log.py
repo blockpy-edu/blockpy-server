@@ -31,7 +31,7 @@ class AssignmentLog(Base):
     course_id: Mapped[int] = mapped_column(Integer())
     subject_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
-    event_type: Mapped[AssignmentLogEvent] = mapped_column(Enum(AssignmentLogEvent, values_callable=get_enum_values))
+    event_type: Mapped[AssignmentLogEvent] = mapped_column(Enum(AssignmentLogEvent, values_callable=get_enum_values, native_enum=False))
     # Message will be JSON encoded data
     field: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     value: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)

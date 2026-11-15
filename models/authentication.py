@@ -20,7 +20,7 @@ class Authentication(Base):
     """
     __tablename__ = "authentication"
 
-    type: Mapped[AuthenticationType] = mapped_column(Enum(AuthenticationType, values_callable=get_enum_values), default=AuthenticationType.LOCAL)
+    type: Mapped[AuthenticationType] = mapped_column(Enum(AuthenticationType, values_callable=get_enum_values, native_enum=False), default=AuthenticationType.LOCAL)
     value: Mapped[str] = mapped_column(String(255))
     user_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     expires_at: Mapped[Optional[datetime]] = mapped_column(UtcDateTime(), default=None, nullable=True)

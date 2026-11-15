@@ -38,14 +38,14 @@ class Course(Base):
                                                nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
-    kind: Mapped[CourseKind] = mapped_column(Enum(CourseKind, values_callable=get_enum_values), default=CourseKind.DEFAULT)
-    service: Mapped[CourseService] = mapped_column(Enum(CourseService, values_callable=get_enum_values), default=CourseService.NATIVE)
+    kind: Mapped[CourseKind] = mapped_column(Enum(CourseKind, values_callable=get_enum_values, native_enum=False), default=CourseKind.DEFAULT)
+    service: Mapped[CourseService] = mapped_column(Enum(CourseService, values_callable=get_enum_values, native_enum=False), default=CourseService.NATIVE)
     external_id: Mapped[str] = mapped_column(String(255), default="")
     lms_id: Mapped[Optional[int]] = mapped_column(Integer(), default=None, nullable=True)
     endpoint: Mapped[str] = mapped_column(Text(), default="")
     version: Mapped[int] = mapped_column(Integer(), default=0)
 
-    visibility: Mapped[CourseVisibility] = mapped_column(Enum(CourseVisibility, values_callable=get_enum_values), default=CourseVisibility.PRIVATE)
+    visibility: Mapped[CourseVisibility] = mapped_column(Enum(CourseVisibility, values_callable=get_enum_values, native_enum=False), default=CourseVisibility.PRIVATE)
     term: Mapped[str] = mapped_column(String(255), default="")
     settings: Mapped[str] = mapped_column(Text(), default="")
     locked: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)

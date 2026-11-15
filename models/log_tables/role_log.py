@@ -28,7 +28,7 @@ class RoleLog(Base):
     # Authorization
     authorizer_id: Mapped[int] = mapped_column(Integer(), ForeignKey('user.id'))
     # Actual event data
-    event_type: Mapped[RoleLogEvent] = mapped_column(Enum(RoleLogEvent, values_callable=get_enum_values), nullable=False)
+    event_type: Mapped[RoleLogEvent] = mapped_column(Enum(RoleLogEvent, values_callable=get_enum_values, native_enum=False), nullable=False)
     event_value: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # When the client initiated this action

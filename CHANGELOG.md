@@ -18,6 +18,16 @@ are grouped as Added, Changed, Deprecated, Removed, Fixed, or Security.
 
 ## [Unreleased]
 
+### Fixed
+
+- Applying a score adjustment failed on the production database with
+  `type "reviewcommentformat" does not exist`, and nothing was saved. Enum
+  columns were declared as native Postgres enum types, which production does
+  not have (it stores them as `VARCHAR`). That only matters when several rows
+  are inserted in one statement, as applying an adjustment does. Every enum
+  column is now declared as `VARCHAR`, so the same failure cannot occur on the
+  other tables that have one.
+
 ## [6.5.0] - 2026-11-15
 
 ### Added
