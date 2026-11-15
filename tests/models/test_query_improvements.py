@@ -342,6 +342,56 @@ def test_get_users_submitted_assignments_full_score_is_batched(client):
     assert len(selects) <= 3
 
 
+def test_full_score_with_a_shared_inherited_parent_is_batched(client):
+    # A bulk score adjustment: every submission's review inherits its score
+    # from one shared, non-generic parent
+    course, instructor, _, _, submissions = make_course_with_submissions(students=5, assignments=1)
+    parent = make_review(None, instructor.id, score=7)
+    for submission in submissions:
+        submission.score = 50
+        make_review(submission.id, instructor.id, score=None, forked_id=parent.id)
+    db.session.commit()
+    points = submissions[0].assignment.get_points()
+    course_id = course.id
+    # A fresh session, as a new request would have: nothing is loaded yet
+    db.session.close()
+    course = Course.by_id(course_id)
+    with count_selects() as selects:
+        rows = course.get_users_submitted_assignments()
+        scores = [submission.full_score() for submission, user, assignment in rows]
+    assert len(scores) == 5
+    assert all(abs(score - 0.57 * points) < 1e-9 for score in scores)
+    # The main query, the reviews, and one query for every parent at once:
+    # the shared parent must not be fetched again for each submission
+    assert len(selects) <= 4
+
+
+def test_prefetch_fork_chains_uses_parents_already_in_the_session(client):
+    course = CourseFactory.create_course()
+    instructor = UserFactory.create_instructor(course=course)
+    submission = SubmissionFactory.create_submission(
+        assignment=AssignmentFactory.create_assignment(course=course), course=course)
+    parent_id = make_review(None, instructor.id, score=7).id
+    child_id = make_review(submission.id, instructor.id, score=None, forked_id=parent_id).id
+    db.session.close()
+    parent = Review.by_id(parent_id)
+    child = Review.by_id(child_id)
+    with count_selects() as selects:
+        kept = Review.prefetch_fork_chains([child])
+        assert child.get_actual_score() == 7
+    assert kept == [parent]
+    assert len(selects) == 0
+    # A parent that is not loaded is still fetched, in one query
+    del parent, kept
+    db.session.close()
+    child = Review.by_id(child_id)
+    with count_selects() as selects:
+        kept = Review.prefetch_fork_chains([child])
+        assert child.get_actual_score() == 7
+    assert [review.id for review in kept] == [parent_id]
+    assert len(selects) == 1
+
+
 # ---------------------------------------------------------------------------
 # 6) Course.export
 # ---------------------------------------------------------------------------

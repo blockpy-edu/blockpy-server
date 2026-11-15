@@ -277,6 +277,10 @@ class Course(Base):
     def get_users_submitted_assignments(self, user_ids=None, limit=None, offset=None):
         # Defer the large Text columns (student code, feedback, assignment bodies)
         # since callers only need metadata, and preload reviews for full_score().
+        # The reviews' fork parents are loaded with them (one query for all of
+        # them, and none when no review inherits): each child then holds its
+        # parent, so a parent shared by a whole class is fetched once rather
+        # than once per submission.
         query = (db.session.query(models.Submission, models.User, models.Assignment)
                 .join(models.Submission,
                       models.Submission.assignment_id == models.Assignment.id)
@@ -285,7 +289,7 @@ class Course(Base):
                 .options(defer(models.Submission.code),
                          defer(models.Submission.extra_files),
                          defer(models.Submission.feedback),
-                         selectinload(models.Submission.reviews),
+                         selectinload(models.Submission.reviews).selectinload(models.Review.forked),
                          defer(models.Assignment.instructions),
                          defer(models.Assignment.on_run),
                          defer(models.Assignment.on_change),

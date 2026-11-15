@@ -121,6 +121,11 @@ class Review(VersionedBase):
         return Review.query.filter_by(generic=True).all()
 
     @staticmethod
+    def in_session(review_id):
+        """ The review with this id if the session already holds it, without querying. """
+        return db.session.identity_map.get(Review.__mapper__.identity_key_from_primary_key((review_id,)))
+
+    @staticmethod
     def prefetch_fork_chains(reviews):
         """
         Load every review in the given reviews' fork chains into the session,
@@ -128,13 +133,21 @@ class Review(VersionedBase):
         returned list is referenced, `get_actual_score` resolves entirely from
         the session's identity map (which only holds weak references), so keep
         the result alive until the scores have been computed.
+
+        A parent that is already in the session costs no query. That matters
+        when many submissions share one parent (a bulk score adjustment): a
+        caller that eager-loads `Review.forked` with the reviews pays for the
+        parent once, instead of once per submission.
         """
         prefetched = []
         known_ids = {review.id for review in reviews if review.id is not None}
         pending_ids = {review.forked_id for review in reviews
                        if review.score is None and review.forked_id is not None} - known_ids
         while pending_ids:
-            fetched = Review.query.filter(Review.id.in_(pending_ids)).all()
+            fetched = [parent for parent in map(Review.in_session, pending_ids) if parent is not None]
+            missing_ids = pending_ids - {parent.id for parent in fetched}
+            if missing_ids:
+                fetched.extend(Review.query.filter(Review.id.in_(missing_ids)).all())
             prefetched.extend(fetched)
             known_ids |= pending_ids
             pending_ids = {review.forked_id for review in fetched
@@ -151,7 +164,8 @@ class Review(VersionedBase):
         elif self.forked_id is None:
             return 0
         else:
-            forked = Review.query.get(self.forked_id)
+            # Session.get answers from the identity map when the parent is already loaded
+            forked = db.session.get(Review, self.forked_id)
             if forked is None:
                 return 0
             else:
