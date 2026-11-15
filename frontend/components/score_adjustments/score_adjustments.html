@@ -1,0 +1,473 @@
+<style>
+.score-adjustments { max-width: 75em; }
+.score-adjustments .card-header { font-weight: 600; }
+.score-adjustments .answer-table td, .score-adjustments .answer-table th { vertical-align: middle; }
+.score-adjustments .answer-table tr.picked td { background: #e8f1fb; }
+.score-adjustments .answer-label { white-space: pre-wrap; word-break: break-word; font-family: monospace; font-size: 90%; }
+.score-adjustments .student-facing { border-left: 4px solid #f0ad4e; padding-left: 0.75em; }
+.score-adjustments .delta { font-family: monospace; font-weight: 600; }
+.score-adjustments .batch-note { white-space: pre-wrap; }
+.score-adjustments tr.left-out td { color: #6c757d; }
+.score-adjustments .pick-column { width: 2.5em; }
+.score-adjustments .sort-button { padding: 0; border: 0; color: inherit; font-weight: inherit; white-space: nowrap; vertical-align: baseline; }
+.score-adjustments .sort-arrow { display: inline-block; width: 1.2em; text-align: center; font-size: 80%; }
+.score-adjustments .sort-arrow.sort-idle { color: #adb5bd; }
+</style>
+
+<div class="score-adjustments">
+
+<!-- ko if: isLoading -->
+<p class="text-muted">Loading…</p>
+<!-- /ko -->
+
+<!-- ko if: loadError -->
+<div class="alert alert-danger" data-bind="text: loadError"></div>
+<!-- /ko -->
+
+<!-- ko if: !isLoading() && !loadError() -->
+
+<!-- ================= Courses ================= -->
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center">
+        <span>Courses</span>
+        <!-- ko if: courses().length > 1 -->
+        <button type="button" class="btn btn-link btn-sm ml-auto p-0" data-bind="click: selectAllCourses">Select all</button>
+        <!-- /ko -->
+    </div>
+    <div class="card-body py-3">
+        <!-- ko foreach: courses -->
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input"
+                   data-bind="checked: checked, attr: {id: 'adjust-course-' + id}">
+            <label class="form-check-label" data-bind="attr: {for: 'adjust-course-' + id}">
+                <span data-bind="text: name"></span>
+                <span class="text-muted" data-bind="text: '(' + submissions + ' submissions)'"></span>
+            </label>
+        </div>
+        <!-- /ko -->
+        <small class="form-text text-muted">
+            Every course that uses this assignment and where you can adjust scores<!-- ko if: isHidden --> (it is hidden, so that means courses you are an instructor of)<!-- /ko -->.
+            One adjustment covers all the courses you tick, and editing it later changes it in all of them.
+        </small>
+    </div>
+</div>
+
+<!-- ================= Step 1: Who ================= -->
+<div class="card mb-3">
+    <div class="card-header">1 · Who</div>
+    <div class="card-body py-3">
+
+        <!-- ko if: isQuiz -->
+        <div class="form-inline mb-2">
+            <label class="mr-2" for="adjust-question">Question</label>
+            <select class="form-control form-control-sm custom-select mr-2" id="adjust-question" style="max-width: 40em"
+                    data-bind="options: questions, optionsText: 'label', optionsValue: 'id',
+                               optionsCaption: 'No particular question (use only the conditions)',
+                               value: questionId"></select>
+            <!-- ko if: currentQuestion() -->
+            <span class="badge badge-secondary mr-2"
+                  data-bind="text: currentQuestion().points + (currentQuestion().points === 1 ? ' point' : ' points')"></span>
+            <!-- ko if: currentQuestion().parts.length -->
+            <label class="mr-2" for="adjust-part">Part</label>
+            <select class="form-control form-control-sm custom-select" id="adjust-part" style="max-width: 20em"
+                    data-bind="options: currentQuestion().parts, optionsText: 'label', optionsValue: 'key',
+                               optionsCaption: 'The whole answer', value: part"></select>
+            <!-- /ko -->
+            <!-- /ko -->
+        </div>
+        <!-- ko if: currentQuestion() && !currentQuestion().graded -->
+        <p class="text-muted small mb-2">This question is not graded against an answer key, so credit cannot be given or removed for it. You can still choose students by their answer and give a fixed amount.</p>
+        <!-- /ko -->
+        <!-- /ko -->
+
+        <!-- ko if: hasTarget -->
+        <table class="table table-sm table-bordered answer-table mb-2" style="max-width: 60em">
+            <thead>
+                <tr>
+                    <th style="width: 2.5em"></th>
+                    <th data-bind="text: isQuiz() ? 'Answer' : 'Variation'"></th>
+                    <th class="text-right" style="width: 8em">Submissions</th>
+                    <!-- ko if: isQuiz -->
+                    <th style="width: 10em">Credit now</th>
+                    <!-- /ko -->
+                </tr>
+            </thead>
+            <tbody data-bind="foreach: tallyRows">
+                <tr data-bind="css: {picked: checked}">
+                    <td class="text-center">
+                        <input type="checkbox" data-bind="checked: checked, attr: {id: 'adjust-answer-' + $index(), 'aria-label': 'Include ' + label}">
+                    </td>
+                    <td><label class="mb-0 answer-label" data-bind="text: label, attr: {for: 'adjust-answer-' + $index()}"></label></td>
+                    <td class="text-right" data-bind="text: count"></td>
+                    <!-- ko if: $component.isQuiz -->
+                    <td><span class="badge" data-bind="text: $component.creditLabel($data), class: $component.creditClass($data)"></span></td>
+                    <!-- /ko -->
+                </tr>
+            </tbody>
+        </table>
+        <!-- /ko -->
+        <!-- ko if: !isQuiz() && !hasTarget() -->
+        <p class="text-muted small mb-2">This problem has no seeded variations, so students are chosen with the conditions below.</p>
+        <!-- /ko -->
+        <!-- ko if: !isQuiz() && hasTarget() -->
+        <p class="text-muted small mb-2">Variations are worked out from the problem as it is now. If a variation was added or removed after students started, some of them saw a different one than is shown here. Leave every box unticked to include all variations.</p>
+        <!-- /ko -->
+
+        <!-- Extra conditions -->
+        <!-- ko ifnot: searchCriteria().length -->
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bind="click: addSearchCriterion">
+            <span class="fas fa-plus"></span> Add a condition</button>
+        <span class="text-muted small ml-2">Narrow by score, times graded, status, and more.</span>
+        <!-- /ko -->
+        <!-- ko if: searchCriteria().length -->
+        <div class="form-inline mb-2">
+            <span class="mr-2">Only if</span>
+            <select class="form-control form-control-sm custom-select" aria-label="How to combine the conditions"
+                    data-bind="options: combinatorOptions, optionsText: 'label', optionsValue: 'key',
+                               value: searchCombinator"></select>
+            <span class="ml-2">of these conditions hold:</span>
+        </div>
+        <!-- ko foreach: searchCriteria -->
+        <div class="form-inline mb-1">
+            <div class="form-check mr-2" title="Invert this condition">
+                <input type="checkbox" class="form-check-input"
+                       data-bind="checked: negate, attr: {id: 'adjust-negate-' + $index()}">
+                <label class="form-check-label" data-bind="attr: {for: 'adjust-negate-' + $index()}">NOT</label>
+            </div>
+            <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition field"
+                    data-bind="foreach: $component.searchFieldGroups, value: field">
+                <optgroup data-bind="attr: {label: $data.label}, foreach: $data.fields">
+                    <option data-bind="text: $data.label, attr: {value: $data.key}"></option>
+                </optgroup>
+            </select>
+            <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition operator"
+                    data-bind="options: spec().operators, optionsText: 'label', optionsValue: 'key',
+                               value: operator"></select>
+            <!-- ko if: spec().type === 'number' -->
+            <input type="number" step="any" class="form-control form-control-sm mr-2" aria-label="Condition value"
+                   data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+            <!-- /ko -->
+            <!-- ko if: spec().type === 'text' -->
+            <input type="text" class="form-control form-control-sm mr-2" style="min-width: 18em" aria-label="Condition value"
+                   data-bind="value: value, attr: {placeholder: spec().placeholder || ''}">
+            <!-- /ko -->
+            <!-- ko if: spec().type === 'date' -->
+            <input type="date" class="form-control form-control-sm mr-2" aria-label="Condition value"
+                   data-bind="value: value">
+            <!-- /ko -->
+            <!-- ko if: spec().type === 'select' -->
+            <select class="form-control form-control-sm custom-select mr-2" aria-label="Condition value"
+                    data-bind="options: spec().options, optionsText: 'label', optionsValue: 'value',
+                               value: value"></select>
+            <!-- /ko -->
+            <button type="button" class="btn btn-outline-danger btn-sm" title="Remove this condition"
+                    data-bind="click: (criterion) => $component.removeSearchCriterion(criterion)">
+                <span class="fas fa-times"></span></button>
+        </div>
+        <!-- ko if: spec().help -->
+        <small class="form-text text-muted mt-0 mb-2" data-bind="text: spec().help"></small>
+        <!-- /ko -->
+        <!-- /ko -->
+        <button type="button" class="btn btn-outline-secondary btn-sm mt-1" data-bind="click: addSearchCriterion">
+            <span class="fas fa-plus"></span> Add another condition</button>
+        <!-- /ko -->
+
+        <p class="mt-3 mb-0"><strong data-bind="text: whoSummary"></strong></p>
+    </div>
+</div>
+
+<!-- ================= Step 2: What ================= -->
+<div class="card mb-3">
+    <div class="card-header">2 · What</div>
+    <div class="card-body py-3">
+        <!-- ko if: currentQuestion() && currentQuestion().graded -->
+        <div class="form-check">
+            <input type="radio" class="form-check-input" name="adjust-mode" id="adjust-mode-credit" value="credit" data-bind="checked: mode">
+            <label class="form-check-label" for="adjust-mode-credit">
+                <span data-bind="text: part() ? 'Count this part as right' : 'Give full credit for this question'"></span>
+                <span class="text-muted">(worked out for each student: their total with it counted right, minus their total now)</span>
+            </label>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" name="adjust-mode" id="adjust-mode-remove" value="remove" data-bind="checked: mode">
+            <label class="form-check-label" for="adjust-mode-remove" data-bind="text: part() ? 'Count this part as wrong' : 'Remove credit for this question'"></label>
+        </div>
+        <!-- /ko -->
+        <div class="form-check">
+            <input type="radio" class="form-check-input" name="adjust-mode" id="adjust-mode-fixed" value="fixed" data-bind="checked: mode">
+            <label class="form-check-label mr-2" for="adjust-mode-fixed">The same amount for everyone:</label>
+            <!-- ko if: mode() === 'fixed' -->
+            <input type="number" step="any" class="form-control form-control-sm d-inline-block mr-2" style="width: 7em" placeholder="e.g. 5 or -5"
+                   aria-label="Amount" data-bind="value: amountValue">
+            <!-- ko if: isQuiz -->
+            <select class="form-control form-control-sm custom-select d-inline-block" style="width: auto" aria-label="Unit" data-bind="value: amountUnit">
+                <option value="percent">percent of the assignment</option>
+                <option value="points">quiz points</option>
+            </select>
+            <!-- /ko -->
+            <!-- ko ifnot: isQuiz -->
+            <span>percent of the assignment</span>
+            <!-- /ko -->
+            <!-- /ko -->
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" name="adjust-mode" id="adjust-mode-floor" value="floor" data-bind="checked: mode">
+            <label class="form-check-label mr-2" for="adjust-mode-floor">Raise each total to at least</label>
+            <!-- ko if: mode() === 'floor' -->
+            <input type="number" min="0" max="100" class="form-control form-control-sm d-inline-block mr-2" style="width: 6em"
+                   aria-label="Target total" data-bind="value: amountValue"><span>%</span>
+            <!-- /ko -->
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" name="adjust-mode" id="adjust-mode-exact" value="exact" data-bind="checked: mode">
+            <label class="form-check-label mr-2" for="adjust-mode-exact">Set each total to exactly</label>
+            <!-- ko if: mode() === 'exact' -->
+            <input type="number" min="0" max="100" class="form-control form-control-sm d-inline-block mr-2" style="width: 6em"
+                   aria-label="Target total" data-bind="value: amountValue"><span>%</span>
+            <!-- /ko -->
+        </div>
+        <small class="form-text text-muted mb-3">Amounts are whole percents of the assignment, and are trimmed for any student they would take past 100% or below 0%.</small>
+
+        <div class="student-facing mb-3">
+            <label for="adjust-comment" class="mb-1"><strong>Comment students will see</strong></label>
+            <textarea class="form-control form-control-sm" id="adjust-comment" rows="2" maxlength="2000"
+                      data-bind="value: comment"></textarea>
+            <small class="form-text text-muted">
+                Shown to every adjusted student with the amount. Some students may not have taken this yet,
+                so keep the question and the answer out of it; they belong in the private note below.
+            </small>
+        </div>
+
+        <label for="adjust-note" class="mb-1">Private note <span class="text-muted">(graders only)</span></label>
+        <textarea class="form-control form-control-sm" id="adjust-note" rows="2" maxlength="2000"
+                  placeholder="Why this adjustment was made. This is where the question and answer belong."
+                  data-bind="value: note"></textarea>
+    </div>
+</div>
+
+<!-- ================= Step 3: Preview ================= -->
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center">
+        <span>3 · Preview</span>
+        <!-- ko if: hasPreview -->
+        <span class="text-muted font-weight-normal ml-3" data-bind="text: previewSummary"></span>
+        <!-- /ko -->
+    </div>
+    <div class="card-body py-3">
+        <button type="button" class="btn btn-primary btn-sm"
+                data-bind="click: preview, enable: canPreview, text: isPreviewing() ? 'Working…' : (hasPreview() ? 'Refresh preview' : 'Preview')"></button>
+        <span class="text-muted small ml-2">Nothing is saved until you apply.</span>
+
+        <!-- ko if: previewError -->
+        <div class="alert alert-danger mt-3 mb-0" data-bind="text: previewError"></div>
+        <!-- /ko -->
+        <!-- ko if: applyMessage -->
+        <div class="alert alert-success mt-3 mb-0" data-bind="text: applyMessage"></div>
+        <!-- /ko -->
+        <!-- ko foreach: searchErrors -->
+        <div class="alert alert-warning mt-3 mb-0" data-bind="text: $data"></div>
+        <!-- /ko -->
+
+        <!-- ko if: hasPreview -->
+        <!-- ko ifnot: previewRows().length -->
+        <p class="text-muted mt-3 mb-0">No submissions match.</p>
+        <!-- /ko -->
+        <!-- ko if: previewRows().length -->
+        <div class="d-flex align-items-center flex-wrap mt-3">
+            <div class="btn-group btn-group-sm mr-3" role="group" aria-label="Choose which students to include">
+                <button type="button" class="btn btn-outline-secondary"
+                        data-bind="click: selectAllPreview, enable: selectablePreviewRows().length && !allPreviewChecked()">Select all</button>
+                <button type="button" class="btn btn-outline-secondary"
+                        data-bind="click: selectNonePreview, enable: checkedPreviewRows().length">Select none</button>
+                <button type="button" class="btn btn-outline-secondary"
+                        title="Tick only the students the preview suggested"
+                        data-bind="click: resetPreviewSelection, enable: !previewIsSuggested()">Reset to suggested</button>
+            </div>
+            <span class="text-muted small"
+                  data-bind="text: checkedPreviewRows().length + ' of ' + selectablePreviewRows().length + ' selected'"></span>
+        </div>
+        <div class="table-responsive mt-2">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th class="text-center pick-column">
+                        <input type="checkbox" aria-label="Select all students" title="Select all"
+                               data-bind="checked: allPreviewChecked, enable: selectablePreviewRows().length">
+                    </th>
+                    <!-- ko foreach: previewColumns -->
+                    <th data-bind="css: {'text-right': numeric}, attr: {'aria-sort': $component.previewSortState(key)}">
+                        <button type="button" class="btn btn-link sort-button"
+                                data-bind="click: () => $component.sortPreviewBy(key), attr: {title: 'Sort by ' + label.toLowerCase()}"><span data-bind="text: label"></span><span class="sort-arrow" aria-hidden="true"
+                                      data-bind="text: $component.previewSortArrow(key), css: {'sort-idle': $component.previewSortState(key) === 'none'}"></span></button>
+                    </th>
+                    <!-- /ko -->
+                </tr>
+            </thead>
+            <tbody data-bind="foreach: sortedPreviewRows">
+                <tr data-bind="css: {'left-out': !checked()}">
+                    <td class="text-center"><input type="checkbox" data-bind="checked: checked, enable: delta !== 0, attr: {'aria-label': 'Include ' + student}"></td>
+                    <td><span data-bind="text: student, attr: {title: email}"></span></td>
+                    <!-- ko if: $component.courses().length > 1 --><td data-bind="text: course"></td><!-- /ko -->
+                    <td class="text-right" data-bind="text: $component.percent(now)"></td>
+                    <td class="text-right"><span class="delta" data-bind="text: $component.signed(delta), class: $component.deltaClass(delta)"></span></td>
+                    <td class="text-right" data-bind="text: $component.percent(checked() ? after : now)"></td>
+                    <td class="small" data-bind="text: notes.join(' · ')"></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <button type="button" class="btn btn-success"
+                data-bind="click: apply, enable: canApply,
+                           text: isApplying() ? 'Saving…' : 'Apply to ' + checkedPreviewRows().length + (checkedPreviewRows().length === 1 ? ' student' : ' students')"></button>
+        <span class="text-muted small ml-2">Adds one review to each ticked submission. Grades are sent to the LMS in a separate step.</span>
+        <!-- /ko -->
+        <!-- /ko -->
+    </div>
+</div>
+
+<!-- ================= Step 4: Existing adjustments ================= -->
+<div class="card mb-3">
+    <div class="card-header">4 · Adjustments on this assignment</div>
+    <div class="card-body py-3">
+        <!-- ko if: batchMessage -->
+        <div class="alert alert-success" data-bind="text: batchMessage"></div>
+        <!-- /ko -->
+        <!-- ko if: batchError -->
+        <div class="alert alert-danger" data-bind="text: batchError"></div>
+        <!-- /ko -->
+        <!-- ko if: sendFailures().length -->
+        <div class="alert alert-warning">
+            <strong>These grades were not sent:</strong>
+            <ul class="mb-0" data-bind="foreach: sendFailures"><li data-bind="text: $data"></li></ul>
+        </div>
+        <!-- /ko -->
+
+        <!-- ko ifnot: batches().length -->
+        <p class="text-muted mb-0">No adjustments have been made on this assignment yet.</p>
+        <!-- /ko -->
+
+        <!-- ko if: batches().length -->
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="adjust-publish" data-bind="checked: publishOnSend">
+            <label class="form-check-label" for="adjust-publish">
+                When sending grades, also publish feedback
+                <span class="text-muted">(marks each submission Fully Graded, which is what lets the student see the comment in BlockPy; leave off to change only the LMS grade)</span>
+            </label>
+        </div>
+
+        <!-- ko foreach: batches -->
+        <div class="border rounded p-3 mb-3">
+            <div class="d-flex flex-wrap align-items-start">
+                <div class="mr-3" style="flex: 1 1 24em; min-width: 0">
+                    <div><strong data-bind="text: comment"></strong></div>
+                    <div class="small text-muted">
+                        <span data-bind="text: rule"></span>
+                        &middot; <span data-bind="text: students + (students === 1 ? ' student' : ' students')"></span>
+                        &middot; <span class="delta" data-bind="text: $component.batchAmount($data)"></span>
+                        &middot; <span data-bind="text: $component.batchCourses($data)"></span>
+                    </div>
+                    <div class="small text-muted">
+                        <span data-bind="text: author"></span>, <span data-bind="text: $component.batchDate($data)"></span>
+                    </div>
+                    <!-- ko if: note -->
+                    <div class="small batch-note mt-1"><span class="text-muted">Private note:</span> <span data-bind="text: note"></span></div>
+                    <!-- /ko -->
+                    <div class="mt-1">
+                        <!-- ko if: pending --><span class="badge badge-warning" data-bind="text: pending + ' not sent to the LMS'"></span><!-- /ko -->
+                        <!-- ko if: sent --><span class="badge badge-success" data-bind="text: sent + ' sent'"></span><!-- /ko -->
+                        <!-- ko if: unlinked --><span class="badge badge-light" title="These submissions were not opened from the LMS, so there is no gradebook entry to update" data-bind="text: unlinked + ' with no LMS link'"></span><!-- /ko -->
+                        <!-- ko if: customized --><span class="badge badge-info" title="Reviews a grader changed by hand; batch edits leave them alone unless you ask" data-bind="text: customized + ' customized'"></span><!-- /ko -->
+                        <!-- ko if: assignment_changed --><span class="badge badge-danger" title="If the answer key now gives this credit, these students have it twice. Remove this adjustment if so.">Assignment changed since</span><!-- /ko -->
+                    </div>
+                </div>
+                <div class="text-nowrap">
+                    <!-- ko if: pending && editable -->
+                    <button type="button" class="btn btn-primary btn-sm"
+                            data-bind="click: (batch) => $component.sendGrades(batch), enable: $component.sendingBatchId() == null,
+                                       text: $component.sendingBatchId() === id ? $component.sendProgress() : 'Send ' + pending + (pending === 1 ? ' grade' : ' grades')"></button>
+                    <!-- /ko -->
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            data-bind="click: (batch) => $component.toggleStudents(batch), enable: editable,
+                                       text: $component.openBatchId() === id ? 'Hide students' : 'Students'"></button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            data-bind="click: (batch) => $component.startEdit(batch), enable: editable">Edit</button>
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            data-bind="click: (batch) => $component.askRemove(batch), enable: editable">Remove</button>
+                </div>
+            </div>
+            <!-- ko ifnot: editable -->
+            <div class="small text-muted mt-2">This adjustment also covers a course you cannot adjust scores in, so only someone with access to all of its courses can change it.</div>
+            <!-- /ko -->
+
+            <!-- Remove confirmation -->
+            <!-- ko if: $component.removingBatchId() === id -->
+            <div class="alert alert-danger mt-3 mb-0">
+                Remove this adjustment from all <span data-bind="text: students"></span> submissions<!-- ko if: customized -->, including the <span data-bind="text: customized"></span> that were edited by hand<!-- /ko -->? Their scores go back to what they were without it.
+                <div class="mt-2">
+                    <button type="button" class="btn btn-danger btn-sm" data-bind="click: (batch) => $component.remove(batch)">Remove it</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bind="click: () => $component.cancelRemove()">Keep it</button>
+                </div>
+            </div>
+            <!-- /ko -->
+
+            <!-- Edit form -->
+            <!-- ko if: $component.editingBatchId() === id -->
+            <div class="mt-3 pt-3 border-top">
+                <div class="student-facing mb-2">
+                    <label class="mb-1" data-bind="attr: {for: 'adjust-edit-comment-' + id}"><strong>Comment students will see</strong></label>
+                    <textarea class="form-control form-control-sm" rows="2" maxlength="2000"
+                              data-bind="value: $component.editComment, attr: {id: 'adjust-edit-comment-' + id}"></textarea>
+                    <small class="form-text text-muted">Changes for every student in every course of this adjustment.</small>
+                </div>
+                <label class="mb-1" data-bind="attr: {for: 'adjust-edit-note-' + id}">Private note <span class="text-muted">(graders only)</span></label>
+                <textarea class="form-control form-control-sm mb-2" rows="2" maxlength="2000"
+                          data-bind="value: $component.editNote, attr: {id: 'adjust-edit-note-' + id}"></textarea>
+                <div class="form-inline mb-2">
+                    <label class="mr-2" data-bind="attr: {for: 'adjust-edit-amount-' + id}">Change the amount to</label>
+                    <input type="number" step="1" class="form-control form-control-sm mr-2" style="width: 7em" placeholder="unchanged"
+                           data-bind="value: $component.editAmount, attr: {id: 'adjust-edit-amount-' + id}">
+                    <span class="text-muted">percent for everyone (leave blank to keep the current amounts)</span>
+                </div>
+                <!-- ko if: customized -->
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" data-bind="checked: $component.editIncludeCustomized, attr: {id: 'adjust-edit-custom-' + id}">
+                    <label class="form-check-label" data-bind="attr: {for: 'adjust-edit-custom-' + id}">Also overwrite the <span data-bind="text: customized"></span> hand-edited review(s) when changing the amount</label>
+                </div>
+                <!-- /ko -->
+                <!-- ko if: $component.editError -->
+                <div class="alert alert-danger" data-bind="text: $component.editError"></div>
+                <!-- /ko -->
+                <button type="button" class="btn btn-success btn-sm" data-bind="click: (batch) => $component.saveEdit(batch)">Save</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bind="click: () => $component.cancelEdit()">Cancel</button>
+            </div>
+            <!-- /ko -->
+
+            <!-- Students -->
+            <!-- ko if: $component.openBatchId() === id -->
+            <div class="table-responsive mt-3">
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Student</th><th>Course</th><th class="text-right">Amount</th><th class="text-right">Total now</th><th>LMS</th><th></th></tr></thead>
+                <tbody data-bind="foreach: $component.openBatchStudents">
+                    <tr>
+                        <td data-bind="text: student"></td>
+                        <td data-bind="text: course"></td>
+                        <td class="text-right"><span class="delta" data-bind="text: $component.signed(amount), class: $component.deltaClass(amount)"></span></td>
+                        <td class="text-right" data-bind="text: $component.percent(total)"></td>
+                        <td><span class="badge" data-bind="text: $component.lmsLabel(lms), class: $component.lmsClass(lms)"></span></td>
+                        <td class="small">
+                            <!-- ko if: customized --><span class="badge badge-info">customized</span> <span data-bind="text: own_comment"></span><!-- /ko -->
+                            <a target="_blank" data-bind="attr: {href: $component.viewSubmissionUrl($data)}">Open</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+            <!-- /ko -->
+        </div>
+        <!-- /ko -->
+        <!-- /ko -->
+    </div>
+</div>
+
+<!-- /ko -->
+</div>

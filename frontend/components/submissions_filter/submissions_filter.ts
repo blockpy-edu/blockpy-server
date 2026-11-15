@@ -874,6 +874,11 @@ export class SubmissionsFilter {
         return `${this.base()}assignments/load?assignment_id=${this.singleAssignment().id}&course_id=${this.course.id}`;
     }
 
+    /** The Score Adjustments page (bulk review editor) for the single viewed assignment. */
+    adjustScoresUrl(): string {
+        return `${this.base()}grading/adjustments?assignment_id=${this.singleAssignment().id}&course_id=${this.course.id}`;
+    }
+
     bulkDownloadEventsUrl(): string {
         return `${this.base()}blockpy/load_history?user_id=${this.singleUser().id}&course_id=${this.course.id}`;
     }

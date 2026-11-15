@@ -329,6 +329,7 @@ Quiz Analysis{% if assignment %}: {{ assignment.title() }}{% endif %}
     </h2>
     <p class="text-muted small">
         <a href="{{ url_for('courses.submissions_filter', course_id=course_id, criteria='assignment', search_key=assignment.id) }}">View submissions</a>
+        &middot; <a href="{{ url_for('grading.score_adjustments', course_id=course_id, assignment_id=assignment.id) }}">Adjust scores</a>
         &middot; Analyzed {{ included_count }} of {{ plural(loaded_count, 'loaded submission') }}
         {% if excluded %}
             (left out:
@@ -472,6 +473,10 @@ Quiz Analysis{% if assignment %}: {{ assignment.title() }}{% endif %}
                 <strong>{{ positions[question_id] }}. {{ question_id }}</strong>
                 <span class="quiet">&middot; {{ type_name(question) }}
                     {% if has_scores %}&middot; {{ plural(question.points_possible, 'point') }}{% endif %}</span>
+                {% if question.type != 'text_only_question' %}
+                <a class="float-right small" href="{{ url_for('grading.score_adjustments', course_id=course_id, assignment_id=assignment.id, question_id=question_id) }}"
+                   title="Give or remove points for everyone who gave a particular answer to this question">Adjust scores</a>
+                {% endif %}
             </div>
             <div class="card-body">
                 <div class="question-body">{{ question.body|safe }}</div>

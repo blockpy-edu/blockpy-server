@@ -7680,106 +7680,42 @@ knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("reader", {
 
 /***/ }),
 
-/***/ "./components/review_interface.ts":
-/*!****************************************!*\
-  !*** ./components/review_interface.ts ***!
-  \****************************************/
+/***/ "./components/review/line_review.html":
+/*!********************************************!*\
+  !*** ./components/review/line_review.html ***!
+  \********************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<!-- ko if: canSeeFeedback -->\r\n<div data-bind=\"template: {afterRender: fixPopoverPosition }\"\r\n    class=\"line-review-box\">\r\n<span class=\"line-review-quick-button fas\"\r\n      data-bind=\"click: quickButtonClick,\r\n                 class: quickButtonIcon\"></span>\r\n<div class=\"popover bs-popover-right static-popover\"\r\n    data-bind=\"css: {inactive: reviewInterface() == null},\r\n               click: takeFocus\" style=\"display:none\">\r\n<!-- ko if: reviewInterface() !== null -->\r\n    <div class=\"arrow\"></div>\r\n    <div class=\"popover-body popover-header-sm\">\r\n    <!-- ko if: !reviewInterface().isEditing() -->\r\n        <code data-bind=\"text: reviewInterface().getScoreText()\"></code>\r\n        <span data-bind=\"text: reviewInterface().getText()\"></span>\r\n        <!-- ko if: canEditFeedback() -->\r\n        <span class=\"fas fa-trash float-right popover-control\"\r\n              data-bind=\"click: remove\"></span>\r\n        <span class=\"fas fa-edit float-right mr-2 popover-control\"\r\n              data-bind=\"click: edit\"></span>\r\n        <span class=\"fas fa-chevron-left float-right mr-2 popover-control\"\r\n              data-bind=\"click: collapse\"></span>\r\n        <!-- /ko -->\r\n    <!-- /ko -->\r\n    <!-- ko if: reviewInterface().isEditing() -->\r\n        <div data-bind='component: {name: \"individual-review-editor\", params: reviewInterface}'></div>\r\n    <!-- /ko -->\r\n    </div>\r\n<!-- /ko -->\r\n</div>\r\n</div>\r\n<!-- /ko -->\r\n";
+
+/***/ }),
+
+/***/ "./components/review/line_review.ts":
+/*!******************************************!*\
+  !*** ./components/review/line_review.ts ***!
+  \******************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   INDIVIDUAL_REVIEW_EDITOR_TEMPLATE: () => (/* binding */ INDIVIDUAL_REVIEW_EDITOR_TEMPLATE),
-/* harmony export */   INDIVIDUAL_REVIEW_SHOW_TEMPLATE: () => (/* binding */ INDIVIDUAL_REVIEW_SHOW_TEMPLATE),
-/* harmony export */   InheritOptions: () => (/* binding */ InheritOptions),
-/* harmony export */   LINE_REVIEW_BUTTON_TEMPLATE: () => (/* binding */ LINE_REVIEW_BUTTON_TEMPLATE),
 /* harmony export */   LineReviewInterface: () => (/* binding */ LineReviewInterface),
-/* harmony export */   LineReviewInterfaceJson: () => (/* binding */ LineReviewInterfaceJson),
-/* harmony export */   ReviewModelState: () => (/* binding */ ReviewModelState),
-/* harmony export */   SUBMISSION_REVIEW_INTERFACE_TEMPLATE: () => (/* binding */ SUBMISSION_REVIEW_INTERFACE_TEMPLATE),
-/* harmony export */   SingleReviewInterface: () => (/* binding */ SingleReviewInterface),
-/* harmony export */   SubmissionReviewInterface: () => (/* binding */ SubmissionReviewInterface),
-/* harmony export */   Tag: () => (/* binding */ Tag),
-/* harmony export */   colorGradingStatus: () => (/* binding */ colorGradingStatus),
-/* harmony export */   explainGradingStatus: () => (/* binding */ explainGradingStatus),
-/* harmony export */   labelGradingStatus: () => (/* binding */ labelGradingStatus)
+/* harmony export */   LineReviewInterfaceJson: () => (/* binding */ LineReviewInterfaceJson)
 /* harmony export */ });
-/* harmony import */ var _models_submission__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../models/submission */ "./models/submission.ts");
-/* harmony import */ var _models_review__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../models/review */ "./models/review.ts");
-/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! knockout */ "knockout");
-/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _models_review__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../models/review */ "./models/review.ts");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./types */ "./components/review/types.ts");
+/* harmony import */ var _single_review__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./single_review */ "./components/review/single_review.ts");
+/**
+ * The quick button and popover shown beside each line of a submission's code,
+ * for adding, reading, and editing the review attached to that line.
+ */
 
 
 
 
-function closeSubmissionStatus(status) {
-    switch (status.toLowerCase()) {
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.COMPLETED.toLowerCase():
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.SUBMITTED.toLowerCase():
-            return "This assignment is closed or already completed, so the student cannot edit the assignment further.<br>Use this button to reopen the assignment.<br>";
-        default:
-            return "This assignment is currently OPEN for the student to edit.<br>Use this button to close the assignment.<br>";
-    }
-}
-function colorSubmissionStatus(status) {
-    switch (status.toLowerCase()) {
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.COMPLETED.toLowerCase():
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.SUBMITTED.toLowerCase():
-            return "btn-info";
-        default:
-            return "btn-success";
-    }
-}
-function explainGradingStatus(status) {
-    switch (status.toLowerCase()) {
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
-            return "<strong>Submission is currently graded and the feedback is visible to them</strong> (unless the assignment is hidden in the LMS).<br>Use this button to hide and make further changes to their feedback.<br>";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
-            return "<strong>Feedback is currently hidden while you add more feedback</strong>.<br>Use this button to release the feedback to the student and update their grade in Canvas.<br>";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
-            return "Something went wrong during the grading upload. Check your internet connection, make sure you have recently opened the BlockPy dashboard, and try again.<br>";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
-            return "<strong>Feedback is currently hidden while you add more feedback</strong>. They might still be working on the assignment.<br>Use this button to release the feedback to the student and update their grade in Canvas.<br>";
-    }
-}
-function colorGradingStatus(status) {
-    switch (status.toLowerCase()) {
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
-            return "btn-info";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
-            return "btn-success";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
-            return "btn-danger";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
-            return "btn-warning";
-    }
-}
-function labelGradingStatus(status) {
-    switch (status.toLowerCase()) {
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
-            return "Hide and revise feedback";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
-            return "Publish feedback to students";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
-            return "Failed to release feedback!";
-        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
-            return "Publish feedback to students early";
-    }
-}
-var ReviewModelState;
-(function (ReviewModelState) {
-    ReviewModelState["DRAFT"] = "DRAFT";
-    ReviewModelState["SAVED"] = "SAVED";
-    ReviewModelState["EDITING"] = "EDITING";
-    ReviewModelState["EXPANDED"] = "EXPANDED";
-    ReviewModelState["COLLAPSED"] = "COLLAPSED";
-})(ReviewModelState || (ReviewModelState = {}));
-class Tag {
-}
 function findReviewByLocation(reviews, location) {
     let potentialReview = reviews().find((review) => parseInt(review.review.location(), 10) === location);
     return potentialReview || null;
@@ -7793,12 +7729,12 @@ class LineReviewInterface {
             $(event.currentTarget).css({ "z-index": 1061 });
         };
         this.parent = params.parent;
-        this.location = knockout__WEBPACK_IMPORTED_MODULE_2__.observable(params.location);
-        this.reviewInterface = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => findReviewByLocation(params.reviews, this.location()));
+        this.location = knockout__WEBPACK_IMPORTED_MODULE_1__.observable(params.location);
+        this.reviewInterface = knockout__WEBPACK_IMPORTED_MODULE_1__.pureComputed(() => findReviewByLocation(params.reviews, this.location()));
         this.isGrader = params.isGrader;
         this.canSeeFeedback = params.canSeeFeedback;
         this.canEditFeedback = params.canEditFeedback;
-        this.quickButtonIcon = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => {
+        this.quickButtonIcon = knockout__WEBPACK_IMPORTED_MODULE_1__.pureComputed(() => {
             const reviewInterface = this.reviewInterface();
             if (reviewInterface === null) {
                 if (this.isGrader()) {
@@ -7809,13 +7745,13 @@ class LineReviewInterface {
                 }
             }
             switch (reviewInterface.state()) {
-                case ReviewModelState.DRAFT:
+                case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.DRAFT:
                     return "fa-save";
-                case ReviewModelState.EDITING:
+                case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING:
                     return "fa-save";
-                case ReviewModelState.SAVED:
+                case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.SAVED:
                     return "fa-chevron-circle-right";
-                case ReviewModelState.EXPANDED:
+                case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EXPANDED:
                     return "fa-chevron-circle-left";
             }
         });
@@ -7823,7 +7759,7 @@ class LineReviewInterface {
     addLineFeedback() {
         let location = this.location();
         if (!this.reviewInterface()) {
-            let draftReview = new _models_review__WEBPACK_IMPORTED_MODULE_1__.Review({
+            let draftReview = new _models_review__WEBPACK_IMPORTED_MODULE_0__.Review({
                 assignment_version: this.parent().assignment.version(),
                 author_id: this.parent().author.id,
                 comment: "New Comment",
@@ -7840,25 +7776,25 @@ class LineReviewInterface {
                 tag_id: null,
                 version: 0
             });
-            let draftReviewInterface = new SingleReviewInterface({
+            let draftReviewInterface = new _single_review__WEBPACK_IMPORTED_MODULE_3__.SingleReviewInterface({
                 inherits: "nothing",
                 parent: this.parent(),
                 review: draftReview,
-                state: ReviewModelState.DRAFT
+                state: _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.DRAFT
             }, false);
             this.parent().reviews.push(draftReviewInterface);
         }
     }
     collapse() {
-        this.reviewInterface().state(ReviewModelState.COLLAPSED);
+        this.reviewInterface().state(_types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.COLLAPSED);
     }
     edit() {
         if (this.reviewInterface()) {
-            if (this.reviewInterface().state() === ReviewModelState.EDITING) {
-                this.reviewInterface().state(ReviewModelState.EXPANDED);
+            if (this.reviewInterface().state() === _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING) {
+                this.reviewInterface().state(_types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EXPANDED);
             }
             else {
-                this.reviewInterface().state(ReviewModelState.EDITING);
+                this.reviewInterface().state(_types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING);
             }
         }
     }
@@ -7880,17 +7816,17 @@ class LineReviewInterface {
             return;
         }
         switch (this.reviewInterface().state()) {
-            case ReviewModelState.DRAFT:
+            case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.DRAFT:
                 this.reviewInterface().create();
                 break;
-            case ReviewModelState.EDITING:
+            case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING:
                 this.reviewInterface().update();
                 break;
-            case ReviewModelState.SAVED:
-                this.reviewInterface().state(ReviewModelState.EDITING);
+            case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.SAVED:
+                this.reviewInterface().state(_types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING);
                 break;
-            case ReviewModelState.EXPANDED:
-                this.reviewInterface().state(ReviewModelState.EDITING);
+            case _types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EXPANDED:
+                this.reviewInterface().state(_types__WEBPACK_IMPORTED_MODULE_2__.ReviewModelState.EDITING);
                 break;
         }
     }
@@ -7914,40 +7850,159 @@ class LineReviewInterface {
         $(popover).show();
     }
 }
-var InheritOptions;
-(function (InheritOptions) {
-    InheritOptions["NOTHING"] = "nothing";
-    InheritOptions["TAG"] = "tag";
-    InheritOptions["REVIEW"] = "review";
-})(InheritOptions || (InheritOptions = {}));
+
+
+/***/ }),
+
+/***/ "./components/review/review.ts":
+/*!*************************************!*\
+  !*** ./components/review/review.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   INDIVIDUAL_REVIEW_EDITOR_TEMPLATE: () => (/* reexport default export from named module */ _review_editor_html__WEBPACK_IMPORTED_MODULE_4__),
+/* harmony export */   INDIVIDUAL_REVIEW_SHOW_TEMPLATE: () => (/* reexport default export from named module */ _review_show_html__WEBPACK_IMPORTED_MODULE_5__),
+/* harmony export */   InheritOptions: () => (/* reexport safe */ _types__WEBPACK_IMPORTED_MODULE_7__.InheritOptions),
+/* harmony export */   LINE_REVIEW_BUTTON_TEMPLATE: () => (/* reexport default export from named module */ _line_review_html__WEBPACK_IMPORTED_MODULE_6__),
+/* harmony export */   LineReviewInterface: () => (/* reexport safe */ _line_review__WEBPACK_IMPORTED_MODULE_1__.LineReviewInterface),
+/* harmony export */   LineReviewInterfaceJson: () => (/* reexport safe */ _line_review__WEBPACK_IMPORTED_MODULE_1__.LineReviewInterfaceJson),
+/* harmony export */   ReviewModelState: () => (/* reexport safe */ _types__WEBPACK_IMPORTED_MODULE_7__.ReviewModelState),
+/* harmony export */   SUBMISSION_REVIEW_INTERFACE_TEMPLATE: () => (/* reexport default export from named module */ _submission_review_html__WEBPACK_IMPORTED_MODULE_3__),
+/* harmony export */   SingleReviewInterface: () => (/* reexport safe */ _single_review__WEBPACK_IMPORTED_MODULE_9__.SingleReviewInterface),
+/* harmony export */   SubmissionReviewInterface: () => (/* reexport safe */ _submission_review__WEBPACK_IMPORTED_MODULE_2__.SubmissionReviewInterface),
+/* harmony export */   Tag: () => (/* reexport safe */ _types__WEBPACK_IMPORTED_MODULE_7__.Tag),
+/* harmony export */   closeSubmissionStatus: () => (/* reexport safe */ _status_labels__WEBPACK_IMPORTED_MODULE_8__.closeSubmissionStatus),
+/* harmony export */   colorGradingStatus: () => (/* reexport safe */ _status_labels__WEBPACK_IMPORTED_MODULE_8__.colorGradingStatus),
+/* harmony export */   colorSubmissionStatus: () => (/* reexport safe */ _status_labels__WEBPACK_IMPORTED_MODULE_8__.colorSubmissionStatus),
+/* harmony export */   explainGradingStatus: () => (/* reexport safe */ _status_labels__WEBPACK_IMPORTED_MODULE_8__.explainGradingStatus),
+/* harmony export */   labelGradingStatus: () => (/* reexport safe */ _status_labels__WEBPACK_IMPORTED_MODULE_8__.labelGradingStatus),
+/* harmony export */   parseReviewInheritance: () => (/* reexport safe */ _types__WEBPACK_IMPORTED_MODULE_7__.parseReviewInheritance)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _line_review__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./line_review */ "./components/review/line_review.ts");
+/* harmony import */ var _submission_review__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./submission_review */ "./components/review/submission_review.ts");
+/* harmony import */ var _submission_review_html__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./submission_review.html */ "./components/review/submission_review.html");
+/* harmony import */ var _review_editor_html__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./review_editor.html */ "./components/review/review_editor.html");
+/* harmony import */ var _review_show_html__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./review_show.html */ "./components/review/review_show.html");
+/* harmony import */ var _line_review_html__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./line_review.html */ "./components/review/line_review.html");
+/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./types */ "./components/review/types.ts");
+/* harmony import */ var _status_labels__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./status_labels */ "./components/review/status_labels.ts");
+/* harmony import */ var _single_review__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./single_review */ "./components/review/single_review.ts");
+/**
+ * The Review interface is how graders attach feedback and score adjustments to
+ * a submission, and how students read them. Importing this module registers
+ * four Knockout components:
+ *
+ *  - `submission-review-interface`: the main panel for one submission
+ *    (submission_review.ts)
+ *  - `line-review`: the per-line quick button and popover (line_review.ts)
+ *  - `individual-review-editor` and `individual-review-show`: the edit form and
+ *    the read-only row for one review; template-only, bound to a
+ *    SingleReviewInterface (single_review.ts)
+ *
+ * They are mounted by `templates/reports/reviewing_interface.html`.
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("individual-review-editor", {
+    template: _review_editor_html__WEBPACK_IMPORTED_MODULE_4__
+});
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("individual-review-show", {
+    template: _review_show_html__WEBPACK_IMPORTED_MODULE_5__
+});
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("line-review", {
+    viewModel: _line_review__WEBPACK_IMPORTED_MODULE_1__.LineReviewInterface,
+    template: _line_review_html__WEBPACK_IMPORTED_MODULE_6__
+});
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("submission-review-interface", {
+    viewModel: _submission_review__WEBPACK_IMPORTED_MODULE_2__.SubmissionReviewInterface,
+    template: _submission_review_html__WEBPACK_IMPORTED_MODULE_3__
+});
+
+
+/***/ }),
+
+/***/ "./components/review/review_editor.html":
+/*!**********************************************!*\
+  !*** ./components/review/review_editor.html ***!
+  \**********************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<!-- Template for Individual Review Editing -->\r\n<div class=\"form-group draft-review\">\r\n    <div class=\"form-inline mb-2\">\r\n        <label class=\"mr-2\" for=\"iret-inherit\">Inherit from:</label>\r\n        <select class=\"custom-select form-control\" id=\"iret-inherit\"\r\n            data-bind=\"value: inherits\">\r\n            <option value=\"nothing\">Nothing</option>\r\n            <option value=\"tag\">Tag</option>\r\n            <option value=\"review\">Review</option>\r\n        </select>\r\n    </div>\r\n    <!-- ko if: inherits() == 'tag' -->\r\n    <div class=\"form-inline mb-2\">\r\n        <label class=\"mr-2\" for=\"iret-tag\">Tag:</label>\r\n        <select class=\"custom-select\" id=\"iret-tag\"\r\n            data-bind=\"value: review.tagId, options: $root.tags, valueAllowUnset: true,\r\n                       optionsText: 'name', optionsValue: 'id'\">\r\n        </select>\r\n    </div>\r\n    <!-- /ko -->\r\n    <!-- ko if: inherits() == 'review' -->\r\n    <div class=\"form-inline mb-2\">\r\n        <label class=\"mr-2\" for=\"iret-forked\">Parent:</label>\r\n        <select class=\"custom-select\" id=\"iret-forked\"\r\n            data-bind=\"value: review.forkedId, options: $root.genericReviews,\r\n                        valueAllowUnset: true,\r\n                        optionsText: 'comment', optionsValue: 'id'\">\r\n        </select>\r\n    </div>\r\n    <!-- /ko -->\r\n    <div class=\"mb-2\">\r\n        <label class=\"mr-2\" for=\"iret-comment\">Additional Comment:</label>\r\n        <textarea data-bind=\"value: review.comment\" class=\"form-control form-control-sm\" id=\"iret-comment\"></textarea>\r\n    </div>\r\n    <div class=\"form-inline mb-2\">\r\n        <label class=\"mr-2\" for=\"iret-score\">Score Modifier:</label>\r\n        <input data-bind=\"value: review.score\" class=\"form-control form-control-sm\" id=\"iret-score\" size=\"5\"/>\r\n        <span class=\"ml-2\">/100</span>\r\n        <!-- ko if: (review.score() == null || review.score() === '') && (getScore() != null && getScore() !== '') -->\r\n        <span class=\"ml-2\">(Modifier blank, will use <code data-bind=\"text: getScore\"></code>)</span>\r\n        <!-- /ko -->\r\n    </div>\r\n    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm mr-2\"\r\n            data-bind=\"click: cancel\">Cancel</button>\r\n    <div class=\"float-right\">\r\n        <button type=\"button\" class=\"btn btn-success btn-sm mr-2\"\r\n            data-bind=\"click: save\">Save</button>\r\n    </div>\r\n</div>\r\n";
+
+/***/ }),
+
+/***/ "./components/review/review_show.html":
+/*!********************************************!*\
+  !*** ./components/review/review_show.html ***!
+  \********************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<!-- ko if: $root.canSeeFeedback -->\r\n<div class=\"individual-review-show-box\">\r\n    <code data-bind=\"text: getScore\"></code>\r\n    <span data-bind=\"text: getText\"></span>\r\n    <!-- ko if: $root.canEditFeedback() -->\r\n    <button type=\"button\" class=\"btn btn-sm btn-danger float-right\"\r\n        data-bind=\"click: remove\">Remove</button>\r\n    <button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-2 float-right\"\r\n        data-bind=\"click: edit\">Edit</button>\r\n    <!-- /ko -->\r\n</div>\r\n<!-- /ko -->\r\n";
+
+/***/ }),
+
+/***/ "./components/review/single_review.ts":
+/*!********************************************!*\
+  !*** ./components/review/single_review.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SingleReviewInterface: () => (/* binding */ SingleReviewInterface)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./types */ "./components/review/types.ts");
+
+
 class SingleReviewInterface {
     constructor(params, startSaved) {
         this.review = params.review;
         this.parent = params.parent;
         if (startSaved) {
-            this.state = knockout__WEBPACK_IMPORTED_MODULE_2__.observable(ReviewModelState.SAVED);
+            this.state = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(_types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.SAVED);
         }
         else {
-            this.state = knockout__WEBPACK_IMPORTED_MODULE_2__.observable(params.state);
+            this.state = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(params.state);
         }
-        this.inherits = knockout__WEBPACK_IMPORTED_MODULE_2__.observable(params.inherits);
+        this.inherits = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(params.inherits);
         // If we change inherits type, then clear out other settings
         this.inherits.subscribe(this.clearOtherInherits.bind(this));
-        this.getScoreText = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => this.calculateScoreText());
-        this.getScore = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => this.calculateScore());
-        this.getText = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => this.calculateText());
+        this.getScoreText = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.calculateScoreText());
+        this.getScore = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.calculateScore());
+        this.getText = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.calculateText());
     }
     isLineReview() {
         return this.review.location() !== "" && this.review.location() !== null;
     }
     isEditing() {
-        return this.state() === ReviewModelState.EDITING || this.state() === ReviewModelState.DRAFT;
+        return this.state() === _types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.EDITING || this.state() === _types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.DRAFT;
     }
     clearOtherInherits(newInheritMode) {
-        if (newInheritMode === InheritOptions.REVIEW) {
+        if (newInheritMode === _types__WEBPACK_IMPORTED_MODULE_1__.InheritOptions.REVIEW) {
             this.review.tagId(null);
         }
-        else if (newInheritMode === InheritOptions.TAG) {
+        else if (newInheritMode === _types__WEBPACK_IMPORTED_MODULE_1__.InheritOptions.TAG) {
             this.review.forkedId(null);
         }
         else {
@@ -8030,32 +8085,32 @@ class SingleReviewInterface {
         });
     }
     edit() {
-        this.state(ReviewModelState.EDITING);
+        this.state(_types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.EDITING);
     }
     create() {
         this.parent.server.reviewStore.create(this.serialized()).then((savedReview) => {
             this.review.id = savedReview.id;
-            this.state(ReviewModelState.SAVED);
+            this.state(_types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.SAVED);
         });
     }
     update() {
         this.parent.server.reviewStore.update(this.serialized()).then((savedReview) => {
-            this.state(ReviewModelState.SAVED);
+            this.state(_types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.SAVED);
         });
     }
     cancel() {
         switch (this.state()) {
-            case ReviewModelState.EDITING:
+            case _types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.EDITING:
                 // Persist change to server
-                this.state(ReviewModelState.SAVED);
+                this.state(_types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.SAVED);
                 break;
-            case ReviewModelState.DRAFT:
+            case _types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.DRAFT:
                 this.parent.reviews.remove(this);
                 break;
         }
     }
     save() {
-        if (this.state() === ReviewModelState.DRAFT) {
+        if (this.state() === _types__WEBPACK_IMPORTED_MODULE_1__.ReviewModelState.DRAFT) {
             this.create();
         }
         else {
@@ -8101,17 +8156,135 @@ class SingleReviewInterface {
     }
     ;
 }
-function parseReviewInheritance(review) {
-    if (review.tagId() != null) {
-        return InheritOptions.TAG;
-    }
-    else if (review.forkedId() != null) {
-        return InheritOptions.REVIEW;
-    }
-    else {
-        return InheritOptions.NOTHING;
+
+
+/***/ }),
+
+/***/ "./components/review/status_labels.ts":
+/*!********************************************!*\
+  !*** ./components/review/status_labels.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   closeSubmissionStatus: () => (/* binding */ closeSubmissionStatus),
+/* harmony export */   colorGradingStatus: () => (/* binding */ colorGradingStatus),
+/* harmony export */   colorSubmissionStatus: () => (/* binding */ colorSubmissionStatus),
+/* harmony export */   explainGradingStatus: () => (/* binding */ explainGradingStatus),
+/* harmony export */   labelGradingStatus: () => (/* binding */ labelGradingStatus)
+/* harmony export */ });
+/* harmony import */ var _models_submission__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../models/submission */ "./models/submission.ts");
+/**
+ * The wording, colors, and explanations for the two status buttons in the
+ * submission review controls: closing/reopening a submission, and publishing
+ * or hiding its feedback.
+ */
+
+function closeSubmissionStatus(status) {
+    switch (status.toLowerCase()) {
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.COMPLETED.toLowerCase():
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.SUBMITTED.toLowerCase():
+            return "This assignment is closed or already completed, so the student cannot edit the assignment further.<br>Use this button to reopen the assignment.<br>";
+        default:
+            return "This assignment is currently OPEN for the student to edit.<br>Use this button to close the assignment.<br>";
     }
 }
+function colorSubmissionStatus(status) {
+    switch (status.toLowerCase()) {
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.COMPLETED.toLowerCase():
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.SUBMITTED.toLowerCase():
+            return "btn-info";
+        default:
+            return "btn-success";
+    }
+}
+function explainGradingStatus(status) {
+    switch (status.toLowerCase()) {
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
+            return "<strong>Submission is currently graded and the feedback is visible to them</strong> (unless the assignment is hidden in the LMS).<br>Use this button to hide and make further changes to their feedback.<br>";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
+            return "<strong>Feedback is currently hidden while you add more feedback</strong>.<br>Use this button to release the feedback to the student and update their grade in Canvas.<br>";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
+            return "Something went wrong during the grading upload. Check your internet connection, make sure you have recently opened the BlockPy dashboard, and try again.<br>";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
+            return "<strong>Feedback is currently hidden while you add more feedback</strong>. They might still be working on the assignment.<br>Use this button to release the feedback to the student and update their grade in Canvas.<br>";
+    }
+}
+function colorGradingStatus(status) {
+    switch (status.toLowerCase()) {
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
+            return "btn-info";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
+            return "btn-success";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
+            return "btn-danger";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
+            return "btn-warning";
+    }
+}
+function labelGradingStatus(status) {
+    switch (status.toLowerCase()) {
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FULLY_GRADED.toLowerCase():
+            return "Hide and revise feedback";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING_MANUAL.toLowerCase():
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.PENDING.toLowerCase():
+            return "Publish feedback to students";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.FAILED.toLowerCase():
+            return "Failed to release feedback!";
+        case _models_submission__WEBPACK_IMPORTED_MODULE_0__.GradingStatus.NOT_READY.toLowerCase():
+            return "Publish feedback to students early";
+    }
+}
+
+
+/***/ }),
+
+/***/ "./components/review/submission_review.html":
+/*!**************************************************!*\
+  !*** ./components/review/submission_review.html ***!
+  \**************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = "<!-- ko if: canSeeFeedback -->\r\n\r\n<!-- Errors -->\r\n<!-- ko if: !isLtiActive() && canEditFeedback() -->\r\n    <div class=\"alert alert-warning\" role=\"alert\">\r\n        You are not in a grading LTI session for this course.\r\n        Launch an LTI session by opening the BlockPy Dashboard from within Canvas.\r\n        This will store a cookie that lets Canvas recognize that you can grade questions!\r\n    </div>\r\n<!-- /ko -->\r\n\r\n<!-- Controls -->\r\n<!-- ko if: canEditFeedback -->\r\n<div class=\"row\">\r\n<p class=\"col-2\">\r\n    <button type=\"button\" class=\"btn btn-sm\"\r\n        data-bind=\"text: closeSubmissionLabel, click: closeSubmission,\r\n                    class: closeSubmissionColor\"></button>\r\n</p><p class=\"col-10\">\r\n    <span data-bind=\"html: closeSubmissionExplanation\"></span>\r\n</p>\r\n<p class=\"col-2\">\r\n    <button type=\"button\" class=\"btn btn-sm\"\r\n        data-bind=\"text: releaseFeedbackLabel, click: releaseFeedback,\r\n                    class: releaseFeedbackColor\"></button>\r\n</p><p class=\"col-10\">\r\n    <span data-bind=\"html: releaseFeedbackExplanation\"></span>\r\n</p>\r\n<p class=\"col-2\">\r\n    <button type=\"button\" class=\"btn btn-sm btn-info\"\r\n        data-bind=\"click: ()=>markAs('Passed human review'), enabled: canMarkCorrect,\r\n                    css: { disabled: !canMarkCorrect()} \">Mark as Fully Correct</button>\r\n</p><p class=\"col-10\">\r\n    Use this button to add a new General Feedback (<code>Passed human review</code>) that is worth all the remaining points of the assignment.<br>\r\n</p>\r\n<p class=\"col-2\">\r\n    <button type=\"button\" class=\"btn btn-sm btn-info\"\r\n        data-bind=\"click: ()=>markAs('Caught Cheating'), enabled: canMarkCheating,\r\n                    css: { disabled: !canMarkCheating()} \">Mark as Caught Cheating</button>\r\n</p><p class=\"col-10\">\r\n    Use this button to add a new General Feedback (<code>Caught Cheating</code>) that is worth a huge number of negative points, sure to take their score down to zero.<br>\r\n</p>\r\n</div>\r\n<!-- /ko -->\r\n\r\n\r\n<!-- Summary Area -->\r\n<div class=\"col-xl-6 col-md-12\">\r\n<table class=\"review-report table table-bordered table-hover table-sm\">\r\n    <thead>\r\n        <th>Grading</th>\r\n        <th>Score</th>\r\n    </thead>\r\n    <tr data-bind=\"visible: hasAutoFeedback() || submission.correct()\">\r\n        <td>Passed all autograder tests?</td>\r\n        <td data-bind=\"html: submission.correct() ? '✔' : '❌'\"></td>\r\n    </tr>\r\n    <tr data-bind=\"visible: hasAutoFeedback() || submission.score() > 0\">\r\n        <td>Autograder submission score:</td>\r\n        <td data-bind=\"text: 100*submission.score()\"></td>\r\n    </tr>\r\n    <tr data-bind=\"visible: generalReviews().length > 0\">\r\n        <th>General Feedback</th>\r\n        <th></th>\r\n    </tr>\r\n    <!-- ko foreach: generalReviews -->\r\n    <tr>\r\n        <td data-bind=\"text: $data.getText(), css: {'draft-comment': $data.state() === 'DRAFT'}\"></td>\r\n        <td data-bind=\"text: $data.getScoreText()\"></td>\r\n    </tr>\r\n    <!-- /ko -->\r\n    <tr data-bind=\"visible: lineReviews().length > 0\">\r\n        <th>Feedback on specific lines</th>\r\n        <th></th>\r\n    </tr>\r\n    <!-- ko foreach: lineReviews -->\r\n    <tr>\r\n        <!-- TODO: Markdown -->\r\n        <td data-bind=\"markdowned: {value: $data.getText(), assignment: null, submission: null}, css: {'draft-comment': $data.state() === 'DRAFT'}\"></td>\r\n        <td data-bind=\"text: $data.getScoreText()\"></td>\r\n    </tr>\r\n    <!-- /ko -->\r\n    <tr class=\"table-active total-row\">\r\n        <td>Total</td>\r\n        <td data-bind=\"text: totalScore()+'/100'\"></td>\r\n    </tr>\r\n</table>\r\n</div>\r\n\r\n<!-- General Feedback -->\r\n<div class=\"col-xl-6 col-md-12\" data-bind=\"visible: generalReviews().length > 0 || canEditFeedback()\">\r\n    <h4>General Feedback</h4>\r\n\r\n    <!-- ko if: canEditFeedback -->\r\n    <button type=\"button\" class=\"btn btn-sm btn-success\"\r\n        data-bind=\"click: addGeneralFeedback\">Add feedback</button>\r\n    <!-- /ko -->\r\n\r\n    <div class=\"list-group d-flex w-100 justify-content-between\"\r\n         data-bind=\"foreach: generalReviews\">\r\n        <!-- ko if: state() !== 'SAVED' -->\r\n        <div data-bind='component: {name: \"individual-review-editor\", params: $data}'></div>\r\n        <!-- /ko -->\r\n        <!-- ko if: state() === 'SAVED' -->\r\n        <div data-bind='component: {name: \"individual-review-show\", params: $data}'></div>\r\n        <!-- /ko -->\r\n    </div>\r\n\r\n</div>\r\n\r\n<!-- Line Feedback -->\r\n<!--<div class=\"col-xl-6 col-md-12\">\r\n    <h4>Line Feedback</h4>\r\n</div>-->\r\n\r\n<!-- /ko -->\r\n";
+
+/***/ }),
+
+/***/ "./components/review/submission_review.ts":
+/*!************************************************!*\
+  !*** ./components/review/submission_review.ts ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SubmissionReviewInterface: () => (/* binding */ SubmissionReviewInterface)
+/* harmony export */ });
+/* harmony import */ var _models_submission__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../models/submission */ "./models/submission.ts");
+/* harmony import */ var _models_review__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../models/review */ "./models/review.ts");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _types__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./types */ "./components/review/types.ts");
+/* harmony import */ var _single_review__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./single_review */ "./components/review/single_review.ts");
+/* harmony import */ var _status_labels__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./status_labels */ "./components/review/status_labels.ts");
+/**
+ * The main review panel for one submission: the status controls, the score
+ * summary, and the general feedback list. It owns the list of reviews that the
+ * per-line buttons (line_review.ts) also read and add to.
+ */
+
+
+
+
+
+
+
 const DEFAULT_MARKS = [
     "Passed human review",
     "Caught Cheating"
@@ -8144,11 +8317,11 @@ class SubmissionReviewInterface {
         // Actual review management
         this.reviews = params.reviewInterfaces;
         knockout__WEBPACK_IMPORTED_MODULE_2__.utils.arrayPushAll(this.reviews(), params.reviews.map((review) => {
-            let sri = new SingleReviewInterface({
+            let sri = new _single_review__WEBPACK_IMPORTED_MODULE_5__.SingleReviewInterface({
                 review: review,
                 parent: this,
-                state: ReviewModelState.SAVED,
-                inherits: parseReviewInheritance(review)
+                state: _types__WEBPACK_IMPORTED_MODULE_4__.ReviewModelState.SAVED,
+                inherits: (0,_types__WEBPACK_IMPORTED_MODULE_4__.parseReviewInheritance)(review)
             }, false);
             return sri;
         }));
@@ -8173,11 +8346,11 @@ class SubmissionReviewInterface {
             let totalReviewScore = this.reviews().map((reviewInterface) => reviewInterface.calculateScore() ? reviewInterface.calculateScore() : 0).reduce((score, total) => score + total, 0);
             return this.submission.score() * 100 + totalReviewScore;
         });
-        this.releaseFeedbackExplanation = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => explainGradingStatus(this.submission.gradingStatus()));
-        this.releaseFeedbackColor = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => colorGradingStatus(this.submission.gradingStatus()));
-        this.releaseFeedbackLabel = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => labelGradingStatus(this.submission.gradingStatus()));
-        this.closeSubmissionExplanation = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => closeSubmissionStatus(this.submission.submissionStatus()));
-        this.closeSubmissionColor = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => colorSubmissionStatus(this.submission.submissionStatus()));
+        this.releaseFeedbackExplanation = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => (0,_status_labels__WEBPACK_IMPORTED_MODULE_6__.explainGradingStatus)(this.submission.gradingStatus()));
+        this.releaseFeedbackColor = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => (0,_status_labels__WEBPACK_IMPORTED_MODULE_6__.colorGradingStatus)(this.submission.gradingStatus()));
+        this.releaseFeedbackLabel = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => (0,_status_labels__WEBPACK_IMPORTED_MODULE_6__.labelGradingStatus)(this.submission.gradingStatus()));
+        this.closeSubmissionExplanation = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => (0,_status_labels__WEBPACK_IMPORTED_MODULE_6__.closeSubmissionStatus)(this.submission.submissionStatus()));
+        this.closeSubmissionColor = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => (0,_status_labels__WEBPACK_IMPORTED_MODULE_6__.colorSubmissionStatus)(this.submission.submissionStatus()));
         this.closeSubmissionLabel = knockout__WEBPACK_IMPORTED_MODULE_2__.pureComputed(() => this.submission.checkSubmission(_models_submission__WEBPACK_IMPORTED_MODULE_0__.SubmissionStatus.COMPLETED) ?
             "Reopen submission" : "Close submission");
         [this.canMarkCorrect, this.canMarkCheating] = DEFAULT_MARKS.map((mark) => {
@@ -8238,11 +8411,11 @@ class SubmissionReviewInterface {
             tag_id: null,
             version: 0
         });
-        let draftReviewInterface = new SingleReviewInterface({
+        let draftReviewInterface = new _single_review__WEBPACK_IMPORTED_MODULE_5__.SingleReviewInterface({
             inherits: "nothing",
             parent: this,
             review: draftReview,
-            state: ReviewModelState.DRAFT
+            state: _types__WEBPACK_IMPORTED_MODULE_4__.ReviewModelState.DRAFT
         }, false);
         this.reviews.push(draftReviewInterface);
     }
@@ -8269,247 +8442,670 @@ class SubmissionReviewInterface {
             tag_id: null,
             version: 0
         });
-        let draftReviewInterface = new SingleReviewInterface({
+        let draftReviewInterface = new _single_review__WEBPACK_IMPORTED_MODULE_5__.SingleReviewInterface({
             inherits: "nothing",
             parent: this,
             review: draftReview,
-            state: ReviewModelState.DRAFT
+            state: _types__WEBPACK_IMPORTED_MODULE_4__.ReviewModelState.DRAFT
         }, false);
         this.reviews.push(draftReviewInterface);
         this.server.reviewStore.create(draftReviewInterface.serialized()).then((savedReview) => {
             draftReview.id = savedReview.id;
-            draftReviewInterface.state(ReviewModelState.SAVED);
+            draftReviewInterface.state(_types__WEBPACK_IMPORTED_MODULE_4__.ReviewModelState.SAVED);
         });
     }
 }
-const SUBMISSION_REVIEW_INTERFACE_TEMPLATE = `
-<!-- ko if: canSeeFeedback -->
-
-<!-- Errors -->
-<!-- ko if: !isLtiActive() && canEditFeedback() -->
-    <div class="alert alert-warning" role="alert">
-        You are not in a grading LTI session for this course.
-        Launch an LTI session by opening the BlockPy Dashboard from within Canvas.
-        This will store a cookie that lets Canvas recognize that you can grade questions!
-    </div>
-<!-- /ko -->
-
-<!-- Controls -->
-<!-- ko if: canEditFeedback -->
-<div class="row">
-<p class="col-2">
-    <button type="button" class="btn btn-sm"
-        data-bind="text: closeSubmissionLabel, click: closeSubmission,
-                    class: closeSubmissionColor"></button>
-</p><p class="col-10">
-    <span data-bind="html: closeSubmissionExplanation"></span>
-</p>
-<p class="col-2">
-    <button type="button" class="btn btn-sm"
-        data-bind="text: releaseFeedbackLabel, click: releaseFeedback,
-                    class: releaseFeedbackColor"></button>
-</p><p class="col-10">
-    <span data-bind="html: releaseFeedbackExplanation"></span>
-</p>
-<p class="col-2">
-    <button type="button" class="btn btn-sm btn-info"
-        data-bind="click: ()=>markAs('Passed human review'), enabled: canMarkCorrect,
-                    css: { disabled: !canMarkCorrect()} ">Mark as Fully Correct</button>
-</p><p class="col-10">
-    Use this button to add a new General Feedback (<code>Passed human review</code>) that is worth all the remaining points of the assignment.<br>
-</p>
-<p class="col-2">
-    <button type="button" class="btn btn-sm btn-info"
-        data-bind="click: ()=>markAs('Caught Cheating'), enabled: canMarkCheating,
-                    css: { disabled: !canMarkCheating()} ">Mark as Caught Cheating</button>
-</p><p class="col-10">
-    Use this button to add a new General Feedback (<code>Caught Cheating</code>) that is worth a huge number of negative points, sure to take their score down to zero.<br>
-</p>
-</div>
-<!-- /ko -->
 
 
-<!-- Summary Area -->
-<div class="col-xl-6 col-md-12">
-<table class="review-report table table-bordered table-hover table-sm">
-    <thead>
-        <th>Grading</th>
-        <th>Score</th>
-    </thead>
-    <tr data-bind="visible: hasAutoFeedback() || submission.correct()">
-        <td>Passed all autograder tests?</td>
-        <td data-bind="html: submission.correct() ? '✔' : '❌'"></td>
-    </tr>
-    <tr data-bind="visible: hasAutoFeedback() || submission.score() > 0">
-        <td>Autograder submission score:</td>
-        <td data-bind="text: 100*submission.score()"></td>
-    </tr>
-    <tr data-bind="visible: generalReviews().length > 0">
-        <th>General Feedback</th>
-        <th></th>
-    </tr>
-    <!-- ko foreach: generalReviews -->
-    <tr>
-        <td data-bind="text: $data.getText(), css: {'draft-comment': $data.state() === 'DRAFT'}"></td>
-        <td data-bind="text: $data.getScoreText()"></td>
-    </tr>
-    <!-- /ko -->
-    <tr data-bind="visible: lineReviews().length > 0">
-        <th>Feedback on specific lines</th>
-        <th></th>
-    </tr>
-    <!-- ko foreach: lineReviews -->
-    <tr>
-        <!-- TODO: Markdown -->
-        <td data-bind="markdowned: {value: $data.getText(), assignment: null, submission: null}, css: {'draft-comment': $data.state() === 'DRAFT'}"></td>
-        <td data-bind="text: $data.getScoreText()"></td>
-    </tr>
-    <!-- /ko -->
-    <tr class="table-active total-row">
-        <td>Total</td>
-        <td data-bind="text: totalScore()+'/100'"></td>
-    </tr>
-</table>
-</div>
+/***/ }),
 
-<!-- General Feedback -->
-<div class="col-xl-6 col-md-12" data-bind="visible: generalReviews().length > 0 || canEditFeedback()">
-    <h4>General Feedback</h4>
+/***/ "./components/review/types.ts":
+/*!************************************!*\
+  !*** ./components/review/types.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-    <!-- ko if: canEditFeedback -->
-    <button type="button" class="btn btn-sm btn-success"
-        data-bind="click: addGeneralFeedback">Add feedback</button>
-    <!-- /ko -->
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   InheritOptions: () => (/* binding */ InheritOptions),
+/* harmony export */   ReviewModelState: () => (/* binding */ ReviewModelState),
+/* harmony export */   Tag: () => (/* binding */ Tag),
+/* harmony export */   parseReviewInheritance: () => (/* binding */ parseReviewInheritance)
+/* harmony export */ });
+var ReviewModelState;
+(function (ReviewModelState) {
+    ReviewModelState["DRAFT"] = "DRAFT";
+    ReviewModelState["SAVED"] = "SAVED";
+    ReviewModelState["EDITING"] = "EDITING";
+    ReviewModelState["EXPANDED"] = "EXPANDED";
+    ReviewModelState["COLLAPSED"] = "COLLAPSED";
+})(ReviewModelState || (ReviewModelState = {}));
+class Tag {
+}
+var InheritOptions;
+(function (InheritOptions) {
+    InheritOptions["NOTHING"] = "nothing";
+    InheritOptions["TAG"] = "tag";
+    InheritOptions["REVIEW"] = "review";
+})(InheritOptions || (InheritOptions = {}));
+function parseReviewInheritance(review) {
+    if (review.tagId() != null) {
+        return InheritOptions.TAG;
+    }
+    else if (review.forkedId() != null) {
+        return InheritOptions.REVIEW;
+    }
+    else {
+        return InheritOptions.NOTHING;
+    }
+}
 
-    <div class="list-group d-flex w-100 justify-content-between"
-         data-bind="foreach: generalReviews">
-        <!-- ko if: state() !== 'SAVED' -->
-        <div data-bind='component: {name: "individual-review-editor", params: $data}'></div>
-        <!-- /ko -->
-        <!-- ko if: state() === 'SAVED' -->
-        <div data-bind='component: {name: "individual-review-show", params: $data}'></div>
-        <!-- /ko -->
-    </div>
 
-</div>
+/***/ }),
 
-<!-- Line Feedback -->
-<!--<div class="col-xl-6 col-md-12">
-    <h4>Line Feedback</h4>
-</div>-->
+/***/ "./components/score_adjustments/score_adjustments.html":
+/*!*************************************************************!*\
+  !*** ./components/score_adjustments/score_adjustments.html ***!
+  \*************************************************************/
+/***/ ((module) => {
 
-<!-- /ko -->`;
-const INDIVIDUAL_REVIEW_EDITOR_TEMPLATE = `
-<!-- Template for Individual Review Editing -->
-<div class="form-group draft-review">
-    <div class="form-inline mb-2">
-        <label class="mr-2" for="iret-inherit">Inherit from:</label>
-        <select class="custom-select form-control" id="iret-inherit"
-            data-bind="value: inherits">
-            <option value="nothing">Nothing</option>
-            <option value="tag">Tag</option>
-            <option value="review">Review</option>
-        </select>
-    </div>
-    <!-- ko if: inherits() == 'tag' -->
-    <div class="form-inline mb-2">
-        <label class="mr-2" for="iret-tag">Tag:</label>
-        <select class="custom-select" id="iret-tag"
-            data-bind="value: review.tagId, options: $root.tags, valueAllowUnset: true,
-                       optionsText: 'name', optionsValue: 'id'">
-        </select>
-    </div>
-    <!-- /ko -->
-    <!-- ko if: inherits() == 'review' -->
-    <div class="form-inline mb-2">
-        <label class="mr-2" for="iret-forked">Parent:</label>
-        <select class="custom-select" id="iret-forked"
-            data-bind="value: review.forkedId, options: $root.genericReviews,
-                        valueAllowUnset: true,
-                        optionsText: 'comment', optionsValue: 'id'">
-        </select>
-    </div>
-    <!-- /ko -->
-    <div class="mb-2">
-        <label class="mr-2" for="iret-comment">Additional Comment:</label>
-        <textarea data-bind="value: review.comment" class="form-control form-control-sm" id="iret-comment"></textarea>
-    </div>
-    <div class="form-inline mb-2">
-        <label class="mr-2" for="iret-score">Score Modifier:</label>
-        <input data-bind="value: review.score" class="form-control form-control-sm" id="iret-score" size="5"/>
-        <span class="ml-2">/100</span>
-        <!-- ko if: (review.score() == null || review.score() === '') && (getScore() != null && getScore() !== '') -->
-        <span class="ml-2">(Modifier blank, will use <code data-bind="text: getScore"></code>)</span>
-        <!-- /ko -->
-    </div>
-    <button type="button" class="btn btn-outline-secondary btn-sm mr-2"
-            data-bind="click: cancel">Cancel</button>
-    <div class="float-right">
-        <button type="button" class="btn btn-success btn-sm mr-2"
-            data-bind="click: save">Save</button>
-    </div>
-</div>`;
-knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("individual-review-editor", {
-    template: INDIVIDUAL_REVIEW_EDITOR_TEMPLATE
-});
-const INDIVIDUAL_REVIEW_SHOW_TEMPLATE = `
-<!-- ko if: $root.canSeeFeedback -->
-<div class="individual-review-show-box">
-    <code data-bind="text: getScore"></code>
-    <span data-bind="text: getText"></span>
-    <!-- ko if: $root.canEditFeedback() -->
-    <button type="button" class="btn btn-sm btn-danger float-right"
-        data-bind="click: remove">Remove</button>
-    <button type="button" class="btn btn-sm btn-outline-secondary mr-2 float-right"
-        data-bind="click: edit">Edit</button>
-    <!-- /ko -->
-</div>
-<!-- /ko -->
-`;
-knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("individual-review-show", {
-    template: INDIVIDUAL_REVIEW_SHOW_TEMPLATE
-});
-const LINE_REVIEW_BUTTON_TEMPLATE = `
-<!-- ko if: canSeeFeedback -->
-<div data-bind="template: {afterRender: fixPopoverPosition }"
-    class="line-review-box">
-<span class="line-review-quick-button fas"
-      data-bind="click: quickButtonClick,
-                 class: quickButtonIcon"></span>
-<div class="popover bs-popover-right static-popover"
-    data-bind="css: {inactive: reviewInterface() == null},
-               click: takeFocus" style="display:none">
-<!-- ko if: reviewInterface() !== null -->
-    <div class="arrow"></div>
-    <div class="popover-body popover-header-sm">
-    <!-- ko if: !reviewInterface().isEditing() -->
-        <code data-bind="text: reviewInterface().getScoreText()"></code>
-        <span data-bind="text: reviewInterface().getText()"></span>
-        <!-- ko if: canEditFeedback() -->
-        <span class="fas fa-trash float-right popover-control"
-              data-bind="click: remove"></span>
-        <span class="fas fa-edit float-right mr-2 popover-control"
-              data-bind="click: edit"></span>
-        <span class="fas fa-chevron-left float-right mr-2 popover-control"
-              data-bind="click: collapse"></span>
-        <!-- /ko -->
-    <!-- /ko -->
-    <!-- ko if: reviewInterface().isEditing() -->
-        <div data-bind='component: {name: "individual-review-editor", params: reviewInterface}'></div>
-    <!-- /ko -->
-    </div>
-<!-- /ko -->
-</div>
-</div>
-<!-- /ko -->
-`;
-knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("line-review", {
-    viewModel: LineReviewInterface,
-    template: LINE_REVIEW_BUTTON_TEMPLATE
-});
-knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("submission-review-interface", {
-    viewModel: SubmissionReviewInterface,
-    template: SUBMISSION_REVIEW_INTERFACE_TEMPLATE
+"use strict";
+module.exports = "<style>\n.score-adjustments { max-width: 75em; }\n.score-adjustments .card-header { font-weight: 600; }\n.score-adjustments .answer-table td, .score-adjustments .answer-table th { vertical-align: middle; }\n.score-adjustments .answer-table tr.picked td { background: #e8f1fb; }\n.score-adjustments .answer-label { white-space: pre-wrap; word-break: break-word; font-family: monospace; font-size: 90%; }\n.score-adjustments .student-facing { border-left: 4px solid #f0ad4e; padding-left: 0.75em; }\n.score-adjustments .delta { font-family: monospace; font-weight: 600; }\n.score-adjustments .batch-note { white-space: pre-wrap; }\n.score-adjustments tr.left-out td { color: #6c757d; }\n.score-adjustments .pick-column { width: 2.5em; }\n.score-adjustments .sort-button { padding: 0; border: 0; color: inherit; font-weight: inherit; white-space: nowrap; vertical-align: baseline; }\n.score-adjustments .sort-arrow { display: inline-block; width: 1.2em; text-align: center; font-size: 80%; }\n.score-adjustments .sort-arrow.sort-idle { color: #adb5bd; }\n</style>\n\n<div class=\"score-adjustments\">\n\n<!-- ko if: isLoading -->\n<p class=\"text-muted\">Loading…</p>\n<!-- /ko -->\n\n<!-- ko if: loadError -->\n<div class=\"alert alert-danger\" data-bind=\"text: loadError\"></div>\n<!-- /ko -->\n\n<!-- ko if: !isLoading() && !loadError() -->\n\n<!-- ================= Courses ================= -->\n<div class=\"card mb-3\">\n    <div class=\"card-header d-flex align-items-center\">\n        <span>Courses</span>\n        <!-- ko if: courses().length > 1 -->\n        <button type=\"button\" class=\"btn btn-link btn-sm ml-auto p-0\" data-bind=\"click: selectAllCourses\">Select all</button>\n        <!-- /ko -->\n    </div>\n    <div class=\"card-body py-3\">\n        <!-- ko foreach: courses -->\n        <div class=\"form-check\">\n            <input type=\"checkbox\" class=\"form-check-input\"\n                   data-bind=\"checked: checked, attr: {id: 'adjust-course-' + id}\">\n            <label class=\"form-check-label\" data-bind=\"attr: {for: 'adjust-course-' + id}\">\n                <span data-bind=\"text: name\"></span>\n                <span class=\"text-muted\" data-bind=\"text: '(' + submissions + ' submissions)'\"></span>\n            </label>\n        </div>\n        <!-- /ko -->\n        <small class=\"form-text text-muted\">\n            Every course that uses this assignment and where you can adjust scores<!-- ko if: isHidden --> (it is hidden, so that means courses you are an instructor of)<!-- /ko -->.\n            One adjustment covers all the courses you tick, and editing it later changes it in all of them.\n        </small>\n    </div>\n</div>\n\n<!-- ================= Step 1: Who ================= -->\n<div class=\"card mb-3\">\n    <div class=\"card-header\">1 · Who</div>\n    <div class=\"card-body py-3\">\n\n        <!-- ko if: isQuiz -->\n        <div class=\"form-inline mb-2\">\n            <label class=\"mr-2\" for=\"adjust-question\">Question</label>\n            <select class=\"form-control form-control-sm custom-select mr-2\" id=\"adjust-question\" style=\"max-width: 40em\"\n                    data-bind=\"options: questions, optionsText: 'label', optionsValue: 'id',\n                               optionsCaption: 'No particular question (use only the conditions)',\n                               value: questionId\"></select>\n            <!-- ko if: currentQuestion() -->\n            <span class=\"badge badge-secondary mr-2\"\n                  data-bind=\"text: currentQuestion().points + (currentQuestion().points === 1 ? ' point' : ' points')\"></span>\n            <!-- ko if: currentQuestion().parts.length -->\n            <label class=\"mr-2\" for=\"adjust-part\">Part</label>\n            <select class=\"form-control form-control-sm custom-select\" id=\"adjust-part\" style=\"max-width: 20em\"\n                    data-bind=\"options: currentQuestion().parts, optionsText: 'label', optionsValue: 'key',\n                               optionsCaption: 'The whole answer', value: part\"></select>\n            <!-- /ko -->\n            <!-- /ko -->\n        </div>\n        <!-- ko if: currentQuestion() && !currentQuestion().graded -->\n        <p class=\"text-muted small mb-2\">This question is not graded against an answer key, so credit cannot be given or removed for it. You can still choose students by their answer and give a fixed amount.</p>\n        <!-- /ko -->\n        <!-- /ko -->\n\n        <!-- ko if: hasTarget -->\n        <table class=\"table table-sm table-bordered answer-table mb-2\" style=\"max-width: 60em\">\n            <thead>\n                <tr>\n                    <th style=\"width: 2.5em\"></th>\n                    <th data-bind=\"text: isQuiz() ? 'Answer' : 'Variation'\"></th>\n                    <th class=\"text-right\" style=\"width: 8em\">Submissions</th>\n                    <!-- ko if: isQuiz -->\n                    <th style=\"width: 10em\">Credit now</th>\n                    <!-- /ko -->\n                </tr>\n            </thead>\n            <tbody data-bind=\"foreach: tallyRows\">\n                <tr data-bind=\"css: {picked: checked}\">\n                    <td class=\"text-center\">\n                        <input type=\"checkbox\" data-bind=\"checked: checked, attr: {id: 'adjust-answer-' + $index(), 'aria-label': 'Include ' + label}\">\n                    </td>\n                    <td><label class=\"mb-0 answer-label\" data-bind=\"text: label, attr: {for: 'adjust-answer-' + $index()}\"></label></td>\n                    <td class=\"text-right\" data-bind=\"text: count\"></td>\n                    <!-- ko if: $component.isQuiz -->\n                    <td><span class=\"badge\" data-bind=\"text: $component.creditLabel($data), class: $component.creditClass($data)\"></span></td>\n                    <!-- /ko -->\n                </tr>\n            </tbody>\n        </table>\n        <!-- /ko -->\n        <!-- ko if: !isQuiz() && !hasTarget() -->\n        <p class=\"text-muted small mb-2\">This problem has no seeded variations, so students are chosen with the conditions below.</p>\n        <!-- /ko -->\n        <!-- ko if: !isQuiz() && hasTarget() -->\n        <p class=\"text-muted small mb-2\">Variations are worked out from the problem as it is now. If a variation was added or removed after students started, some of them saw a different one than is shown here. Leave every box unticked to include all variations.</p>\n        <!-- /ko -->\n\n        <!-- Extra conditions -->\n        <!-- ko ifnot: searchCriteria().length -->\n        <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\" data-bind=\"click: addSearchCriterion\">\n            <span class=\"fas fa-plus\"></span> Add a condition</button>\n        <span class=\"text-muted small ml-2\">Narrow by score, times graded, status, and more.</span>\n        <!-- /ko -->\n        <!-- ko if: searchCriteria().length -->\n        <div class=\"form-inline mb-2\">\n            <span class=\"mr-2\">Only if</span>\n            <select class=\"form-control form-control-sm custom-select\" aria-label=\"How to combine the conditions\"\n                    data-bind=\"options: combinatorOptions, optionsText: 'label', optionsValue: 'key',\n                               value: searchCombinator\"></select>\n            <span class=\"ml-2\">of these conditions hold:</span>\n        </div>\n        <!-- ko foreach: searchCriteria -->\n        <div class=\"form-inline mb-1\">\n            <div class=\"form-check mr-2\" title=\"Invert this condition\">\n                <input type=\"checkbox\" class=\"form-check-input\"\n                       data-bind=\"checked: negate, attr: {id: 'adjust-negate-' + $index()}\">\n                <label class=\"form-check-label\" data-bind=\"attr: {for: 'adjust-negate-' + $index()}\">NOT</label>\n            </div>\n            <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition field\"\n                    data-bind=\"foreach: $component.searchFieldGroups, value: field\">\n                <optgroup data-bind=\"attr: {label: $data.label}, foreach: $data.fields\">\n                    <option data-bind=\"text: $data.label, attr: {value: $data.key}\"></option>\n                </optgroup>\n            </select>\n            <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition operator\"\n                    data-bind=\"options: spec().operators, optionsText: 'label', optionsValue: 'key',\n                               value: operator\"></select>\n            <!-- ko if: spec().type === 'number' -->\n            <input type=\"number\" step=\"any\" class=\"form-control form-control-sm mr-2\" aria-label=\"Condition value\"\n                   data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\n            <!-- /ko -->\n            <!-- ko if: spec().type === 'text' -->\n            <input type=\"text\" class=\"form-control form-control-sm mr-2\" style=\"min-width: 18em\" aria-label=\"Condition value\"\n                   data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\n            <!-- /ko -->\n            <!-- ko if: spec().type === 'date' -->\n            <input type=\"date\" class=\"form-control form-control-sm mr-2\" aria-label=\"Condition value\"\n                   data-bind=\"value: value\">\n            <!-- /ko -->\n            <!-- ko if: spec().type === 'select' -->\n            <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition value\"\n                    data-bind=\"options: spec().options, optionsText: 'label', optionsValue: 'value',\n                               value: value\"></select>\n            <!-- /ko -->\n            <button type=\"button\" class=\"btn btn-outline-danger btn-sm\" title=\"Remove this condition\"\n                    data-bind=\"click: (criterion) => $component.removeSearchCriterion(criterion)\">\n                <span class=\"fas fa-times\"></span></button>\n        </div>\n        <!-- ko if: spec().help -->\n        <small class=\"form-text text-muted mt-0 mb-2\" data-bind=\"text: spec().help\"></small>\n        <!-- /ko -->\n        <!-- /ko -->\n        <button type=\"button\" class=\"btn btn-outline-secondary btn-sm mt-1\" data-bind=\"click: addSearchCriterion\">\n            <span class=\"fas fa-plus\"></span> Add another condition</button>\n        <!-- /ko -->\n\n        <p class=\"mt-3 mb-0\"><strong data-bind=\"text: whoSummary\"></strong></p>\n    </div>\n</div>\n\n<!-- ================= Step 2: What ================= -->\n<div class=\"card mb-3\">\n    <div class=\"card-header\">2 · What</div>\n    <div class=\"card-body py-3\">\n        <!-- ko if: currentQuestion() && currentQuestion().graded -->\n        <div class=\"form-check\">\n            <input type=\"radio\" class=\"form-check-input\" name=\"adjust-mode\" id=\"adjust-mode-credit\" value=\"credit\" data-bind=\"checked: mode\">\n            <label class=\"form-check-label\" for=\"adjust-mode-credit\">\n                <span data-bind=\"text: part() ? 'Count this part as right' : 'Give full credit for this question'\"></span>\n                <span class=\"text-muted\">(worked out for each student: their total with it counted right, minus their total now)</span>\n            </label>\n        </div>\n        <div class=\"form-check\">\n            <input type=\"radio\" class=\"form-check-input\" name=\"adjust-mode\" id=\"adjust-mode-remove\" value=\"remove\" data-bind=\"checked: mode\">\n            <label class=\"form-check-label\" for=\"adjust-mode-remove\" data-bind=\"text: part() ? 'Count this part as wrong' : 'Remove credit for this question'\"></label>\n        </div>\n        <!-- /ko -->\n        <div class=\"form-check\">\n            <input type=\"radio\" class=\"form-check-input\" name=\"adjust-mode\" id=\"adjust-mode-fixed\" value=\"fixed\" data-bind=\"checked: mode\">\n            <label class=\"form-check-label mr-2\" for=\"adjust-mode-fixed\">The same amount for everyone:</label>\n            <!-- ko if: mode() === 'fixed' -->\n            <input type=\"number\" step=\"any\" class=\"form-control form-control-sm d-inline-block mr-2\" style=\"width: 7em\" placeholder=\"e.g. 5 or -5\"\n                   aria-label=\"Amount\" data-bind=\"value: amountValue\">\n            <!-- ko if: isQuiz -->\n            <select class=\"form-control form-control-sm custom-select d-inline-block\" style=\"width: auto\" aria-label=\"Unit\" data-bind=\"value: amountUnit\">\n                <option value=\"percent\">percent of the assignment</option>\n                <option value=\"points\">quiz points</option>\n            </select>\n            <!-- /ko -->\n            <!-- ko ifnot: isQuiz -->\n            <span>percent of the assignment</span>\n            <!-- /ko -->\n            <!-- /ko -->\n        </div>\n        <div class=\"form-check\">\n            <input type=\"radio\" class=\"form-check-input\" name=\"adjust-mode\" id=\"adjust-mode-floor\" value=\"floor\" data-bind=\"checked: mode\">\n            <label class=\"form-check-label mr-2\" for=\"adjust-mode-floor\">Raise each total to at least</label>\n            <!-- ko if: mode() === 'floor' -->\n            <input type=\"number\" min=\"0\" max=\"100\" class=\"form-control form-control-sm d-inline-block mr-2\" style=\"width: 6em\"\n                   aria-label=\"Target total\" data-bind=\"value: amountValue\"><span>%</span>\n            <!-- /ko -->\n        </div>\n        <div class=\"form-check\">\n            <input type=\"radio\" class=\"form-check-input\" name=\"adjust-mode\" id=\"adjust-mode-exact\" value=\"exact\" data-bind=\"checked: mode\">\n            <label class=\"form-check-label mr-2\" for=\"adjust-mode-exact\">Set each total to exactly</label>\n            <!-- ko if: mode() === 'exact' -->\n            <input type=\"number\" min=\"0\" max=\"100\" class=\"form-control form-control-sm d-inline-block mr-2\" style=\"width: 6em\"\n                   aria-label=\"Target total\" data-bind=\"value: amountValue\"><span>%</span>\n            <!-- /ko -->\n        </div>\n        <small class=\"form-text text-muted mb-3\">Amounts are whole percents of the assignment, and are trimmed for any student they would take past 100% or below 0%.</small>\n\n        <div class=\"student-facing mb-3\">\n            <label for=\"adjust-comment\" class=\"mb-1\"><strong>Comment students will see</strong></label>\n            <textarea class=\"form-control form-control-sm\" id=\"adjust-comment\" rows=\"2\" maxlength=\"2000\"\n                      data-bind=\"value: comment\"></textarea>\n            <small class=\"form-text text-muted\">\n                Shown to every adjusted student with the amount. Some students may not have taken this yet,\n                so keep the question and the answer out of it; they belong in the private note below.\n            </small>\n        </div>\n\n        <label for=\"adjust-note\" class=\"mb-1\">Private note <span class=\"text-muted\">(graders only)</span></label>\n        <textarea class=\"form-control form-control-sm\" id=\"adjust-note\" rows=\"2\" maxlength=\"2000\"\n                  placeholder=\"Why this adjustment was made. This is where the question and answer belong.\"\n                  data-bind=\"value: note\"></textarea>\n    </div>\n</div>\n\n<!-- ================= Step 3: Preview ================= -->\n<div class=\"card mb-3\">\n    <div class=\"card-header d-flex align-items-center\">\n        <span>3 · Preview</span>\n        <!-- ko if: hasPreview -->\n        <span class=\"text-muted font-weight-normal ml-3\" data-bind=\"text: previewSummary\"></span>\n        <!-- /ko -->\n    </div>\n    <div class=\"card-body py-3\">\n        <button type=\"button\" class=\"btn btn-primary btn-sm\"\n                data-bind=\"click: preview, enable: canPreview, text: isPreviewing() ? 'Working…' : (hasPreview() ? 'Refresh preview' : 'Preview')\"></button>\n        <span class=\"text-muted small ml-2\">Nothing is saved until you apply.</span>\n\n        <!-- ko if: previewError -->\n        <div class=\"alert alert-danger mt-3 mb-0\" data-bind=\"text: previewError\"></div>\n        <!-- /ko -->\n        <!-- ko if: applyMessage -->\n        <div class=\"alert alert-success mt-3 mb-0\" data-bind=\"text: applyMessage\"></div>\n        <!-- /ko -->\n        <!-- ko foreach: searchErrors -->\n        <div class=\"alert alert-warning mt-3 mb-0\" data-bind=\"text: $data\"></div>\n        <!-- /ko -->\n\n        <!-- ko if: hasPreview -->\n        <!-- ko ifnot: previewRows().length -->\n        <p class=\"text-muted mt-3 mb-0\">No submissions match.</p>\n        <!-- /ko -->\n        <!-- ko if: previewRows().length -->\n        <div class=\"d-flex align-items-center flex-wrap mt-3\">\n            <div class=\"btn-group btn-group-sm mr-3\" role=\"group\" aria-label=\"Choose which students to include\">\n                <button type=\"button\" class=\"btn btn-outline-secondary\"\n                        data-bind=\"click: selectAllPreview, enable: selectablePreviewRows().length && !allPreviewChecked()\">Select all</button>\n                <button type=\"button\" class=\"btn btn-outline-secondary\"\n                        data-bind=\"click: selectNonePreview, enable: checkedPreviewRows().length\">Select none</button>\n                <button type=\"button\" class=\"btn btn-outline-secondary\"\n                        title=\"Tick only the students the preview suggested\"\n                        data-bind=\"click: resetPreviewSelection, enable: !previewIsSuggested()\">Reset to suggested</button>\n            </div>\n            <span class=\"text-muted small\"\n                  data-bind=\"text: checkedPreviewRows().length + ' of ' + selectablePreviewRows().length + ' selected'\"></span>\n        </div>\n        <div class=\"table-responsive mt-2\">\n        <table class=\"table table-sm table-hover\">\n            <thead>\n                <tr>\n                    <th class=\"text-center pick-column\">\n                        <input type=\"checkbox\" aria-label=\"Select all students\" title=\"Select all\"\n                               data-bind=\"checked: allPreviewChecked, enable: selectablePreviewRows().length\">\n                    </th>\n                    <!-- ko foreach: previewColumns -->\n                    <th data-bind=\"css: {'text-right': numeric}, attr: {'aria-sort': $component.previewSortState(key)}\">\n                        <button type=\"button\" class=\"btn btn-link sort-button\"\n                                data-bind=\"click: () => $component.sortPreviewBy(key), attr: {title: 'Sort by ' + label.toLowerCase()}\"><span data-bind=\"text: label\"></span><span class=\"sort-arrow\" aria-hidden=\"true\"\n                                      data-bind=\"text: $component.previewSortArrow(key), css: {'sort-idle': $component.previewSortState(key) === 'none'}\"></span></button>\n                    </th>\n                    <!-- /ko -->\n                </tr>\n            </thead>\n            <tbody data-bind=\"foreach: sortedPreviewRows\">\n                <tr data-bind=\"css: {'left-out': !checked()}\">\n                    <td class=\"text-center\"><input type=\"checkbox\" data-bind=\"checked: checked, enable: delta !== 0, attr: {'aria-label': 'Include ' + student}\"></td>\n                    <td><span data-bind=\"text: student, attr: {title: email}\"></span></td>\n                    <!-- ko if: $component.courses().length > 1 --><td data-bind=\"text: course\"></td><!-- /ko -->\n                    <td class=\"text-right\" data-bind=\"text: $component.percent(now)\"></td>\n                    <td class=\"text-right\"><span class=\"delta\" data-bind=\"text: $component.signed(delta), class: $component.deltaClass(delta)\"></span></td>\n                    <td class=\"text-right\" data-bind=\"text: $component.percent(checked() ? after : now)\"></td>\n                    <td class=\"small\" data-bind=\"text: notes.join(' · ')\"></td>\n                </tr>\n            </tbody>\n        </table>\n        </div>\n        <button type=\"button\" class=\"btn btn-success\"\n                data-bind=\"click: apply, enable: canApply,\n                           text: isApplying() ? 'Saving…' : 'Apply to ' + checkedPreviewRows().length + (checkedPreviewRows().length === 1 ? ' student' : ' students')\"></button>\n        <span class=\"text-muted small ml-2\">Adds one review to each ticked submission. Grades are sent to the LMS in a separate step.</span>\n        <!-- /ko -->\n        <!-- /ko -->\n    </div>\n</div>\n\n<!-- ================= Step 4: Existing adjustments ================= -->\n<div class=\"card mb-3\">\n    <div class=\"card-header\">4 · Adjustments on this assignment</div>\n    <div class=\"card-body py-3\">\n        <!-- ko if: batchMessage -->\n        <div class=\"alert alert-success\" data-bind=\"text: batchMessage\"></div>\n        <!-- /ko -->\n        <!-- ko if: batchError -->\n        <div class=\"alert alert-danger\" data-bind=\"text: batchError\"></div>\n        <!-- /ko -->\n        <!-- ko if: sendFailures().length -->\n        <div class=\"alert alert-warning\">\n            <strong>These grades were not sent:</strong>\n            <ul class=\"mb-0\" data-bind=\"foreach: sendFailures\"><li data-bind=\"text: $data\"></li></ul>\n        </div>\n        <!-- /ko -->\n\n        <!-- ko ifnot: batches().length -->\n        <p class=\"text-muted mb-0\">No adjustments have been made on this assignment yet.</p>\n        <!-- /ko -->\n\n        <!-- ko if: batches().length -->\n        <div class=\"form-check mb-3\">\n            <input type=\"checkbox\" class=\"form-check-input\" id=\"adjust-publish\" data-bind=\"checked: publishOnSend\">\n            <label class=\"form-check-label\" for=\"adjust-publish\">\n                When sending grades, also publish feedback\n                <span class=\"text-muted\">(marks each submission Fully Graded, which is what lets the student see the comment in BlockPy; leave off to change only the LMS grade)</span>\n            </label>\n        </div>\n\n        <!-- ko foreach: batches -->\n        <div class=\"border rounded p-3 mb-3\">\n            <div class=\"d-flex flex-wrap align-items-start\">\n                <div class=\"mr-3\" style=\"flex: 1 1 24em; min-width: 0\">\n                    <div><strong data-bind=\"text: comment\"></strong></div>\n                    <div class=\"small text-muted\">\n                        <span data-bind=\"text: rule\"></span>\n                        &middot; <span data-bind=\"text: students + (students === 1 ? ' student' : ' students')\"></span>\n                        &middot; <span class=\"delta\" data-bind=\"text: $component.batchAmount($data)\"></span>\n                        &middot; <span data-bind=\"text: $component.batchCourses($data)\"></span>\n                    </div>\n                    <div class=\"small text-muted\">\n                        <span data-bind=\"text: author\"></span>, <span data-bind=\"text: $component.batchDate($data)\"></span>\n                    </div>\n                    <!-- ko if: note -->\n                    <div class=\"small batch-note mt-1\"><span class=\"text-muted\">Private note:</span> <span data-bind=\"text: note\"></span></div>\n                    <!-- /ko -->\n                    <div class=\"mt-1\">\n                        <!-- ko if: pending --><span class=\"badge badge-warning\" data-bind=\"text: pending + ' not sent to the LMS'\"></span><!-- /ko -->\n                        <!-- ko if: sent --><span class=\"badge badge-success\" data-bind=\"text: sent + ' sent'\"></span><!-- /ko -->\n                        <!-- ko if: unlinked --><span class=\"badge badge-light\" title=\"These submissions were not opened from the LMS, so there is no gradebook entry to update\" data-bind=\"text: unlinked + ' with no LMS link'\"></span><!-- /ko -->\n                        <!-- ko if: customized --><span class=\"badge badge-info\" title=\"Reviews a grader changed by hand; batch edits leave them alone unless you ask\" data-bind=\"text: customized + ' customized'\"></span><!-- /ko -->\n                        <!-- ko if: assignment_changed --><span class=\"badge badge-danger\" title=\"If the answer key now gives this credit, these students have it twice. Remove this adjustment if so.\">Assignment changed since</span><!-- /ko -->\n                    </div>\n                </div>\n                <div class=\"text-nowrap\">\n                    <!-- ko if: pending && editable -->\n                    <button type=\"button\" class=\"btn btn-primary btn-sm\"\n                            data-bind=\"click: (batch) => $component.sendGrades(batch), enable: $component.sendingBatchId() == null,\n                                       text: $component.sendingBatchId() === id ? $component.sendProgress() : 'Send ' + pending + (pending === 1 ? ' grade' : ' grades')\"></button>\n                    <!-- /ko -->\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\n                            data-bind=\"click: (batch) => $component.toggleStudents(batch), enable: editable,\n                                       text: $component.openBatchId() === id ? 'Hide students' : 'Students'\"></button>\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\n                            data-bind=\"click: (batch) => $component.startEdit(batch), enable: editable\">Edit</button>\n                    <button type=\"button\" class=\"btn btn-outline-danger btn-sm\"\n                            data-bind=\"click: (batch) => $component.askRemove(batch), enable: editable\">Remove</button>\n                </div>\n            </div>\n            <!-- ko ifnot: editable -->\n            <div class=\"small text-muted mt-2\">This adjustment also covers a course you cannot adjust scores in, so only someone with access to all of its courses can change it.</div>\n            <!-- /ko -->\n\n            <!-- Remove confirmation -->\n            <!-- ko if: $component.removingBatchId() === id -->\n            <div class=\"alert alert-danger mt-3 mb-0\">\n                Remove this adjustment from all <span data-bind=\"text: students\"></span> submissions<!-- ko if: customized -->, including the <span data-bind=\"text: customized\"></span> that were edited by hand<!-- /ko -->? Their scores go back to what they were without it.\n                <div class=\"mt-2\">\n                    <button type=\"button\" class=\"btn btn-danger btn-sm\" data-bind=\"click: (batch) => $component.remove(batch)\">Remove it</button>\n                    <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\" data-bind=\"click: () => $component.cancelRemove()\">Keep it</button>\n                </div>\n            </div>\n            <!-- /ko -->\n\n            <!-- Edit form -->\n            <!-- ko if: $component.editingBatchId() === id -->\n            <div class=\"mt-3 pt-3 border-top\">\n                <div class=\"student-facing mb-2\">\n                    <label class=\"mb-1\" data-bind=\"attr: {for: 'adjust-edit-comment-' + id}\"><strong>Comment students will see</strong></label>\n                    <textarea class=\"form-control form-control-sm\" rows=\"2\" maxlength=\"2000\"\n                              data-bind=\"value: $component.editComment, attr: {id: 'adjust-edit-comment-' + id}\"></textarea>\n                    <small class=\"form-text text-muted\">Changes for every student in every course of this adjustment.</small>\n                </div>\n                <label class=\"mb-1\" data-bind=\"attr: {for: 'adjust-edit-note-' + id}\">Private note <span class=\"text-muted\">(graders only)</span></label>\n                <textarea class=\"form-control form-control-sm mb-2\" rows=\"2\" maxlength=\"2000\"\n                          data-bind=\"value: $component.editNote, attr: {id: 'adjust-edit-note-' + id}\"></textarea>\n                <div class=\"form-inline mb-2\">\n                    <label class=\"mr-2\" data-bind=\"attr: {for: 'adjust-edit-amount-' + id}\">Change the amount to</label>\n                    <input type=\"number\" step=\"1\" class=\"form-control form-control-sm mr-2\" style=\"width: 7em\" placeholder=\"unchanged\"\n                           data-bind=\"value: $component.editAmount, attr: {id: 'adjust-edit-amount-' + id}\">\n                    <span class=\"text-muted\">percent for everyone (leave blank to keep the current amounts)</span>\n                </div>\n                <!-- ko if: customized -->\n                <div class=\"form-check mb-2\">\n                    <input type=\"checkbox\" class=\"form-check-input\" data-bind=\"checked: $component.editIncludeCustomized, attr: {id: 'adjust-edit-custom-' + id}\">\n                    <label class=\"form-check-label\" data-bind=\"attr: {for: 'adjust-edit-custom-' + id}\">Also overwrite the <span data-bind=\"text: customized\"></span> hand-edited review(s) when changing the amount</label>\n                </div>\n                <!-- /ko -->\n                <!-- ko if: $component.editError -->\n                <div class=\"alert alert-danger\" data-bind=\"text: $component.editError\"></div>\n                <!-- /ko -->\n                <button type=\"button\" class=\"btn btn-success btn-sm\" data-bind=\"click: (batch) => $component.saveEdit(batch)\">Save</button>\n                <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\" data-bind=\"click: () => $component.cancelEdit()\">Cancel</button>\n            </div>\n            <!-- /ko -->\n\n            <!-- Students -->\n            <!-- ko if: $component.openBatchId() === id -->\n            <div class=\"table-responsive mt-3\">\n            <table class=\"table table-sm mb-0\">\n                <thead><tr><th>Student</th><th>Course</th><th class=\"text-right\">Amount</th><th class=\"text-right\">Total now</th><th>LMS</th><th></th></tr></thead>\n                <tbody data-bind=\"foreach: $component.openBatchStudents\">\n                    <tr>\n                        <td data-bind=\"text: student\"></td>\n                        <td data-bind=\"text: course\"></td>\n                        <td class=\"text-right\"><span class=\"delta\" data-bind=\"text: $component.signed(amount), class: $component.deltaClass(amount)\"></span></td>\n                        <td class=\"text-right\" data-bind=\"text: $component.percent(total)\"></td>\n                        <td><span class=\"badge\" data-bind=\"text: $component.lmsLabel(lms), class: $component.lmsClass(lms)\"></span></td>\n                        <td class=\"small\">\n                            <!-- ko if: customized --><span class=\"badge badge-info\">customized</span> <span data-bind=\"text: own_comment\"></span><!-- /ko -->\n                            <a target=\"_blank\" data-bind=\"attr: {href: $component.viewSubmissionUrl($data)}\">Open</a>\n                        </td>\n                    </tr>\n                </tbody>\n            </table>\n            </div>\n            <!-- /ko -->\n        </div>\n        <!-- /ko -->\n        <!-- /ko -->\n    </div>\n</div>\n\n<!-- /ko -->\n</div>\n";
+
+/***/ }),
+
+/***/ "./components/score_adjustments/score_adjustments.ts":
+/*!***********************************************************!*\
+  !*** ./components/score_adjustments/score_adjustments.ts ***!
+  \***********************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ScoreAdjustments: () => (/* binding */ ScoreAdjustments),
+/* harmony export */   percent: () => (/* binding */ percent),
+/* harmony export */   signed: () => (/* binding */ signed)
+/* harmony export */ });
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! knockout */ "knockout");
+/* harmony import */ var knockout__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(knockout__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _services_ajax__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/ajax */ "./services/ajax.ts");
+/* harmony import */ var _utilities_dates__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utilities/dates */ "./utilities/dates.ts");
+/* harmony import */ var _search_criteria__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../search_criteria */ "./components/search_criteria.ts");
+/* harmony import */ var _score_adjustments_html__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./score_adjustments.html */ "./components/score_adjustments/score_adjustments.html");
+/**
+ * Score Adjustments is the bulk review editor: it corrects many students'
+ * scores on one assignment at once, across every course the grader teaches
+ * that uses the assignment.
+ *
+ * The page reads top to bottom as four steps:
+ *
+ *  1. Who: for a quiz, pick a question and tick the answers to include; for a
+ *     coding problem with seeded pools, tick the variations. Extra conditions
+ *     (score, times graded, ...) reuse the criteria rows from View Submissions.
+ *  2. What: give or remove credit for the question (worked out per student on
+ *     the server), or a fixed amount, or a target total; and the comment that
+ *     students will see.
+ *  3. Preview: who matches and what would happen to each, with a checkbox per
+ *     student. Nothing is written until Apply.
+ *  4. Adjustments already made on this assignment, each of which can be sent
+ *     to the LMS, edited, or removed.
+ *
+ * A batch is one parent review that every student's review inherits from, so
+ * the comment is edited in one place for all courses. Everything is decided on
+ * the server (`controllers/endpoints/score_adjustments.py`); this component
+ * only describes the rule and shows the result. The comment is student-facing
+ * and, like any review comment, is trusted to the grader who writes it; the
+ * question and answer behind an adjustment belong in the private note.
+ */
+
+
+
+
+
+const PREVIEW_COLUMNS = [
+    { key: "student", label: "Student", numeric: false, value: (row) => row.student },
+    { key: "course", label: "Course", numeric: false, value: (row) => row.course },
+    { key: "now", label: "Now", numeric: true, value: (row) => row.now },
+    { key: "delta", label: "Adjustment", numeric: true, value: (row) => row.delta },
+    // Matches what the cell shows: a row that is left out keeps its current score
+    { key: "after", label: "After", numeric: true, value: (row) => row.checked.peek() ? row.after : row.now },
+    { key: "notes", label: "Notes", numeric: false, value: (row) => row.notes.join(" · ") }
+];
+const CREDIT_LABELS = {
+    full: "Full credit", none: "No credit", partial: "Partial credit", mixed: "Mixed",
+    ungraded: "Not graded", "not counted": "Not counted"
+};
+const CREDIT_CLASSES = {
+    full: "badge-success", none: "badge-danger", partial: "badge-warning", mixed: "badge-warning",
+    ungraded: "badge-light", "not counted": "badge-light"
+};
+/** "+8", "-5", "0": an amount the way a review shows it. */
+function signed(amount) {
+    const rounded = Math.round(amount * 10) / 10;
+    return (rounded > 0 ? "+" : "") + rounded;
+}
+function percent(amount) {
+    return (Math.round(amount * 10) / 10) + "%";
+}
+class ScoreAdjustments {
+    constructor(params) {
+        this.searchFieldGroups = _search_criteria__WEBPACK_IMPORTED_MODULE_3__.ADJUSTMENT_FIELD_GROUPS;
+        this.searchFields = (0,_search_criteria__WEBPACK_IMPORTED_MODULE_3__.flattenFieldGroups)(_search_criteria__WEBPACK_IMPORTED_MODULE_3__.ADJUSTMENT_FIELD_GROUPS);
+        this.combinatorOptions = _search_criteria__WEBPACK_IMPORTED_MODULE_3__.SEARCH_COMBINATORS;
+        this.tallyRequest = 0;
+        this.config = params.config;
+        this.isLoading = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(true);
+        this.loadError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.kind = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("quiz");
+        this.isHidden = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.isSurvey = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.courses = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.questions = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.questionId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.part = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.tallyRows = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.tallySubmissions = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(0);
+        this.isTallying = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.searchCombinator = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("and");
+        this.searchCriteria = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.mode = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("fixed");
+        this.amountValue = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.amountUnit = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("percent");
+        this.comment = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(this.config.defaultComment);
+        this.note = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.previewRows = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.hasPreview = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.isPreviewing = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.isApplying = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.previewError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.searchErrors = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.ruleDescription = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.applyMessage = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.previewSortKey = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.previewSortDescending = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.batches = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.batchMessage = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.batchError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.openBatchId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.openBatchStudents = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.editingBatchId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.editComment = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.editNote = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.editAmount = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.editIncludeCustomized = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.editError = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.removingBatchId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.publishOnSend = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+        this.sendingBatchId = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(null);
+        this.sendProgress = knockout__WEBPACK_IMPORTED_MODULE_0__.observable("");
+        this.sendFailures = knockout__WEBPACK_IMPORTED_MODULE_0__.observableArray([]);
+        this.selectedCourseIds = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.readSelectedCourseIds());
+        this.isQuiz = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.kind() === "quiz");
+        this.currentQuestion = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.findQuestion(this.questionId()));
+        // Whether students are being chosen by an answer table or variation list at all
+        this.hasTarget = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.tallyRows().length > 0);
+        this.selectedKeys = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.tallyRows().filter((row) => row.checked()).map((row) => row.key));
+        this.selectedCount = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.tallyRows().filter((row) => row.checked()).reduce((total, row) => total + row.count, 0));
+        this.checkedPreviewRows = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.previewRows().filter((row) => row.checked()));
+        // A row that would not change has nothing to apply, so it cannot be ticked
+        this.selectablePreviewRows = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.previewRows().filter((row) => row.delta !== 0));
+        this.allPreviewChecked = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed({
+            read: () => {
+                const selectable = this.selectablePreviewRows();
+                return selectable.length > 0 && selectable.every((row) => row.checked());
+            },
+            write: (checked) => this.setAllPreview(checked)
+        });
+        this.previewIsSuggested = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.previewRows().every((row) => row.checked() === row.include));
+        this.previewColumns = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => PREVIEW_COLUMNS.filter((column) => column.key !== "course" || this.courses().length > 1));
+        this.sortedPreviewRows = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const rows = this.previewRows();
+            const column = PREVIEW_COLUMNS.filter((candidate) => candidate.key === this.previewSortKey())[0];
+            if (column == null) {
+                return rows;
+            }
+            const direction = this.previewSortDescending() ? -1 : 1;
+            // The sort is stable, so ties stay in the server's course-then-student order
+            return rows.slice().sort((left, right) => {
+                const a = column.value(left);
+                const b = column.value(right);
+                const order = typeof a === "number" && typeof b === "number"
+                    ? a - b
+                    : String(a).localeCompare(String(b), undefined, { sensitivity: "base", numeric: true });
+                return direction * order;
+            });
+        });
+        this.canApply = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.checkedPreviewRows().length > 0 && !this.isApplying());
+        this.needsValue = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => this.mode() !== "credit" && this.mode() !== "remove");
+        this.whoSummary = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const courseCount = this.selectedCourseIds().length;
+            const where = courseCount === 1 ? "1 course" : `${courseCount} courses`;
+            if (this.isQuiz() && this.currentQuestion() != null) {
+                return this.selectedKeys().length
+                    ? `${this.selectedCount()} of ${this.tallySubmissions()} submissions in ${where} gave a selected answer`
+                    : `Tick the answers to include (${this.tallySubmissions()} submissions in ${where})`;
+            }
+            if (!this.isQuiz() && this.hasTarget() && this.selectedKeys().length) {
+                return `${this.selectedCount()} of ${this.tallySubmissions()} submissions in ${where} got a selected variation`;
+            }
+            return `All ${this.tallySubmissions()} submissions in ${where}, narrowed by the conditions below`;
+        });
+        this.canPreview = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            if (!this.selectedCourseIds().length || this.isPreviewing() || this.isApplying()) {
+                return false;
+            }
+            if (this.isQuiz() && this.currentQuestion() != null && !this.selectedKeys().length) {
+                return false;
+            }
+            return !this.needsValue() || String(this.amountValue()).trim() !== "";
+        });
+        this.previewSummary = knockout__WEBPACK_IMPORTED_MODULE_0__.pureComputed(() => {
+            const rows = this.previewRows();
+            const changing = this.checkedPreviewRows().length;
+            return `${rows.length} match${rows.length === 1 ? "es" : ""} · ${changing} will change · ` +
+                `${rows.length - changing} left out`;
+        });
+        // Changing who or what makes an old preview wrong, so drop it
+        const invalidate = () => this.clearPreview();
+        this.mode.subscribe(invalidate);
+        this.amountValue.subscribe(invalidate);
+        this.amountUnit.subscribe(invalidate);
+        this.searchCombinator.subscribe(invalidate);
+        this.searchCriteria.subscribe(invalidate);
+        this.questionId.subscribe((questionId) => {
+            // A manual subscription runs before the computeds that depend on the same
+            // observable are refreshed, so look the question up from the new value
+            const question = this.findQuestion(questionId);
+            const isQuestionMode = this.mode() === "credit" || this.mode() === "remove";
+            this.part("");
+            // Credit modes only make sense with a graded question to credit
+            if ((question == null || !question.graded) && isQuestionMode) {
+                this.mode("fixed");
+            }
+            else if (question != null && question.graded
+                && this.mode() === "fixed" && String(this.amountValue()).trim() === "") {
+                this.mode("credit");
+            }
+            this.loadTally();
+        });
+        this.part.subscribe(() => this.loadTally());
+        this.load();
+    }
+    post(path, payload) {
+        return (0,_services_ajax__WEBPACK_IMPORTED_MODULE_1__.ajax_post)(`grading/adjustments/${path}`, { payload: JSON.stringify(payload) });
+    }
+    /* Plain reads of the observables, safe to call from inside a subscription
+     * (where a computed over the same observable may not have been refreshed yet). */
+    readSelectedCourseIds() {
+        return this.courses().filter((course) => course.checked()).map((course) => course.id);
+    }
+    findQuestion(questionId) {
+        return this.questions().find((question) => question.id === questionId) || null;
+    }
+    scope() {
+        return { assignment_id: this.config.assignmentId, course_ids: this.readSelectedCourseIds() };
+    }
+    /*
+     * Loading
+     */
+    load() {
+        this.isLoading(true);
+        this.post("load", { assignment_id: this.config.assignmentId }).then((data) => {
+            this.isLoading(false);
+            if (!data.success) {
+                this.loadError(data.message || "This assignment could not be loaded.");
+                return;
+            }
+            this.kind(data.kind);
+            this.isHidden(data.assignment.hidden);
+            this.isSurvey(data.is_survey);
+            this.courses(data.courses.map((course) => {
+                // Start with the course the page was opened from; the others are one click away
+                const checked = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(course.id === this.config.courseId || data.courses.length === 1);
+                checked.subscribe(() => { this.loadTally(); });
+                return { id: course.id, name: course.name, submissions: course.submissions, checked };
+            }));
+            if (!this.readSelectedCourseIds().length && this.courses().length) {
+                this.courses()[0].checked(true);
+            }
+            this.questions(data.questions);
+            this.batches(data.batches);
+            const wanted = this.config.questionId;
+            if (wanted && data.questions.some((question) => question.id === wanted)) {
+                // The subscription loads the tally for it
+                this.questionId(wanted);
+            }
+            else {
+                this.loadTally();
+            }
+        }).fail(() => {
+            this.isLoading(false);
+            this.loadError("This assignment could not be loaded. Check your connection and reload the page.");
+        });
+    }
+    selectAllCourses() {
+        this.courses().forEach((course) => course.checked(true));
+    }
+    /** Refresh the answer table (or the variation list) for the current question and courses. */
+    loadTally() {
+        this.clearPreview();
+        if (!this.readSelectedCourseIds().length) {
+            this.tallyRows([]);
+            this.tallySubmissions(0);
+            return;
+        }
+        const request = ++this.tallyRequest;
+        this.isTallying(true);
+        this.post("tally", Object.assign(Object.assign({}, this.scope()), { question_id: this.questionId(), part: this.part() }))
+            .then((data) => {
+            if (request !== this.tallyRequest) {
+                return; // A newer request is on its way
+            }
+            this.isTallying(false);
+            if (!data.success) {
+                this.tallyRows([]);
+                return;
+            }
+            this.tallySubmissions(data.submissions);
+            this.tallyRows(data.rows.map((row) => {
+                const checked = knockout__WEBPACK_IMPORTED_MODULE_0__.observable(false);
+                checked.subscribe(() => this.clearPreview());
+                return Object.assign(Object.assign({}, row), { checked });
+            }));
+        }).fail(() => {
+            if (request === this.tallyRequest) {
+                this.isTallying(false);
+            }
+        });
+    }
+    creditLabel(row) {
+        return CREDIT_LABELS[row.credit] || "";
+    }
+    creditClass(row) {
+        return CREDIT_CLASSES[row.credit] || "badge-light";
+    }
+    /*
+     * Conditions
+     */
+    addSearchCriterion() {
+        const criterion = new _search_criteria__WEBPACK_IMPORTED_MODULE_3__.SearchCriterion(this.searchFields);
+        const invalidate = () => this.clearPreview();
+        criterion.field.subscribe(invalidate);
+        criterion.operator.subscribe(invalidate);
+        criterion.value.subscribe(invalidate);
+        criterion.negate.subscribe(invalidate);
+        this.searchCriteria.push(criterion);
+    }
+    removeSearchCriterion(criterion) {
+        this.searchCriteria.remove(criterion);
+    }
+    /*
+     * The rule and amount as the server expects them
+     */
+    rule() {
+        const rule = {};
+        if (this.isQuiz() && this.currentQuestion() != null) {
+            rule.question_id = this.questionId();
+            rule.part = this.part() || null;
+            rule.answers = this.selectedKeys();
+        }
+        else if (!this.isQuiz()) {
+            rule.variations = this.selectedKeys();
+        }
+        if (this.searchCriteria().length) {
+            rule.search = {
+                combinator: this.searchCombinator(),
+                criteria: this.searchCriteria().map((criterion) => criterion.toJson())
+            };
+        }
+        return rule;
+    }
+    amount() {
+        return { mode: this.mode(), value: this.amountValue(), unit: this.amountUnit() };
+    }
+    request() {
+        return Object.assign(Object.assign({}, this.scope()), { rule: this.rule(), amount: this.amount(), comment: this.comment() });
+    }
+    /*
+     * Preview and apply
+     */
+    clearPreview() {
+        if (this.hasPreview()) {
+            this.hasPreview(false);
+            this.previewRows([]);
+        }
+        this.previewError("");
+    }
+    preview() {
+        this.isPreviewing(true);
+        this.previewError("");
+        this.applyMessage("");
+        this.post("preview", this.request()).then((data) => {
+            this.isPreviewing(false);
+            if (!data.success) {
+                this.previewError(data.message || "The preview failed.");
+                return;
+            }
+            this.searchErrors(data.search_errors || []);
+            this.ruleDescription(data.rule_description || "");
+            this.previewRows(data.rows.map((row) => (Object.assign(Object.assign({}, row), { checked: knockout__WEBPACK_IMPORTED_MODULE_0__.observable(row.include) }))));
+            this.hasPreview(true);
+        }).fail(() => {
+            this.isPreviewing(false);
+            this.previewError("The preview failed. Check your connection and try again.");
+        });
+    }
+    setAllPreview(checked) {
+        this.selectablePreviewRows().forEach((row) => row.checked(checked));
+    }
+    selectAllPreview() {
+        this.setAllPreview(true);
+    }
+    selectNonePreview() {
+        this.setAllPreview(false);
+    }
+    /** Back to the rows the preview ticked by itself. */
+    resetPreviewSelection() {
+        this.previewRows().forEach((row) => row.checked(row.include));
+    }
+    /** First click sorts ascending, a second click on the same column flips it. */
+    sortPreviewBy(key) {
+        if (this.previewSortKey() === key) {
+            this.previewSortDescending(!this.previewSortDescending());
+        }
+        else {
+            this.previewSortDescending(false);
+            this.previewSortKey(key);
+        }
+    }
+    previewSortState(key) {
+        if (this.previewSortKey() !== key) {
+            return "none";
+        }
+        return this.previewSortDescending() ? "descending" : "ascending";
+    }
+    previewSortArrow(key) {
+        const state = this.previewSortState(key);
+        return state === "none" ? "↕" : state === "ascending" ? "▲" : "▼";
+    }
+    apply() {
+        const chosen = this.checkedPreviewRows().map((row) => row.submission_id);
+        if (!chosen.length) {
+            return;
+        }
+        this.isApplying(true);
+        this.previewError("");
+        this.post("apply", Object.assign(Object.assign({}, this.request()), { note: this.note(), submission_ids: chosen })).then((data) => {
+            this.isApplying(false);
+            if (!data.success) {
+                this.previewError(data.message || "The adjustment could not be saved.");
+                return;
+            }
+            this.batches(data.batches);
+            this.clearPreview();
+            this.note("");
+            this.tallyRows().forEach((row) => row.checked(false));
+            this.applyMessage(`Added a review to ${data.applied} submission${data.applied === 1 ? "" : "s"}. ` +
+                "Their grades have not been sent to the LMS yet: use Send grades below.");
+        }).fail(() => {
+            this.isApplying(false);
+            this.previewError("The adjustment could not be saved. Check your connection and try again.");
+        });
+    }
+    signed(amount) {
+        return signed(amount);
+    }
+    percent(amount) {
+        return percent(amount);
+    }
+    deltaClass(amount) {
+        return amount > 0 ? "text-success" : amount < 0 ? "text-danger" : "text-muted";
+    }
+    /*
+     * Existing batches
+     */
+    batchAmount(batch) {
+        if (batch.amount_low == null) {
+            return "";
+        }
+        if (batch.amount_low === batch.amount_high) {
+            return signed(batch.amount_low);
+        }
+        return `${signed(batch.amount_low)} to ${signed(batch.amount_high)}`;
+    }
+    batchCourses(batch) {
+        return batch.courses.map((course) => course.name || "another course").join(", ");
+    }
+    batchDate(batch) {
+        return batch.date_created ? (0,_utilities_dates__WEBPACK_IMPORTED_MODULE_2__.prettyPrintDateTime)(batch.date_created) : "";
+    }
+    toggleStudents(batch) {
+        if (this.openBatchId() === batch.id) {
+            this.openBatchId(null);
+            return;
+        }
+        this.openBatchStudents([]);
+        this.openBatchId(batch.id);
+        this.post("batch", { batch_id: batch.id }).then((data) => {
+            if (data.success && this.openBatchId() === batch.id) {
+                this.openBatchStudents(data.rows);
+            }
+            else if (!data.success) {
+                this.batchError(data.message || "The students could not be loaded.");
+                this.openBatchId(null);
+            }
+        });
+    }
+    viewSubmissionUrl(student) {
+        return `${window["$URL_ROOT"]}grading/review_editor?submission_id=${student.submission_id}`;
+    }
+    lmsLabel(state) {
+        return state === "sent" ? "Sent" : state === "pending" ? "Not sent" : "No LMS link";
+    }
+    lmsClass(state) {
+        return state === "sent" ? "badge-success" : state === "pending" ? "badge-warning" : "badge-light";
+    }
+    startEdit(batch) {
+        this.editComment(batch.comment);
+        this.editNote(batch.note);
+        this.editAmount("");
+        this.editIncludeCustomized(false);
+        this.editError("");
+        this.removingBatchId(null);
+        this.editingBatchId(batch.id);
+    }
+    cancelEdit() {
+        this.editingBatchId(null);
+    }
+    saveEdit(batch) {
+        this.editError("");
+        this.post("batch/edit", {
+            batch_id: batch.id, comment: this.editComment(), note: this.editNote(),
+            amount: String(this.editAmount()).trim(), include_customized: this.editIncludeCustomized()
+        }).then((data) => {
+            if (!data.success) {
+                this.editError(data.message || "The change could not be saved.");
+                return;
+            }
+            this.batches(data.batches);
+            this.editingBatchId(null);
+            this.openBatchId(null);
+            this.batchMessage(data.changed
+                ? `Saved. ${data.changed} review${data.changed === 1 ? "" : "s"} changed amount; send grades again.`
+                : "Saved.");
+        }).fail(() => this.editError("The change could not be saved. Check your connection and try again."));
+    }
+    askRemove(batch) {
+        this.editingBatchId(null);
+        this.removingBatchId(batch.id);
+    }
+    cancelRemove() {
+        this.removingBatchId(null);
+    }
+    remove(batch) {
+        this.batchError("");
+        this.post("batch/remove", { batch_id: batch.id }).then((data) => {
+            this.removingBatchId(null);
+            if (!data.success) {
+                this.batchError(data.message || "The adjustment could not be removed.");
+                return;
+            }
+            this.batches(data.batches);
+            this.openBatchId(null);
+            this.batchMessage(`Removed the adjustment from ${data.removed} submission${data.removed === 1 ? "" : "s"}. ` +
+                "Grades already sent to the LMS still include it until they are sent again.");
+            this.loadTally();
+        }).fail(() => this.batchError("The adjustment could not be removed. Check your connection and try again."));
+    }
+    /** Send each unsent grade in turn, so every request is short and every result is shown. */
+    sendGrades(batch) {
+        const ids = batch.pending_submission_ids.slice();
+        if (!ids.length || this.sendingBatchId() != null) {
+            return;
+        }
+        this.sendingBatchId(batch.id);
+        this.sendFailures([]);
+        this.batchMessage("");
+        let sent = 0;
+        const total = ids.length;
+        const next = () => {
+            if (!ids.length) {
+                this.sendingBatchId(null);
+                this.sendProgress("");
+                const failed = this.sendFailures().length;
+                this.batchMessage(`Sent ${sent} of ${total} grade${total === 1 ? "" : "s"}` +
+                    (failed ? `; ${failed} failed and can be sent again.` : "."));
+                this.refreshBatches();
+                return;
+            }
+            const submissionId = ids.shift();
+            this.sendProgress(`Sending grades… ${total - ids.length} of ${total}`);
+            this.post("send", { submission_id: submissionId, publish: this.publishOnSend() }).then((data) => {
+                if (data.success && data.status === "sent") {
+                    sent += 1;
+                }
+                else {
+                    this.sendFailures.push(`Submission ${submissionId}: ${data.message || "not sent"}`);
+                }
+            }).fail(() => {
+                this.sendFailures.push(`Submission ${submissionId}: the request failed`);
+            }).always(next);
+        };
+        next();
+    }
+    refreshBatches() {
+        this.post("load", { assignment_id: this.config.assignmentId }).then((data) => {
+            if (data.success) {
+                this.batches(data.batches);
+            }
+        });
+    }
+}
+knockout__WEBPACK_IMPORTED_MODULE_0__.components.register("score-adjustments", {
+    viewModel: ScoreAdjustments,
+    template: _score_adjustments_html__WEBPACK_IMPORTED_MODULE_4__
 });
 
 
@@ -8524,6 +9120,7 @@ knockout__WEBPACK_IMPORTED_MODULE_2__.components.register("submission-review-int
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ADJUSTMENT_FIELD_GROUPS: () => (/* binding */ ADJUSTMENT_FIELD_GROUPS),
 /* harmony export */   ANALYTICS_FIELD_GROUPS: () => (/* binding */ ANALYTICS_FIELD_GROUPS),
 /* harmony export */   ASSIGNMENT_SEARCH_FIELDS: () => (/* binding */ ASSIGNMENT_SEARCH_FIELDS),
 /* harmony export */   DATE_OPERATORS: () => (/* binding */ DATE_OPERATORS),
@@ -8597,6 +9194,10 @@ const SUBMISSION_SEARCH_FIELDS = [
         operators: NUMBER_OPERATORS, placeholder: "e.g. 20" },
     { key: "version", label: "Number of edits", type: "number", operators: NUMBER_OPERATORS,
         placeholder: "e.g. 5" },
+    { key: "attempts", label: "Times graded", type: "number", operators: NUMBER_OPERATORS,
+        placeholder: "e.g. 1",
+        help: "How many times the submission was run for a grade (or the quiz was submitted). " +
+            "A student can have edits without ever being graded." },
     { key: "submission_status", label: "Submission status", type: "select", operators: IS_OPERATOR,
         options: [{ value: "Initialized", label: "Initialized (never started)" },
             { value: "Started", label: "Started (never run)" },
@@ -8703,6 +9304,11 @@ const ANALYTICS_FIELD_GROUPS = [
     { label: "Student", fields: STUDENT_SEARCH_FIELDS },
     { label: "Assignment", fields: ASSIGNMENT_SEARCH_FIELDS }
 ];
+/** Score Adjustments works on one assignment, so it offers no assignment fields. */
+const ADJUSTMENT_FIELD_GROUPS = [
+    { label: "Submission", fields: SUBMISSION_SEARCH_FIELDS },
+    { label: "Student", fields: STUDENT_SEARCH_FIELDS }
+];
 function flattenFieldGroups(groups) {
     return groups.reduce((flat, group) => flat.concat(group.fields), []);
 }
@@ -8747,7 +9353,7 @@ class SearchCriterion {
 /***/ ((module) => {
 
 "use strict";
-module.exports = "<style>\r\n#submission-table thead tr {\r\n    cursor: pointer;\r\n}\r\n</style>\r\n\r\n<div class=\"submissions-filter\">\r\n    <user-display-settings-editor params=\"options: server.userStore.displayOptions,\r\n                                          sortMode: server.userStore.sortMode,\r\n                                          displayMode: server.userStore.displayMode\"></user-display-settings-editor>\r\n\r\n    <!-- Recent views: shortcuts that bypass the form entirely -->\r\n    <!-- ko if: history().length -->\r\n    <div class=\"mb-3\">\r\n        <div class=\"text-muted small mb-1\">Recent views</div>\r\n        <!-- ko foreach: history -->\r\n        <button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-1 mb-1\"\r\n                data-bind=\"click: (entry) => $component.applyHistoryEntry(entry),\r\n                           text: $component.historyLabel($data),\r\n                           attr: {title: $component.historyTitle($data)}\"></button>\r\n        <!-- /ko -->\r\n    </div>\r\n    <!-- /ko -->\r\n\r\n    <!-- Questions 1 and 2, side by side (stacked on small screens):\r\n         whose submissions, and which assignments? -->\r\n    <div class=\"row\">\r\n        <div class=\"col-md-6 mb-3\">\r\n            <div class=\"card h-100\">\r\n                <div class=\"card-header py-2\">\r\n                    <strong>Students</strong>\r\n                </div>\r\n                <div class=\"card-body py-3\">\r\n                    <user-set-selector params=\"store: server.userStore, modelSet: userSet, default: userDefault,\r\n                                               mode: userSelectMode, applySelection: userApply,\r\n                                               ready: userSelectorReady\"></user-set-selector>\r\n                </div>\r\n            </div>\r\n        </div>\r\n        <div class=\"col-md-6 mb-3\">\r\n            <div class=\"card h-100\">\r\n                <div class=\"card-header py-2\">\r\n                    <strong>Assignments</strong>\r\n                </div>\r\n                <div class=\"card-body py-3\">\r\n                    <assignment-set-selector params=\"store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,\r\n                                                     mode: assignmentSelectMode, applySelection: assignmentApply,\r\n                                                     ready: assignmentSelectorReady\"></assignment-set-selector>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n\r\n    <!-- Question 3: which submissions match additional conditions? -->\r\n    <div class=\"card mb-3\">\r\n        <div class=\"card-header py-2 d-flex align-items-center\">\r\n            <strong>Submission filters</strong>\r\n            <span class=\"badge badge-secondary ml-2\"\r\n                  data-bind=\"text: searchCriteria().length, visible: searchCriteria().length > 0\"></span>\r\n            <small class=\"text-muted ml-auto\">Optional</small>\r\n        </div>\r\n        <div class=\"card-body py-3\">\r\n            <!-- ko ifnot: searchCriteria().length -->\r\n            <span class=\"text-muted mr-3\">No submission filters</span>\r\n            <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\r\n                    data-bind=\"click: addSearchCriterion\">\r\n                <span class=\"fas fa-plus\"></span> Add filter</button>\r\n            <!-- /ko -->\r\n            <!-- ko if: searchCriteria().length -->\r\n            <div class=\"form-inline mb-2\">\r\n                <label class=\"mr-2\" for=\"search-combinator\">Match</label>\r\n                <select id=\"search-combinator\" class=\"form-control form-control-sm custom-select\"\r\n                        data-bind=\"options: combinatorOptions, optionsText: 'label', optionsValue: 'key',\r\n                                   value: searchCombinator\"></select>\r\n                <span class=\"ml-2\">of the following conditions:</span>\r\n            </div>\r\n            <!-- ko foreach: searchCriteria -->\r\n            <div class=\"form-inline mb-1\">\r\n                <div class=\"form-check mr-2\" title=\"Invert this condition\">\r\n                    <input type=\"checkbox\" class=\"form-check-input\"\r\n                           data-bind=\"checked: negate, attr: {id: 'search-negate-' + $index()}\">\r\n                    <label class=\"form-check-label\"\r\n                           data-bind=\"attr: {for: 'search-negate-' + $index()}\">NOT</label>\r\n                </div>\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition field\"\r\n                        data-bind=\"foreach: $component.searchFieldGroups, value: field\">\r\n                    <optgroup data-bind=\"attr: {label: $data.label}, foreach: $data.fields\">\r\n                        <option data-bind=\"text: $data.label, attr: {value: $data.key}\"></option>\r\n                    </optgroup>\r\n                </select>\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition operator\"\r\n                        data-bind=\"options: spec().operators, optionsText: 'label', optionsValue: 'key',\r\n                                   value: operator\"></select>\r\n                <!-- ko if: spec().type === 'number' -->\r\n                <input type=\"number\" step=\"any\" class=\"form-control form-control-sm mr-2\"\r\n                       aria-label=\"Condition value\"\r\n                       data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'text' -->\r\n                <input type=\"text\" class=\"form-control form-control-sm mr-2\" style=\"min-width: 18em\"\r\n                       aria-label=\"Condition value\"\r\n                       data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'date' -->\r\n                <input type=\"date\" class=\"form-control form-control-sm mr-2\"\r\n                       aria-label=\"Condition value\" data-bind=\"value: value\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'select' -->\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition value\"\r\n                        data-bind=\"options: spec().options, optionsText: 'label', optionsValue: 'value',\r\n                                   value: value\"></select>\r\n                <!-- /ko -->\r\n                <button type=\"button\" class=\"btn btn-outline-danger btn-sm\" title=\"Remove this condition\"\r\n                        data-bind=\"click: (criterion) => $component.removeSearchCriterion(criterion)\">\r\n                    <span class=\"fas fa-times\"></span></button>\r\n            </div>\r\n            <!-- ko if: spec().help -->\r\n            <small class=\"form-text text-muted mt-0 mb-2\" data-bind=\"text: spec().help\"></small>\r\n            <!-- /ko -->\r\n            <!-- /ko -->\r\n            <div class=\"mt-2\">\r\n                <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\r\n                        data-bind=\"click: addSearchCriterion\">\r\n                    <span class=\"fas fa-plus\"></span> Add condition</button>\r\n                <button type=\"button\" class=\"btn btn-link btn-sm ml-2\"\r\n                        data-bind=\"click: clearSearch\">Clear all</button>\r\n            </div>\r\n            <small class=\"text-muted mt-2 d-block\">\r\n                While filters are applied, students and assignments without a matching\r\n                submission are hidden from the results.\r\n            </small>\r\n            <!-- /ko -->\r\n            <!-- ko if: searchErrors().length -->\r\n            <div class=\"alert alert-warning mt-2 mb-0\">\r\n                <!-- ko foreach: searchErrors -->\r\n                <div data-bind=\"text: $data\"></div>\r\n                <!-- /ko -->\r\n            </div>\r\n            <!-- /ko -->\r\n        </div>\r\n    </div>\r\n\r\n    <!-- The current interpretation of the form, then the single action -->\r\n    <div class=\"mb-4\">\r\n        <div class=\"text-muted mb-2\" data-bind=\"text: querySummary\"></div>\r\n        <button class=\"btn btn-primary\" data-bind=\"click: viewSubmissions\">View submissions</button>\r\n    </div>\r\n\r\n    <div data-bind=\"if: isLoading\">\r\n        <div class=\"spinner-loader\" role=\"status\">\r\n            <span class=\"sr-only\">Loading...</span>\r\n        </div>\r\n    </div>\r\n    <!-- ko if: hasFailed -->\r\n    <div class=\"alert alert-danger\" role=\"alert\">\r\n        Loading these submissions has failed; more details in JS console.\r\n    </div>\r\n    <!-- /ko -->\r\n\r\n    <div data-bind=\"if: hasLoaded() && !isLoading()\">\r\n        <div class=\"float-right\">\r\n            <a data-bind=\"attr: {href: analyzeUrl()}\" target=\"_blank\"\r\n               class=\"btn btn-outline-secondary mt-2 mr-2\"\r\n               title=\"Open the Course Analytics page for this same selection\">Analyze these</a>\r\n            <span id=\"bulk-regrade-status\" data-bind=\"text: bulkRegradeStatus\"></span>\r\n            <div class=\"btn-group mt-2\">\r\n                <button\r\n                        data-as-human=\"false\"\r\n                        class=\"bulk-regrade btn btn-outline-secondary\"\r\n                        data-bind=\"click: () => bulkRegrade(false)\"\r\n                        title=\"Simulate clicking on all of the regrade buttons, forcing the grades to sync with Canvas\">\r\n                    Bulk regrade</button>\r\n                <!-- Dropdown -->\r\n                <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\"\r\n                        data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                    <span class=\"caret\"></span>\r\n                    <span class=\"sr-only\">Toggle Dropdown</span>\r\n                </button>\r\n                <div class=\"dropdown-menu dropdown-menu-right\">\r\n                    <button\r\n                        data-as-human=\"true\"\r\n                        class=\"bulk-regrade btn btn-outline-secondary\"\r\n                        data-bind=\"click: () => bulkRegrade(true)\"\r\n                        title=\"Simulate clicking on all of the regrade as human buttons, forcing the grades to sync with Canvas. This resubmits the grades with your instructor account, not the autograder. You probably don't want to use this one unless you know what you are doing.\">\r\n                    Bulk regrade (as human)</button>\r\n                </div>\r\n            </div>\r\n        </div>\r\n\r\n        <!-- ko if: isAssignmentMode -->\r\n        <div class=\"btn-group mt-2\">\r\n            <a data-bind=\"attr: {href: exportSubmissionsUrl(false)}\" target=\"_blank\"\r\n               class=\"btn btn-outline-secondary\">Bulk download all submissions for assignment</a>\r\n            <!-- Dropdown -->\r\n            <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                <span class=\"caret\"></span>\r\n                <span class=\"sr-only\">Toggle Dropdown</span>\r\n            </button>\r\n            <!-- Extended buttons -->\r\n            <div class=\"dropdown-menu dropdown-menu-right\">\r\n                <a data-bind=\"attr: {href: exportSubmissionsUrl(true)}\"\r\n                   class=\"dropdown-item\" target=\"_blank\">Download with history</a>\r\n            </div>\r\n        </div><br>\r\n\r\n        <a data-bind=\"attr: {href: openAssignmentUrl()}\"\r\n           target=\"_blank\" class=\"btn btn-outline-secondary mt-2 mb-2 \">Open assignment</a><br>\r\n        <input type=\"checkbox\" name=\"show-only-learners\" id=\"show-only-learners\"\r\n               data-bind=\"checked: showOnlyLearners\" />\r\n        <label for=\"show-only-learners\">Show only learners</label>\r\n        <!-- /ko -->\r\n        <!-- ko if: isStudentMode -->\r\n        <a data-bind=\"attr: {href: bulkDownloadEventsUrl()}\" target=\"_blank\"\r\n           class=\"btn btn-outline-secondary mt-2 mb-2 \">Bulk download all events</a>\r\n        <!-- /ko -->\r\n\r\n        <table class=\"table table-condensed table-hover table-striped table-bordered\" id=\"submission-table\">\r\n        <caption>Student's submissions for course's assignments.</caption>\r\n        <thead class=\"thead-dark\">\r\n            <tr data-bind=\"foreach: columns\">\r\n                <th data-bind=\"click: () => $component.sortColumn($index()), attr: {'data-type': type}\">\r\n                    <span data-bind=\"text: label\"></span><i class=\"ml-2 fas\"\r\n                        data-bind=\"visible: $component.sortIndex() === $index(),\r\n                                   css: $component.appliedSortDirection() === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down'\"></i>\r\n                </th>\r\n            </tr>\r\n        </thead>\r\n\r\n        <tbody data-bind=\"foreach: displayRows\">\r\n            <!-- ko if: $data.isGroupHeader -->\r\n            <tr class=\"table-secondary table-groups\">\r\n                <td data-bind=\"attr: {colspan: $component.groupHeaderColspan()}\">\r\n                    <strong>Group: <span data-bind=\"text: groupName\"></span></strong></td>\r\n                <td>\r\n                    <!-- ko if: viewGroupUrl -->\r\n                    <div class=\"btn-group\">\r\n                        <a data-bind=\"attr: {href: viewGroupUrl}\"\r\n                           class=\"btn btn-primary btn-sm\" target=\"_blank\">View Group</a>\r\n                        <!-- Dropdown -->\r\n                        <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                            <span class=\"caret\"></span>\r\n                            <span class=\"sr-only\">Toggle Dropdown</span>\r\n                        </button>\r\n                        <div class=\"dropdown-menu dropdown-menu-right\">\r\n                            <a data-bind=\"attr: {href: timeAnalysisUrl}\"\r\n                               class=\"dropdown-item\" target=\"_blank\"\r\n                               title=\"How the student spent their time across this group's assignments: active work, idle gaps, and a minute-by-minute log\">Time Analysis</a>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </td>\r\n            </tr>\r\n            <!-- /ko -->\r\n            <!-- ko ifnot: $data.isGroupHeader -->\r\n            <!-- Row Color based on Assignment status -->\r\n            <tr data-bind=\"css: $component.rowClass($data)\">\r\n                <!-- Assignment Mode -->\r\n                <!-- ko if: $component.showAssignmentColumn -->\r\n                <td>\r\n                    <a data-bind=\"attr: {href: $component.filterByAssignmentUrl(assignment)}\"\r\n                       ><i class=\"fas fa-eye\"></i></a> <span data-bind=\"text: assignment != null ? assignment.title() : ''\"></span>\r\n                </td>\r\n                <!-- /ko -->\r\n\r\n                <!-- Student Mode -->\r\n                <!-- ko if: $component.showStudentColumns -->\r\n                <td>\r\n                    <a data-bind=\"attr: {href: $component.filterByStudentUrl(user)}\"\r\n                       ><i class=\"fas fa-eye\"></i></a>\r\n                    <span data-bind=\"text: user != null ? user.title() : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <span data-bind=\"text: $component.rolesList(user)\"></span>\r\n                </td>\r\n                <!-- /ko -->\r\n\r\n                <td data-bind=\"text: $component.scoreText($data),\r\n                               attr: {title: $component.scoreTitle($data)}\"></td>\r\n                <td data-bind=\"text: submission != null ? submission.human_submission_status : ''\"></td>\r\n                <td>\r\n                    <span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                    <span data-bind=\"text: submission != null ? submission.human_grading_status : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <!-- ko if: submission -->\r\n                    <span style=\"cursor: pointer\"\r\n                          data-bind=\"click: (row, event) => $component.estimateDuration(row, event),\r\n                                     text: submission.version || '0'\"></span>\r\n                    <!-- /ko -->\r\n                    <!-- ko ifnot: submission -->\r\n                    <span>0</span>\r\n                    <!-- /ko -->\r\n                </td>\r\n\r\n                <td>\r\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_created : ''},\r\n                                     text: submission != null ? $component.prettyDate(submission.date_created) : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_modified : ''},\r\n                                     text: submission != null ? $component.prettyDate(submission.date_modified) : ''\"></span>\r\n                </td>\r\n\r\n                <td>\r\n                    <!-- ko if: submission -->\r\n                    <div class=\"btn-group\">\r\n                        <a data-bind=\"attr: {href: $component.viewSubmissionUrl($data)}\"\r\n                            target=\"_blank\" class=\"btn btn-primary btn-sm\"\r\n                        >View</a>\r\n                        <!-- Dropdown -->\r\n                        <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                            <span class=\"caret\"></span>\r\n                            <span class=\"sr-only\">Toggle Dropdown</span>\r\n                        </button>\r\n                        <!-- Extended buttons -->\r\n                        <div class=\"dropdown-menu dropdown-menu-right\">\r\n                            <!-- ko if: submission.assignment_group_id != null -->\r\n                            <a data-bind=\"attr: {href: $component.viewGroupUrl($data)}\"\r\n                                 class=\"dropdown-item\" target=\"_blank\">View Group</a>\r\n                            <!-- /ko -->\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, false)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, true)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission+History</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.historyLogUrl($data)}\"\r\n                               target=\"_blank\" class=\"dropdown-item\">History Log</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.timeAnalysisUrl($data, 'assignment')}\"\r\n                               target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"How the student spent their time on this assignment: active work, idle gaps, and a minute-by-minute log\"\r\n                            >Time Analysis</a>\r\n                            <!-- ko if: submission.assignment_group_id != null -->\r\n                            <a data-bind=\"attr: {href: $component.timeAnalysisUrl($data, 'group')}\"\r\n                               target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"Time analysis across every assignment in this submission's group\"\r\n                            >Time Analysis (Group)</a>\r\n                            <!-- /ko -->\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.transferCourseUrl($data)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"Launches a new window to help you transfer this submission to another course, if the student transfers\"\r\n                            >Copy to Course</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\r\n                                    data-as-human=\"false\"\r\n                                    style=\"cursor: pointer\"\r\n                                    title=\"Force a regrade of the submission, but do so as the autograder. Forces resync with canvas.\"\r\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, false, event),\r\n                                               attr: {'data-submission-id': submission.id,\r\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\r\n                                                      'data-user-name': user != null ? user.name() : ''}\"\r\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                                Regrade\r\n                            </button>\r\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\r\n                                    data-as-human=\"true\"\r\n                                    style=\"cursor: pointer\"\r\n                                    title=\"Force a regrade of the submission, but do so as a human instead of the autograder.\"\r\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, true, event),\r\n                                               attr: {'data-submission-id': submission.id,\r\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\r\n                                                      'data-user-name': user != null ? user.name() : ''}\"\r\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                                Regrade as human\r\n                            </button>\r\n                            <!---------------------------------------------------------------------->\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </td>\r\n            </tr>\r\n            <!-- /ko -->\r\n        </tbody>\r\n        </table>\r\n    </div>\r\n</div>\r\n";
+module.exports = "<style>\r\n#submission-table thead tr {\r\n    cursor: pointer;\r\n}\r\n</style>\r\n\r\n<div class=\"submissions-filter\">\r\n    <user-display-settings-editor params=\"options: server.userStore.displayOptions,\r\n                                          sortMode: server.userStore.sortMode,\r\n                                          displayMode: server.userStore.displayMode\"></user-display-settings-editor>\r\n\r\n    <!-- Recent views: shortcuts that bypass the form entirely -->\r\n    <!-- ko if: history().length -->\r\n    <div class=\"mb-3\">\r\n        <div class=\"text-muted small mb-1\">Recent views</div>\r\n        <!-- ko foreach: history -->\r\n        <button type=\"button\" class=\"btn btn-sm btn-outline-secondary mr-1 mb-1\"\r\n                data-bind=\"click: (entry) => $component.applyHistoryEntry(entry),\r\n                           text: $component.historyLabel($data),\r\n                           attr: {title: $component.historyTitle($data)}\"></button>\r\n        <!-- /ko -->\r\n    </div>\r\n    <!-- /ko -->\r\n\r\n    <!-- Questions 1 and 2, side by side (stacked on small screens):\r\n         whose submissions, and which assignments? -->\r\n    <div class=\"row\">\r\n        <div class=\"col-md-6 mb-3\">\r\n            <div class=\"card h-100\">\r\n                <div class=\"card-header py-2\">\r\n                    <strong>Students</strong>\r\n                </div>\r\n                <div class=\"card-body py-3\">\r\n                    <user-set-selector params=\"store: server.userStore, modelSet: userSet, default: userDefault,\r\n                                               mode: userSelectMode, applySelection: userApply,\r\n                                               ready: userSelectorReady\"></user-set-selector>\r\n                </div>\r\n            </div>\r\n        </div>\r\n        <div class=\"col-md-6 mb-3\">\r\n            <div class=\"card h-100\">\r\n                <div class=\"card-header py-2\">\r\n                    <strong>Assignments</strong>\r\n                </div>\r\n                <div class=\"card-body py-3\">\r\n                    <assignment-set-selector params=\"store: server.assignmentStore, modelSet: assignmentSet, default: assignmentDefault,\r\n                                                     mode: assignmentSelectMode, applySelection: assignmentApply,\r\n                                                     ready: assignmentSelectorReady\"></assignment-set-selector>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n\r\n    <!-- Question 3: which submissions match additional conditions? -->\r\n    <div class=\"card mb-3\">\r\n        <div class=\"card-header py-2 d-flex align-items-center\">\r\n            <strong>Submission filters</strong>\r\n            <span class=\"badge badge-secondary ml-2\"\r\n                  data-bind=\"text: searchCriteria().length, visible: searchCriteria().length > 0\"></span>\r\n            <small class=\"text-muted ml-auto\">Optional</small>\r\n        </div>\r\n        <div class=\"card-body py-3\">\r\n            <!-- ko ifnot: searchCriteria().length -->\r\n            <span class=\"text-muted mr-3\">No submission filters</span>\r\n            <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\r\n                    data-bind=\"click: addSearchCriterion\">\r\n                <span class=\"fas fa-plus\"></span> Add filter</button>\r\n            <!-- /ko -->\r\n            <!-- ko if: searchCriteria().length -->\r\n            <div class=\"form-inline mb-2\">\r\n                <label class=\"mr-2\" for=\"search-combinator\">Match</label>\r\n                <select id=\"search-combinator\" class=\"form-control form-control-sm custom-select\"\r\n                        data-bind=\"options: combinatorOptions, optionsText: 'label', optionsValue: 'key',\r\n                                   value: searchCombinator\"></select>\r\n                <span class=\"ml-2\">of the following conditions:</span>\r\n            </div>\r\n            <!-- ko foreach: searchCriteria -->\r\n            <div class=\"form-inline mb-1\">\r\n                <div class=\"form-check mr-2\" title=\"Invert this condition\">\r\n                    <input type=\"checkbox\" class=\"form-check-input\"\r\n                           data-bind=\"checked: negate, attr: {id: 'search-negate-' + $index()}\">\r\n                    <label class=\"form-check-label\"\r\n                           data-bind=\"attr: {for: 'search-negate-' + $index()}\">NOT</label>\r\n                </div>\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition field\"\r\n                        data-bind=\"foreach: $component.searchFieldGroups, value: field\">\r\n                    <optgroup data-bind=\"attr: {label: $data.label}, foreach: $data.fields\">\r\n                        <option data-bind=\"text: $data.label, attr: {value: $data.key}\"></option>\r\n                    </optgroup>\r\n                </select>\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition operator\"\r\n                        data-bind=\"options: spec().operators, optionsText: 'label', optionsValue: 'key',\r\n                                   value: operator\"></select>\r\n                <!-- ko if: spec().type === 'number' -->\r\n                <input type=\"number\" step=\"any\" class=\"form-control form-control-sm mr-2\"\r\n                       aria-label=\"Condition value\"\r\n                       data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'text' -->\r\n                <input type=\"text\" class=\"form-control form-control-sm mr-2\" style=\"min-width: 18em\"\r\n                       aria-label=\"Condition value\"\r\n                       data-bind=\"value: value, attr: {placeholder: spec().placeholder || ''}\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'date' -->\r\n                <input type=\"date\" class=\"form-control form-control-sm mr-2\"\r\n                       aria-label=\"Condition value\" data-bind=\"value: value\">\r\n                <!-- /ko -->\r\n                <!-- ko if: spec().type === 'select' -->\r\n                <select class=\"form-control form-control-sm custom-select mr-2\" aria-label=\"Condition value\"\r\n                        data-bind=\"options: spec().options, optionsText: 'label', optionsValue: 'value',\r\n                                   value: value\"></select>\r\n                <!-- /ko -->\r\n                <button type=\"button\" class=\"btn btn-outline-danger btn-sm\" title=\"Remove this condition\"\r\n                        data-bind=\"click: (criterion) => $component.removeSearchCriterion(criterion)\">\r\n                    <span class=\"fas fa-times\"></span></button>\r\n            </div>\r\n            <!-- ko if: spec().help -->\r\n            <small class=\"form-text text-muted mt-0 mb-2\" data-bind=\"text: spec().help\"></small>\r\n            <!-- /ko -->\r\n            <!-- /ko -->\r\n            <div class=\"mt-2\">\r\n                <button type=\"button\" class=\"btn btn-outline-secondary btn-sm\"\r\n                        data-bind=\"click: addSearchCriterion\">\r\n                    <span class=\"fas fa-plus\"></span> Add condition</button>\r\n                <button type=\"button\" class=\"btn btn-link btn-sm ml-2\"\r\n                        data-bind=\"click: clearSearch\">Clear all</button>\r\n            </div>\r\n            <small class=\"text-muted mt-2 d-block\">\r\n                While filters are applied, students and assignments without a matching\r\n                submission are hidden from the results.\r\n            </small>\r\n            <!-- /ko -->\r\n            <!-- ko if: searchErrors().length -->\r\n            <div class=\"alert alert-warning mt-2 mb-0\">\r\n                <!-- ko foreach: searchErrors -->\r\n                <div data-bind=\"text: $data\"></div>\r\n                <!-- /ko -->\r\n            </div>\r\n            <!-- /ko -->\r\n        </div>\r\n    </div>\r\n\r\n    <!-- The current interpretation of the form, then the single action -->\r\n    <div class=\"mb-4\">\r\n        <div class=\"text-muted mb-2\" data-bind=\"text: querySummary\"></div>\r\n        <button class=\"btn btn-primary\" data-bind=\"click: viewSubmissions\">View submissions</button>\r\n    </div>\r\n\r\n    <div data-bind=\"if: isLoading\">\r\n        <div class=\"spinner-loader\" role=\"status\">\r\n            <span class=\"sr-only\">Loading...</span>\r\n        </div>\r\n    </div>\r\n    <!-- ko if: hasFailed -->\r\n    <div class=\"alert alert-danger\" role=\"alert\">\r\n        Loading these submissions has failed; more details in JS console.\r\n    </div>\r\n    <!-- /ko -->\r\n\r\n    <div data-bind=\"if: hasLoaded() && !isLoading()\">\r\n        <div class=\"float-right\">\r\n            <a data-bind=\"attr: {href: analyzeUrl()}\" target=\"_blank\"\r\n               class=\"btn btn-outline-secondary mt-2 mr-2\"\r\n               title=\"Open the Course Analytics page for this same selection\">Analyze these</a>\r\n            <span id=\"bulk-regrade-status\" data-bind=\"text: bulkRegradeStatus\"></span>\r\n            <div class=\"btn-group mt-2\">\r\n                <button\r\n                        data-as-human=\"false\"\r\n                        class=\"bulk-regrade btn btn-outline-secondary\"\r\n                        data-bind=\"click: () => bulkRegrade(false)\"\r\n                        title=\"Simulate clicking on all of the regrade buttons, forcing the grades to sync with Canvas\">\r\n                    Bulk regrade</button>\r\n                <!-- Dropdown -->\r\n                <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\"\r\n                        data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                    <span class=\"caret\"></span>\r\n                    <span class=\"sr-only\">Toggle Dropdown</span>\r\n                </button>\r\n                <div class=\"dropdown-menu dropdown-menu-right\">\r\n                    <button\r\n                        data-as-human=\"true\"\r\n                        class=\"bulk-regrade btn btn-outline-secondary\"\r\n                        data-bind=\"click: () => bulkRegrade(true)\"\r\n                        title=\"Simulate clicking on all of the regrade as human buttons, forcing the grades to sync with Canvas. This resubmits the grades with your instructor account, not the autograder. You probably don't want to use this one unless you know what you are doing.\">\r\n                    Bulk regrade (as human)</button>\r\n                </div>\r\n            </div>\r\n        </div>\r\n\r\n        <!-- ko if: isAssignmentMode -->\r\n        <div class=\"btn-group mt-2\">\r\n            <a data-bind=\"attr: {href: exportSubmissionsUrl(false)}\" target=\"_blank\"\r\n               class=\"btn btn-outline-secondary\">Bulk download all submissions for assignment</a>\r\n            <!-- Dropdown -->\r\n            <button type=\"button\" class=\"btn btn-outline-secondary dropdown-toggle\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                <span class=\"caret\"></span>\r\n                <span class=\"sr-only\">Toggle Dropdown</span>\r\n            </button>\r\n            <!-- Extended buttons -->\r\n            <div class=\"dropdown-menu dropdown-menu-right\">\r\n                <a data-bind=\"attr: {href: exportSubmissionsUrl(true)}\"\r\n                   class=\"dropdown-item\" target=\"_blank\">Download with history</a>\r\n            </div>\r\n        </div><br>\r\n\r\n        <a data-bind=\"attr: {href: openAssignmentUrl()}\"\r\n           target=\"_blank\" class=\"btn btn-outline-secondary mt-2 mb-2 \">Open assignment</a>\r\n        <a data-bind=\"attr: {href: adjustScoresUrl()}\"\r\n           title=\"Add the same review to many of these submissions at once\"\r\n           class=\"btn btn-outline-secondary mt-2 mb-2 \">Adjust scores</a><br>\r\n        <input type=\"checkbox\" name=\"show-only-learners\" id=\"show-only-learners\"\r\n               data-bind=\"checked: showOnlyLearners\" />\r\n        <label for=\"show-only-learners\">Show only learners</label>\r\n        <!-- /ko -->\r\n        <!-- ko if: isStudentMode -->\r\n        <a data-bind=\"attr: {href: bulkDownloadEventsUrl()}\" target=\"_blank\"\r\n           class=\"btn btn-outline-secondary mt-2 mb-2 \">Bulk download all events</a>\r\n        <!-- /ko -->\r\n\r\n        <table class=\"table table-condensed table-hover table-striped table-bordered\" id=\"submission-table\">\r\n        <caption>Student's submissions for course's assignments.</caption>\r\n        <thead class=\"thead-dark\">\r\n            <tr data-bind=\"foreach: columns\">\r\n                <th data-bind=\"click: () => $component.sortColumn($index()), attr: {'data-type': type}\">\r\n                    <span data-bind=\"text: label\"></span><i class=\"ml-2 fas\"\r\n                        data-bind=\"visible: $component.sortIndex() === $index(),\r\n                                   css: $component.appliedSortDirection() === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down'\"></i>\r\n                </th>\r\n            </tr>\r\n        </thead>\r\n\r\n        <tbody data-bind=\"foreach: displayRows\">\r\n            <!-- ko if: $data.isGroupHeader -->\r\n            <tr class=\"table-secondary table-groups\">\r\n                <td data-bind=\"attr: {colspan: $component.groupHeaderColspan()}\">\r\n                    <strong>Group: <span data-bind=\"text: groupName\"></span></strong></td>\r\n                <td>\r\n                    <!-- ko if: viewGroupUrl -->\r\n                    <div class=\"btn-group\">\r\n                        <a data-bind=\"attr: {href: viewGroupUrl}\"\r\n                           class=\"btn btn-primary btn-sm\" target=\"_blank\">View Group</a>\r\n                        <!-- Dropdown -->\r\n                        <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                            <span class=\"caret\"></span>\r\n                            <span class=\"sr-only\">Toggle Dropdown</span>\r\n                        </button>\r\n                        <div class=\"dropdown-menu dropdown-menu-right\">\r\n                            <a data-bind=\"attr: {href: timeAnalysisUrl}\"\r\n                               class=\"dropdown-item\" target=\"_blank\"\r\n                               title=\"How the student spent their time across this group's assignments: active work, idle gaps, and a minute-by-minute log\">Time Analysis</a>\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </td>\r\n            </tr>\r\n            <!-- /ko -->\r\n            <!-- ko ifnot: $data.isGroupHeader -->\r\n            <!-- Row Color based on Assignment status -->\r\n            <tr data-bind=\"css: $component.rowClass($data)\">\r\n                <!-- Assignment Mode -->\r\n                <!-- ko if: $component.showAssignmentColumn -->\r\n                <td>\r\n                    <a data-bind=\"attr: {href: $component.filterByAssignmentUrl(assignment)}\"\r\n                       ><i class=\"fas fa-eye\"></i></a> <span data-bind=\"text: assignment != null ? assignment.title() : ''\"></span>\r\n                </td>\r\n                <!-- /ko -->\r\n\r\n                <!-- Student Mode -->\r\n                <!-- ko if: $component.showStudentColumns -->\r\n                <td>\r\n                    <a data-bind=\"attr: {href: $component.filterByStudentUrl(user)}\"\r\n                       ><i class=\"fas fa-eye\"></i></a>\r\n                    <span data-bind=\"text: user != null ? user.title() : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <span data-bind=\"text: $component.rolesList(user)\"></span>\r\n                </td>\r\n                <!-- /ko -->\r\n\r\n                <td data-bind=\"text: $component.scoreText($data),\r\n                               attr: {title: $component.scoreTitle($data)}\"></td>\r\n                <td data-bind=\"text: submission != null ? submission.human_submission_status : ''\"></td>\r\n                <td>\r\n                    <span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                    <span data-bind=\"text: submission != null ? submission.human_grading_status : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <!-- ko if: submission -->\r\n                    <span style=\"cursor: pointer\"\r\n                          data-bind=\"click: (row, event) => $component.estimateDuration(row, event),\r\n                                     text: submission.version || '0'\"></span>\r\n                    <!-- /ko -->\r\n                    <!-- ko ifnot: submission -->\r\n                    <span>0</span>\r\n                    <!-- /ko -->\r\n                </td>\r\n\r\n                <td>\r\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_created : ''},\r\n                                     text: submission != null ? $component.prettyDate(submission.date_created) : ''\"></span>\r\n                </td>\r\n                <td>\r\n                    <span data-bind=\"attr: {title: submission != null ? submission.date_modified : ''},\r\n                                     text: submission != null ? $component.prettyDate(submission.date_modified) : ''\"></span>\r\n                </td>\r\n\r\n                <td>\r\n                    <!-- ko if: submission -->\r\n                    <div class=\"btn-group\">\r\n                        <a data-bind=\"attr: {href: $component.viewSubmissionUrl($data)}\"\r\n                            target=\"_blank\" class=\"btn btn-primary btn-sm\"\r\n                        >View</a>\r\n                        <!-- Dropdown -->\r\n                        <button type=\"button\" class=\"btn btn-primary dropdown-toggle btn-sm\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\">\r\n                            <span class=\"caret\"></span>\r\n                            <span class=\"sr-only\">Toggle Dropdown</span>\r\n                        </button>\r\n                        <!-- Extended buttons -->\r\n                        <div class=\"dropdown-menu dropdown-menu-right\">\r\n                            <!-- ko if: submission.assignment_group_id != null -->\r\n                            <a data-bind=\"attr: {href: $component.viewGroupUrl($data)}\"\r\n                                 class=\"dropdown-item\" target=\"_blank\">View Group</a>\r\n                            <!-- /ko -->\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, false)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.downloadSubmissionUrl($data, true)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\">Download Submission+History</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.historyLogUrl($data)}\"\r\n                               target=\"_blank\" class=\"dropdown-item\">History Log</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.timeAnalysisUrl($data, 'assignment')}\"\r\n                               target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"How the student spent their time on this assignment: active work, idle gaps, and a minute-by-minute log\"\r\n                            >Time Analysis</a>\r\n                            <!-- ko if: submission.assignment_group_id != null -->\r\n                            <a data-bind=\"attr: {href: $component.timeAnalysisUrl($data, 'group')}\"\r\n                               target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"Time analysis across every assignment in this submission's group\"\r\n                            >Time Analysis (Group)</a>\r\n                            <!-- /ko -->\r\n                            <!---------------------------------------------------------------------->\r\n                            <a data-bind=\"attr: {href: $component.transferCourseUrl($data)}\"\r\n                                target=\"_blank\" class=\"dropdown-item\"\r\n                               title=\"Launches a new window to help you transfer this submission to another course, if the student transfers\"\r\n                            >Copy to Course</a>\r\n                            <!---------------------------------------------------------------------->\r\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\r\n                                    data-as-human=\"false\"\r\n                                    style=\"cursor: pointer\"\r\n                                    title=\"Force a regrade of the submission, but do so as the autograder. Forces resync with canvas.\"\r\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, false, event),\r\n                                               attr: {'data-submission-id': submission.id,\r\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\r\n                                                      'data-user-name': user != null ? user.name() : ''}\"\r\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                                Regrade\r\n                            </button>\r\n                            <button class=\"dropdown-item re-autograde-btn\" type=\"button\"\r\n                                    data-as-human=\"true\"\r\n                                    style=\"cursor: pointer\"\r\n                                    title=\"Force a regrade of the submission, but do so as a human instead of the autograder.\"\r\n                                    data-bind=\"click: (row, event) => $component.regradeSubmission(row, true, event),\r\n                                               attr: {'data-submission-id': submission.id,\r\n                                                      'data-assignment-name': assignment != null ? assignment.title() : '',\r\n                                                      'data-user-name': user != null ? user.name() : ''}\"\r\n                            ><span data-bind=\"html: $component.gradingIcon($data)\"></span>\r\n                                Regrade as human\r\n                            </button>\r\n                            <!---------------------------------------------------------------------->\r\n                        </div>\r\n                    </div>\r\n                    <!-- /ko -->\r\n                </td>\r\n            </tr>\r\n            <!-- /ko -->\r\n        </tbody>\r\n        </table>\r\n    </div>\r\n</div>\r\n";
 
 /***/ }),
 
@@ -9447,6 +10053,10 @@ class SubmissionsFilter {
     }
     openAssignmentUrl() {
         return `${this.base()}assignments/load?assignment_id=${this.singleAssignment().id}&course_id=${this.course.id}`;
+    }
+    /** The Score Adjustments page (bulk review editor) for the single viewed assignment. */
+    adjustScoresUrl() {
+        return `${this.base()}grading/adjustments?assignment_id=${this.singleAssignment().id}&course_id=${this.course.id}`;
     }
     bulkDownloadEventsUrl() {
         return `${this.base()}blockpy/load_history?user_id=${this.singleUser().id}&course_id=${this.course.id}`;
@@ -216117,9 +216727,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_feedback_feedback__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./components/feedback/feedback */ "./components/feedback/feedback.ts");
 /* harmony import */ var _components_kettle_kettle__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./components/kettle/kettle */ "./components/kettle/kettle.ts");
 /* harmony import */ var _components_explanations_explain__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./components/explanations/explain */ "./components/explanations/explain.ts");
-/* harmony import */ var _components_review_interface__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./components/review_interface */ "./components/review_interface.ts");
-/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
-/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
+/* harmony import */ var _components_review_review__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./components/review/review */ "./components/review/review.ts");
+/* harmony import */ var _components_score_adjustments_score_adjustments__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./components/score_adjustments/score_adjustments */ "./components/score_adjustments/score_adjustments.ts");
+/* harmony import */ var _components_blockpy_blockpy_interface__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./components/blockpy/blockpy_interface */ "./components/blockpy/blockpy_interface.ts");
+/* harmony import */ var _styles_test_css__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./styles/test.css */ "./styles/test.css");
 
 
 
@@ -216148,6 +216759,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 //import "./components/java";
+
 
 
 

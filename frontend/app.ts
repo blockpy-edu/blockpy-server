@@ -34,6 +34,7 @@ import "./components/feedback/feedback";
 import './components/kettle/kettle';
 import './components/explanations/explain';
 import "./components/review/review";
+import "./components/score_adjustments/score_adjustments";
 import "./components/blockpy/blockpy_interface";
 //import "./components/textbook";
 

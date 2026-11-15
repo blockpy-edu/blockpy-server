@@ -80,6 +80,10 @@ export const SUBMISSION_SEARCH_FIELDS: SearchFieldSpec[] = [
      operators: NUMBER_OPERATORS, placeholder: "e.g. 20"},
     {key: "version", label: "Number of edits", type: "number", operators: NUMBER_OPERATORS,
      placeholder: "e.g. 5"},
+    {key: "attempts", label: "Times graded", type: "number", operators: NUMBER_OPERATORS,
+     placeholder: "e.g. 1",
+     help: "How many times the submission was run for a grade (or the quiz was submitted). " +
+           "A student can have edits without ever being graded."},
     {key: "submission_status", label: "Submission status", type: "select", operators: IS_OPERATOR,
      options: [{value: "Initialized", label: "Initialized (never started)"},
                {value: "Started", label: "Started (never run)"},
@@ -191,6 +195,12 @@ export const ANALYTICS_FIELD_GROUPS: SearchFieldGroup[] = [
     {label: "Metrics", fields: METRIC_SEARCH_FIELDS},
     {label: "Student", fields: STUDENT_SEARCH_FIELDS},
     {label: "Assignment", fields: ASSIGNMENT_SEARCH_FIELDS}
+];
+
+/** Score Adjustments works on one assignment, so it offers no assignment fields. */
+export const ADJUSTMENT_FIELD_GROUPS: SearchFieldGroup[] = [
+    {label: "Submission", fields: SUBMISSION_SEARCH_FIELDS},
+    {label: "Student", fields: STUDENT_SEARCH_FIELDS}
 ];
 
 export function flattenFieldGroups(groups: SearchFieldGroup[]): SearchFieldSpec[] {
