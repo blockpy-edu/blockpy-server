@@ -1,0 +1,75 @@
+{% extends 'helpers/layout.html' %}
+
+{% block title %}
+Score Adjustments: {{ assignment.title() if assignment else course.name }}
+{% endblock %}
+
+{% block statusbar %}
+{% endblock %}
+
+{% block extrahead %}
+{% if assignment %}
+<script>
+    $().ready(function() {
+        mainModel = {
+            config: {
+                courseId: {{ course_id|tojson }},
+                assignmentId: {{ assignment.id|tojson }},
+                // Preselects a question when arriving from Quiz Analysis
+                questionId: {{ request.values.get('question_id', '')|tojson }},
+                defaultComment: {{ default_comment|tojson }},
+                viewSubmissionsUrl: {{ url_for('courses.submissions_filter', course_id=course_id, criteria='assignment', search_key=assignment.id)|tojson }}
+            }
+        };
+        ko.applyBindings(mainModel);
+    });
+</script>
+{% endif %}
+{% endblock %}
+
+{% block body %}
+
+<h1>Score Adjustments</h1>
+
+<p class="text-muted small">
+    Back to <a href="{{ url_for('courses.course', course_id=course_id) }}">{{ course.name }}</a>
+    {% if assignment %}
+        &middot; <a href="{{ url_for('grading.score_adjustments', course_id=course_id) }}">Choose another assignment</a>
+        &middot; <a href="{{ url_for('courses.submissions_filter', course_id=course_id, criteria='assignment', search_key=assignment.id) }}">View submissions</a>
+        {% if assignment.type == 'quiz' %}
+        &middot; <a href="{{ url_for('courses.quiz_analysis', course_id=course_id, assignment_id=assignment.id) }}">Quiz analysis</a>
+        {% endif %}
+    {% endif %}
+</p>
+
+{% if assignment %}
+    <h2>{{ assignment.title() }} <small class="text-muted">(<code>{{ assignment.url }}</code>)</small></h2>
+    <score-adjustments params="config: config"></score-adjustments>
+{% else %}
+    <p style="max-width: 50em">
+        Correct many students' scores on one assignment at once: choose the students by how they answered
+        a quiz question or by which variation of a coding problem they were given, preview the change,
+        and add the same review to each of them. Every adjustment stays listed so it can be changed or removed.
+    </p>
+    {% if groups %}
+        <table class="table table-sm table-hover" style="max-width: 60em">
+            <thead><tr><th>Assignment</th><th>Type</th><th>Group</th><th></th></tr></thead>
+            <tbody>
+            {% for group, assignments in groups.items() %}
+                {% for listed in assignments %}
+                <tr>
+                    <td>{{ listed.title() }}</td>
+                    <td class="text-muted">{{ listed.type }}</td>
+                    <td class="text-muted">{{ group.name if group else 'Ungrouped' }}</td>
+                    <td><a href="{{ url_for('grading.score_adjustments', course_id=course_id, assignment_id=listed.id) }}">Adjust scores</a></td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-muted">No assignments in this course have submissions yet.</p>
+    {% endif %}
+{% endif %}
+
+{% endblock %}

@@ -7,6 +7,8 @@ from controllers.endpoints.blockpy import blueprint_blockpy
 from controllers.endpoints.maze import blueprint_maze
 from controllers.endpoints.external import blueprint_external
 from controllers.endpoints.grading import blueprint_grading
+# Adds the grading/adjustments routes to blueprint_grading; must load before it is registered
+import controllers.endpoints.score_adjustments
 from controllers.quizzes import blueprint_quizzes
 from controllers.endpoints.api import blueprint_api
 from controllers.endpoints.audit import blueprint_audit

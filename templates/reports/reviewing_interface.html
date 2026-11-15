@@ -9,7 +9,9 @@
         let submission = {{ submission.encode_json()|tojson }};
         let assignment = {{ assignment.encode_json()|tojson }};
         let reviews = {{ submission.get_reviews()|tojson }};
-        let metaReviews = {{ submission.get_meta_reviews()|tojson }};
+        // The sitewide generic reviews, plus any non-generic parents this submission's
+        // own reviews inherit from (the shared parent of a bulk score adjustment)
+        let metaReviews = {{ (submission.get_meta_reviews() + submission.get_inherited_reviews())|tojson }};
         let tags = {{ tags|tojson }};
         let isGrader = ko.observable({{ is_grader|tojson }});
         let previewStudentMode = ko.observable(false);

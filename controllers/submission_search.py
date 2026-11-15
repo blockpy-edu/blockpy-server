@@ -193,6 +193,9 @@ SEARCH_FIELD_REGISTRY = {
         lambda s, op, v: s.grading_status == v),
     "version": _submission_field(
         lambda s, op, v: _search_compare_numbers(s.version or 0, op, v)),
+    # How many times the submission has been graded (run-and-grade, or a quiz submit)
+    "attempts": _submission_field(
+        lambda s, op, v: _search_compare_numbers(s.attempts or 0, op, v)),
     "code": _submission_field(
         lambda s, op, v: _search_compare_text(s.code, op, v)),
     "feedback": _submission_field(
@@ -236,6 +239,8 @@ def search_fields_for(*categories):
 # against; the analytics detail endpoint pivots one per submission.
 VIEW_SUBMISSIONS_SEARCH_FIELDS = search_fields_for("submission", "user", "assignment")
 ANALYTICS_SEARCH_FIELDS = search_fields_for("submission", "metric", "user", "assignment")
+# Score adjustments work on one assignment, so assignment fields would be noise
+ADJUSTMENT_SEARCH_FIELDS = search_fields_for("submission", "user")
 
 
 def parse_submission_search(raw, allowed_fields):

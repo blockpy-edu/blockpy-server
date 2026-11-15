@@ -808,6 +808,24 @@ class Submission(EnhancedBase):
             for review in Review.query.filter_by(generic=True).all()
         ]
 
+    def get_inherited_reviews(self):
+        """
+        The reviews that this submission's reviews inherit from but that are not in the
+        sitewide generic list: the shared parent of a bulk score adjustment. The reviewing
+        interface needs them to show an inheriting review's text and score. Only the fields
+        of `Review.encode_json` are included, so a parent's grader-only data (its rule and
+        private note, in `extra_data`) never reaches the page.
+        """
+        parent_ids = {review.forked_id for review in self.get_reviews_db()
+                      if review.forked_id is not None}
+        if not parent_ids:
+            return []
+        return [
+            review.encode_json()
+            for review in Review.query.filter(Review.id.in_(parent_ids),
+                                              Review.generic.isnot(True)).all()
+        ]
+
     def regrade_if_quiz(self) -> Union[QuizResult, bool]:
         if self.assignment.type == "quiz":
             # Try parsing both as JSON - report errors

@@ -368,6 +368,60 @@ def grade_submission(submission_id: int, assignment_group_id,
     return report
 
 
+def post_current_grade(submission, grader) -> GradingReport:
+    """
+    Send a submission's current total to the LMS and change nothing else.
+
+    This is for grade changes that did not come from the student's work, such as a bulk
+    score adjustment (a review added to many submissions at once). Unlike `grade_submission`
+    it never regrades a quiz, never ends an in-progress attempt, and leaves the submission
+    and grading statuses alone: the only writes are a grade history row and a log entry.
+
+    The grade is recorded at the submission's own `date_submitted`, so a late policy treats
+    the adjustment like the rest of that submission's score rather than as new late work.
+    A failed post is reported but not retried in the background; the caller decides.
+    """
+    report = GradingReport(submission.assignment_id, submission.assignment_version,
+                           submission.assignment_group_id, submission.course_id,
+                           grader.id if grader is not None else None,
+                           submission.user_id, submission.id, submission.version,
+                           True,
+                           request.values.get('timestamp') if has_request_context() else None,
+                           request.values.get('timezone') if has_request_context() else None,
+                           submission.correct, submission.score, None, {}, [],
+                           True, False, False, False)
+    if grader is None:
+        return report.add_reason(FailureReasons.NO_USER)
+    course = submission.course
+    if course is None:
+        return report.add_reason(FailureReasons.NO_COURSE)
+    if submission.assignment is None:
+        return report.add_reason(FailureReasons.NO_ASSIGNMENT)
+    if not grader.is_grader(course.id):
+        return report.add_reason(FailureReasons.INVALID_PERMISSIONS)
+    if not submission.endpoint:
+        return report.add_reason(FailureReasons.NOT_GRADED_ASSIGNMENT)
+    if not course.endpoint:
+        return report.add_reason(FailureReasons.NO_GRADING_CONTEXT)
+    at_time = submission.date_submitted
+    grade_post = report.create_grade_post(submission, course, True, False, at_time)
+    report.oauth_consumer_key = (session.get('oauth_consumer_key') or "") if has_request_context() else ""
+    grade_post.oauth_consumer_key = report.oauth_consumer_key
+    submission_score = submission.full_score()
+    try:
+        transmission_status, error = grade_post.submit()
+    except LTIPostMessageException as e:
+        transmission_status, error = TransmissionStatuses.FAILURE, str(e)
+    if transmission_status != TransmissionStatuses.SUCCESS:
+        report.log(LogEventType.LMS_FAILURE, error)
+        return report.add_reason(FailureReasons.LTI_FAILURE, error)
+    report.submitted = True
+    report.changed = True
+    GradeHistory.remember(submission.id, grader.id, submission_score, at_time)
+    report.log(LogEventType.LMS_SUBMISSION, f"{grade_post.total_score}|{submission_score}")
+    return report
+
+
 def get_groups_submissions(group_id, user_id, course_id):
     group = AssignmentGroup.by_id(group_id)
     check_resource_exists(group, "AssignmentGroup", group_id)
