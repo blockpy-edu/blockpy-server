@@ -2,16 +2,23 @@
 
 All notable changes to BlockPy Server are recorded in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-BlockPy Server does not cut numbered releases, so changes collect under
-"Unreleased" and move under a heading with the date they were deployed
-(`YYYY-MM-DD`), newest first. Changes made before this file was started are in
-the git history.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and version numbers follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+(`MAJOR.MINOR.PATCH`): a new feature raises the minor number, a release of
+fixes only raises the patch number, and a change that people running the
+server must act on raises the major number.
+
+Changes collect under "Unreleased" until they are released, and then move under
+a heading with the version and its release date (`YYYY-MM-DD`), newest first.
+Version tracking starts at 6.5.0; changes made before it are in the git
+history.
 
 Each entry says what changed for the people who use or run the server. Entries
 are grouped as Added, Changed, Deprecated, Removed, Fixed, or Security.
 
-## Unreleased
+## [Unreleased]
+
+## [6.5.0] - 2026-11-15
 
 ### Added
 
